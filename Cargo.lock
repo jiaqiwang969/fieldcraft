@@ -1629,6 +1629,7 @@ dependencies = [
  "fieldcraft-mesh",
  "fieldcraft-model",
  "fieldcraft-parallel",
+ "libm",
  "serde",
  "thiserror 2.0.21",
 ]
