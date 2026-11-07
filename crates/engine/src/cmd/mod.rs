@@ -225,6 +225,7 @@ pub static ALL: &[CommandSpec] = &[
     solve::SENSITIVITY_FREQUENCY,
     solve::INVERSE_FREQUENCY,
     solve::INVERSE_HARMONIC,
+    solve::INVERSE_JOINT,
     solve::NONLINEAR,
     solve::FREQUENCY,
     solve::HARMONIC,

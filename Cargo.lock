@@ -1663,7 +1663,6 @@ dependencies = [
  "fieldcraft-model",
  "fieldcraft-render",
  "fieldcraft-update",
- "libm",
  "log",
  "png",
  "resvg",
