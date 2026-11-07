@@ -28,7 +28,7 @@ jobs:
       CARGO_INCREMENTAL: '0'
       CARGO_PROFILE_DEV_DEBUG: '0'
       CARGO_PROFILE_CI_DEBUG: '0'
-      CARGO_BUILD_JOBS: '6'
+      CARGO_BUILD_JOBS: '4'
       CARGO_TERM_COLOR: never
       FIELDCRAFT_GPU: cpu
     steps:
@@ -67,13 +67,13 @@ jobs:
             if [ "$rc" -ne 0 ]; then status=1; fi
           }
           cargo1() { rustup run 1.99.1 cargo "$@"; }
-          check core cargo1 test --locked --profile ci -j 6 -p fieldcraft-mesh -p fieldcraft-solver -p fieldcraft-testkit --lib
-          check engine-fillet cargo1 test --locked --profile ci -j 6 -p fieldcraft-engine --lib cmd::mesh::boundary_on_the_geometry::refinement_below_the_facets_keeps_a_fillets_nodes_on_its_torus -- --exact --ignored --nocapture
-          check corpus cargo1 test --locked --profile ci -j 6 -p fieldcraft-testkit --lib runner::tests::corpus_matches_its_fixtures -- --exact --ignored --nocapture
-          check bracket cargo1 test --locked --profile ci -j 6 -p fieldcraft-testkit --test bracket_blocks -- --ignored
+          check core cargo1 test --locked --profile ci -j 4 -p fieldcraft-mesh -p fieldcraft-solver -p fieldcraft-testkit --lib
+          check engine-fillet cargo1 test --locked --profile ci -j 4 -p fieldcraft-engine --lib cmd::mesh::boundary_on_the_geometry::refinement_below_the_facets_keeps_a_fillets_nodes_on_its_torus -- --exact --ignored --nocapture
+          check corpus cargo1 test --locked --profile ci -j 4 -p fieldcraft-testkit --lib runner::tests::corpus_matches_its_fixtures -- --exact --ignored --nocapture
+          check bracket cargo1 test --locked --profile ci -j 4 -p fieldcraft-testkit --test bracket_blocks -- --ignored
           # Known experimental failures stay visible in the oracle output and
           # expected.json; a zero oracle exit does not validate those amplitudes.
-          check harmonic-oracle cargo1 run --locked --profile ci -j 6 -p fieldcraft-testkit --bin oracle -- --case harmonic-sdof --case harmonic-cantilever --case harmonic-reciprocity --case harmonic-nafems-5h --case harmonic-tip-mass-experiment --no-write
+          check harmonic-oracle cargo1 run --locked --profile ci -j 4 -p fieldcraft-testkit --bin oracle -- --case harmonic-sdof --case harmonic-cantilever --case harmonic-reciprocity --case harmonic-nafems-5h --case harmonic-tip-mass-experiment --no-write
           git diff --stat > "$EVIDENCE/generated-diff.txt"
           exit "$status"
           CHECKS
