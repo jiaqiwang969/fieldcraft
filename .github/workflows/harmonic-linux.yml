@@ -28,17 +28,18 @@ jobs:
       CARGO_INCREMENTAL: '0'
       CARGO_PROFILE_DEV_DEBUG: '0'
       CARGO_PROFILE_CI_DEBUG: '0'
-      CARGO_TARGET_DIR: ${{ runner.temp }}/harmonic-target
       CARGO_BUILD_JOBS: '6'
       CARGO_TERM_COLOR: never
       FIELDCRAFT_GPU: cpu
-      EVIDENCE: ${{ runner.temp }}/harmonic-evidence
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Bounded native Linux checks
         shell: bash
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/harmonic-target
+          EVIDENCE: ${{ runner.temp }}/harmonic-evidence
         run: |
           mkdir -p "$EVIDENCE"
           {
