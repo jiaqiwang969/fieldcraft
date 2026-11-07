@@ -423,6 +423,7 @@ pub fn inverse_joint_uniform_material(model: &Model, fit: &JointFit, limits: &Li
                     };
                     guarded.replace_step(selected)?;
                     let r = crate::solve_frequency(&guarded, Some(step), &Default::default(), limits)?;
+                    super::model::require_uncapped_modes(&r, limits)?;
                     let requested = modes as usize;
                     if r.modes.len() < requested || (r.modes.len() == requested && r.stats.equations > requested) {
                         return Err(Error::NotConverged("uniform joint baseline needs requested modes and an upper gap guard".into()));
