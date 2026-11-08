@@ -6,7 +6,7 @@ Every entry is a toolbar button. **Ready** entries run their command; **coming s
 shown greyed with the roadmap milestone that brings them (ROADMAP.md). Scripts, the command line,
 the control channel and AI agents over MCP (docs/mcp.md) run the same commands.
 
-93 ready, 31 coming soon.
+94 ready, 31 coming soon.
 
 ## Geometry
 
@@ -139,6 +139,7 @@ the control channel and AI agents over MCP (docs/mcp.md) run the same commands.
 | Decks | Read Deck — Read an Abaqus input deck's model data: mesh, sets, materials and sections; unread keywords are listed, not kept | ready | `deck.read` |
 | Implicit | Static — Linear static (or coupled temperature–displacement) solve of a step with FieldCraft's own solver; nonlinear static, buckling, harmonic response and heat transfer in the drop-down | ready | `solve.static`, `solve.nonlinear`, `solve.buckle`, `solve.harmonic`, `solve.heat` |
 | Implicit | Frequency — Natural frequencies and mode shapes of a frequency step | ready | `solve.frequency` |
+| Implicit | Random Response — Modal random response from force or base-acceleration PSD inputs; reports PSD and RMS quantities | ready | `solve.random` |
 | Design studies | Sensitivity — Static displacement, work and continuum stress derivatives; simple-mode frequency and direct harmonic derivatives in the drop-down | ready | `solve.sensitivity.static`, `solve.sensitivity.frequency`, `solve.sensitivity.harmonic` |
 | Design studies | Identify Parameters — Fit material, thickness or spring parameters; complex-response and joint mixed-observation fits in the drop-down | ready | `solve.inverse.frequency`, `solve.inverse.harmonic`, `solve.inverse.joint` |
 | Explicit | Explicit — Transient dynamics of an explicit step by central differences (contact and erosion coming in M10) | ready | `solve.explicit` |
