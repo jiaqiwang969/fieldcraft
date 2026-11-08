@@ -37,6 +37,7 @@ mod model;
 pub(crate) mod names;
 pub(crate) mod node_move;
 pub(crate) mod nodes;
+mod observations;
 pub(crate) mod octree;
 mod orphan;
 mod path;
@@ -69,6 +70,8 @@ use crate::{CommandSpec, EngineError, Result, Session};
 
 pub static ALL: &[CommandSpec] = &[
     model::INFO,
+    observations::IMPORT,
+    observations::READ,
     library::LIST,
     library::ADD,
     geometry::OPEN,
