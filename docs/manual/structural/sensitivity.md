@@ -414,3 +414,17 @@ Without the switch, weak or ambiguous assignments still fail as a whole.
 Joint harmonic observations at the same `(step, node, dof)` reuse one sweep per
 parameter and trial; real and imaginary rows index the same immutable result.
 No cache survives into a different parameter vector or command.
+
+
+After a rejected scalar or joint LM trial, the fit also checks floating-point
+resolution. The undamped Gauss–Newton predicted decrease is `0.5*g²/I` for
+one parameter and `0.5*gᵀCg` for the joint fit, in whitened/scaled coordinates.
+If this is finite, nonnegative and no larger than `4*f64::EPSILON*objective`,
+the last accepted point is returned with a floating-point plateau warning and
+its normalized gradient. Here `objective` is the stored sum of squared whitened
+residuals plus any quadratic prior; for regularized fits the full undamped
+information (including that prior) replaces data-only covariance in this check.
+This does not assert exact stationarity or remove model discrepancy. A small
+*damped* step alone never suffices. Ordinary gradient/bound convergence and its
+iteration count are unchanged. Iteration-cap errors include the last accepted
+SI parameter(s), normalized gradient, LM damping and objective.
