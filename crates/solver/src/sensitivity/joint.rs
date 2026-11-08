@@ -304,7 +304,7 @@ pub fn fit_joint(initial: &[f64], fit: &JointFit, response: impl Fn(&[f64]) -> R
             });
             let mut warnings = vec!["Local data-only rank diagnosis; not global identifiability. Covariance is a known-independent-Gaussian-error linearization. Joint projection intervals are projections of one 95% ellipsoid, not marginal intervals. No covariance for regularization or bound-active estimates.".into()];
             if let Some(decrease) = floating_point_plateau {
-                warnings.push(format!("Floating-point plateau after rejected step: gradient criterion not met, but predicted decrease is below double-precision resolution; normalized_gradient={norm}, predicted_decrease={decrease}, objective={}", current.cost));
+                warnings.push(format!("Floating-point plateau after rejected step: gradient criterion not met, but the predicted relative decrease is at most sqrt(machine epsilon), below finite-element evaluation noise; normalized_gradient={norm}, predicted_decrease={decrease}, objective={}", current.cost));
             }
             return Ok(JointEstimate {
                 modal_pairings: Vec::new(),
@@ -352,7 +352,7 @@ pub fn fit_joint(initial: &[f64], fit: &JointFit, response: impl Fn(&[f64]) -> R
                 solve(current.info.clone(), current.gradient.clone())?
             };
             let decrease = 0.5 * current.gradient.iter().zip(direction).map(|(g, d)| g * d).sum::<f64>();
-            if decrease.is_finite() && decrease >= 0.0 && decrease <= 4.0 * f64::EPSILON * current.cost {
+            if decrease.is_finite() && decrease >= 0.0 && decrease <= f64::EPSILON.sqrt() * current.cost {
                 floating_point_plateau = Some(decrease);
             }
             damping = (damping * 10.0).min(MAX_DAMPING);

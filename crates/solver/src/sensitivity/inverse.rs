@@ -196,7 +196,7 @@ pub(super) fn fit_scalar(
                 warnings.push("Confidence interval is a local Gaussian linearization conditional on the model and known independent observation errors; it excludes model discrepancy.".into());
             }
             if floating_point_plateau {
-                warnings.push(format!("Floating-point plateau after rejected step: gradient criterion not met, but predicted decrease is below double-precision resolution; normalized_gradient={}, predicted_decrease={}, objective={}",
+                warnings.push(format!("Floating-point plateau after rejected step: gradient criterion not met, but the predicted relative decrease is at most sqrt(machine epsilon), below finite-element evaluation noise; normalized_gradient={}, predicted_decrease={}, objective={}",
                     current.gradient.abs() / current.information.sqrt(),
                     0.5 * (current.gradient / current.information.sqrt()).powi(2), current.cost));
             }
@@ -233,7 +233,7 @@ pub(super) fn fit_scalar(
             // Undamped GN decrease, not the artificially small LM step at large damping.
             // cost stores the squared whitened residual (including any prior).
             let decrease = 0.5 * (current.gradient / current.information.sqrt()).powi(2);
-            floating_point_plateau = decrease.is_finite() && decrease <= 4.0 * f64::EPSILON * current.cost;
+            floating_point_plateau = decrease.is_finite() && decrease <= f64::EPSILON.sqrt() * current.cost;
             damping = (damping * 10.0).min(MAX_DAMPING);
         }
     }
