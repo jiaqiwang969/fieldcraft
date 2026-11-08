@@ -24,9 +24,17 @@ pub enum MaterialConstant {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Parameter {
+    Foundation { name: String, component: FoundationComponent },
     Material { name: String, constant: MaterialConstant },
     ShellThickness { name: String },
     SpringStiffness { name: String },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FoundationComponent {
+    Normal,
+    Tangential,
 }
 
 fn missing() -> Error {
@@ -63,6 +71,13 @@ fn material_slot(material: &mut crate::Material, constant: MaterialConstant) -> 
 impl Parameter {
     pub fn value(&self, model: &Model) -> Result<f64> {
         match self {
+            Self::Foundation { name, component } => {
+                let f = model.foundation(name).ok_or_else(missing)?;
+                Ok(match component {
+                    FoundationComponent::Normal => f.normal,
+                    FoundationComponent::Tangential => f.tangential,
+                })
+            }
             Self::Material { name, constant } => {
                 let mut material = model.material(name).cloned().ok_or_else(missing)?;
                 Ok(*material_slot(&mut material, *constant)?)
@@ -81,6 +96,7 @@ impl Parameter {
     pub fn quantity(&self, model: &Model) -> Result<Quantity> {
         self.value(model)?;
         Ok(match self {
+            Self::Foundation { .. } => Quantity::ForcePerVolume,
             Self::Material { constant, .. } => match constant {
                 MaterialConstant::Density => Quantity::Density,
                 MaterialConstant::Poisson | MaterialConstant::Nu12 | MaterialConstant::Nu13 | MaterialConstant::Nu23 => Quantity::Dimensionless,
@@ -99,6 +115,14 @@ impl Parameter {
             return Err(Error::Invalid("design parameter must be finite".into()));
         }
         match self {
+            Self::Foundation { name, component } => {
+                let mut f = model.foundation(name).cloned().ok_or_else(missing)?;
+                match component {
+                    FoundationComponent::Normal => f.normal = value,
+                    FoundationComponent::Tangential => f.tangential = value,
+                };
+                model.replace_foundation(name, f)
+            }
             Self::Material { name, constant } => {
                 let mut material = model.material(name).cloned().ok_or_else(missing)?;
                 *material_slot(&mut material, *constant)? = value;

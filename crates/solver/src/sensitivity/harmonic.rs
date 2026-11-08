@@ -127,9 +127,19 @@ pub fn harmonic_sensitivity(
 
         let (ap, bp, fp) = dynamic(&p)?;
         let (am, bm, fm) = dynamic(&m)?;
-        let da = matrix_difference(&ap, &am, increment)?;
-        let db = matrix_difference(&bp, &bm, increment)?;
-        let df = Vector { real: difference(&fp.real, &fm.real, increment)?, imaginary: difference(&fp.imaginary, &fm.imaginary, increment)? };
+        let mut da = matrix_difference(&ap, &am, increment)?;
+        let mut db = matrix_difference(&bp, &bm, increment)?;
+        let mut df = Vector { real: difference(&fp.real, &fm.real, increment)?, imaginary: difference(&fp.imaginary, &fm.imaginary, increment)? };
+        if let Some((dk, mut dh)) = crate::foundation::derivative(&mesh, &graph, parameter)? {
+            // Step Rayleigh beta and structural loss multiply the total stiffness.
+            for (g, k) in dh.val.iter_mut().zip(&dk.val) {
+                *g += (omega * h.damping.beta + h.damping.loss_factor) * k;
+            }
+            df = Vector { real: red.rhs(&vec![0.; mesh.dofs()], &dk), imaginary: red.rhs(&vec![0.; mesh.dofs()], &dh) };
+            [da, db] = red.reduce([&dk, &dh])?;
+            da.mirror_lower();
+            db.mirror_lower();
+        }
         let primal = complex::solve(&a, &b, &rhs, limits)?;
         let tangent = super::tangent_load(&da, &db, &primal.displacement, &df, limits)?;
         let derivative = super::direct(&a, &b, &tangent, limits)?;
