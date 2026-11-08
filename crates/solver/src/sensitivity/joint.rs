@@ -319,21 +319,31 @@ pub fn inverse_joint(model: &Model, fit: &JointFit, limits: &Limits) -> Result<J
         }
         let mut predictions = vec![0.0; fit.observations.len()];
         let mut jac = vec![vec![0.0; x.len()]; fit.observations.len()];
+        let mut static_steps: std::collections::BTreeMap<&str, Vec<(usize, StaticObservation)>> = std::collections::BTreeMap::new();
+        for (row, o) in fit.observations.iter().enumerate() {
+            if let JointResponse::Static { step, node, dof } = &o.response {
+                static_steps.entry(step).or_default().push((row, StaticObservation { node: *node, dof: *dof, stress_element: None }));
+            }
+        }
+        let parameters: Vec<_> = fit
+            .parameters
+            .iter()
+            .zip(x)
+            .map(|(p, x)| (p.parameter.clone(), x.abs().max(p.scale_si * INCREMENT_FLOOR) * fit.relative_increment))
+            .collect();
+        for (step, rows) in static_steps {
+            let observations: Vec<_> = rows.iter().map(|(_, o)| *o).collect();
+            let result = super::model::static_jacobian(&trial, step, &parameters, &observations, limits)?;
+            for ((row, _), (value, derivatives)) in rows.into_iter().zip(result.values.into_iter().zip(result.derivatives)) {
+                predictions[row] = value;
+                jac[row] = derivatives;
+            }
+        }
         for (col, p) in fit.parameters.iter().enumerate() {
             let h = x[col].abs().max(p.scale_si * INCREMENT_FLOOR) * fit.relative_increment;
             for (row, o) in fit.observations.iter().enumerate() {
                 let (value, derivative) = match &o.response {
-                    JointResponse::Static { step, node, dof } => {
-                        let r = super::static_sensitivity(
-                            &trial,
-                            Some(step),
-                            &p.parameter,
-                            h,
-                            StaticObservation { node: *node, dof: *dof, stress_element: None },
-                            limits,
-                        )?;
-                        (r.displacement, r.direct)
-                    }
+                    JointResponse::Static { .. } => continue,
                     JointResponse::Frequency { step, mode } => {
                         let r = super::frequency_sensitivity(&trial, Some(step), &p.parameter, h, &Default::default(), limits)?;
                         let r =
