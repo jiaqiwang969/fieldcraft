@@ -54,6 +54,13 @@ pub const SET_RESOLVE: &[Field] = existing!("Set", C::Set);
 
 // ---- Model definitions ----
 
+pub const NODE_COORDS: &[Field] = &[
+    labels("nodes", "Nodes", LabelOf::Node)
+        .req()
+        .help("Mesh node labels whose coordinates to return.")
+        .hint("labels: 120050, 82222"),
+];
+
 pub const SET: &[Field] = &[
     NAME,
     rows(

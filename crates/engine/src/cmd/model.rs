@@ -13,7 +13,7 @@ pub const NODE_COORDS: CommandSpec = CommandSpec {
     id: "model.node.coordinates",
     label: "Node Coordinates",
     params: r#"{"nodes": [1, 2]} — returns the requested mesh node labels and coordinates in the model's display length units"#,
-    form: None,
+    form: Some(super::forms::NODE_COORDS),
     kind: CommandKind::Model,
     requires: &[Requirement::Mesh],
     run: node_coordinates,
