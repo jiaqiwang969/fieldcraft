@@ -162,13 +162,13 @@ frame by frame over the control channel, encoded with ffmpeg). The wake forms an
 settles; it does not shed (that needs a finer grid or a collision operator stable near τ⁺ = 0.5,
 #557).
 
-### Inverse modal observations (in progress)
+### Inverse modal observations (core delivery verified)
 
 Sensor-space real MAC pairing now has a bounded, deterministic one-to-one
 maximum-weight assignment, minimum-MAC filtering and a global alternative-assignment
 ambiguity check. Tests cover order exchange, sign/scale invariance and invalid inputs.
-Connecting these pairs and normalized Nelson vector derivatives to joint observations,
-damping identification, coverage statistics and modal harmonic derivatives remains open.
+The two-coordinate exchange regression also runs ordered-frequency fitting and proves
+that it recovers swapped spring identities despite matching the frequency observations.
 
 Joint inversion now accepts reference-normalized real measured mode components and
 MAC-matched frequencies. Nelson quotient derivatives, final-estimate pairing reports
