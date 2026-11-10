@@ -124,3 +124,48 @@ fn empty_declaration_is_legacy_not_stick() {
     p.require_applied(&m, &Geometry::default(), &Run::default()).unwrap();
     assert_eq!(report(&m).unwrap()["steps"]["Modes"]["runtime_qualification"], "unverified");
 }
+
+#[test]
+fn native_tangent_free_is_reported_and_frozen_without_claiming_qualification() {
+    use fieldcraft_model::ContactPerturbation;
+    let mut m = fixture();
+    let mut modes = m.step("Modes").unwrap().clone();
+    modes.contact_perturbation.insert("Interface".into(), ContactPerturbation::ClosedTangentFree);
+    m.replace_step(modes).unwrap();
+    let capabilities = report(&m).unwrap();
+    assert_eq!(capabilities["steps"]["Modes"]["selection"], "explicit_closed_tangent_free");
+    assert_eq!(capabilities["steps"]["Modes"]["runtime_qualification"], "unverified");
+    let geometry = Geometry::default();
+    let run = Run::default();
+    let request = PolicyRequest::freeze(&m, &geometry, &run, "Modes", &json!({"Interface":"closed_tangent_free"})).unwrap();
+    request.require_applied(&m, &geometry, &run).unwrap();
+    let archive = fieldcraft_io::write(&m, &geometry, &[], &Default::default(), &Default::default()).unwrap();
+    let reopened = fieldcraft_io::read(&archive).unwrap();
+    assert_eq!(report(&reopened.model).unwrap(), capabilities);
+    let restored =
+        PolicyRequest::decode(&serde_json::to_vec(&request).unwrap(), &request.digest().unwrap(), &reopened.model, &reopened.geometry, &reopened.run)
+            .unwrap();
+    restored.require_applied(&reopened.model, &reopened.geometry, &reopened.run).unwrap();
+    let mut changed = reopened.model.step("Modes").unwrap().clone();
+    changed.contact_perturbation.insert("Interface".into(), ContactPerturbation::Stick);
+    m.replace_step(changed).unwrap();
+    assert!(request.validate(&m, &geometry, &run).unwrap_err().to_string().contains("ModelRevisionMismatch"));
+}
+
+#[test]
+fn mixed_native_selection_does_not_report_stick_for_every_contact() {
+    use fieldcraft_model::ContactPerturbation;
+    let mut m = fixture();
+    m.add_contact("Second", m.contact("Interface").unwrap().clone()).unwrap();
+    let mut modes = m.step("Modes").unwrap().clone();
+    modes.contact_perturbation.insert("Interface".into(), ContactPerturbation::Stick);
+    modes.contact_perturbation.insert("Second".into(), ContactPerturbation::ClosedTangentFree);
+    m.replace_step(modes).unwrap();
+    let capability = report(&m).unwrap();
+    assert_eq!(capability["steps"]["Modes"]["selection"], "explicit_mixed");
+    assert_eq!(capability["steps"]["Modes"]["runtime_qualification"], "unverified");
+    let request =
+        PolicyRequest::freeze(&m, &Geometry::default(), &Run::default(), "Modes", &json!({"Interface":"stick","Second":"closed_tangent_free"}))
+            .unwrap();
+    request.require_applied(&m, &Geometry::default(), &Run::default()).unwrap();
+}

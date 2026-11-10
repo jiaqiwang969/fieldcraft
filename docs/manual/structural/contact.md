@@ -623,3 +623,11 @@ State refusals, native persistence, thread independence and a fixed-pressure
 finite-difference check of a nonzero geometric action are included. This local linearisation does
 not certify that arbitrary finite amplitudes remain on the same contact branch.
 The `contact_perturbation v2` diagnostic is text, not a stable structured schema.
+
+`model.info` reports the selected native policy separately from runtime qualification.
+The identity request `fieldcraft-contact-policy-request/1` can freeze either native
+value, or a map containing both. `require_applied` checks the archived selection and
+model identity; it does not certify pressure, shear, branch margin or convergence.
+The capability report therefore keeps `runtime_qualification` as `unverified` even
+after a solve. A finite tangential spring, a friction coefficient and a contact
+status label do not imply the hard constraint used by `stick`.
