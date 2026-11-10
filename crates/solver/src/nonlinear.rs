@@ -1767,7 +1767,14 @@ fn solve_on(
         ));
     }
     if let Some((policies, terminal)) = terminal {
-        let stiffness = problem
+        if policies.values().any(|p| *p == fieldcraft_model::ContactPerturbation::ClosedTangentFree)
+            && problem.follower_asymmetry(&u, lambda)?.is_some_and(|a| a > NOTABLE_ASYMMETRY)
+        {
+            return Err(Error::NotSupported(
+                "contact_perturbation.nonsymmetric_follower_tangent: closed_tangent_free requires a conservative perturbation".into(),
+            ));
+        }
+        let mut stiffness = problem
             .evaluate_with_contact(&u, lambda, true, &run.committed, &run.contact, &run.reference, 0.0, false)?
             .tangent
             .ok_or_else(|| Error::Internal("terminal structural tangent".into()))?;
@@ -1778,6 +1785,29 @@ fn solve_on(
                 Some(fieldcraft_model::ContactPerturbation::Stick) => {
                     let force_bound = (settings.tolerances.force * run.scale()).max(f64::EPSILON.sqrt() * norm_inf(&evaluation.internal));
                     constraints.extend(interface.stick_rows(&mesh, &u, state, &red, force_bound, &mut warnings)?);
+                }
+                Some(fieldcraft_model::ContactPerturbation::ClosedTangentFree) => {
+                    let force_bound = (settings.tolerances.force * run.scale()).max(f64::EPSILON.sqrt() * norm_inf(&evaluation.internal));
+                    let (rows, geometry) = interface.tangent_free_rows(&mesh, &u, state, &red, force_bound, &mut warnings)?;
+                    constraints.extend(rows);
+                    // The qualified main is fixed, so its rows/columns project to zero.
+                    // Remaining entries lie on each secondary element's face and therefore
+                    // fit the structural pattern shared with the reference mass.
+                    for (nodes, data) in geometry {
+                        let mut dofs = Vec::with_capacity(3 * nodes.len());
+                        for node in &nodes {
+                            for kind in mesh.translation_kinds().iter() {
+                                dofs.push(mesh.dof(*node, kind)?);
+                            }
+                        }
+                        for (i, &row) in dofs.iter().enumerate().filter(|(_, dof)| red.has_free_motion(**dof)) {
+                            for (j, &col) in dofs.iter().enumerate().filter(|(_, dof)| red.has_free_motion(**dof)) {
+                                let value =
+                                    data.get(i * dofs.len() + j).copied().ok_or_else(|| Error::Internal("contact geometry block size".into()))?;
+                                add_entry(&mut stiffness, row, col, value)?;
+                            }
+                        }
+                    }
                 }
                 None => {
                     constraints.extend(interface.frozen_rows(&mesh, &u, state)?);
@@ -1798,7 +1828,9 @@ fn solve_on(
                 Some(&constraints),
             )?;
             for interface in &problem.contacts {
-                interface.check_fixed_perturbation(&frozen)?;
+                if policies.get(&interface.name) == Some(&fieldcraft_model::ContactPerturbation::Stick) {
+                    interface.check_fixed_perturbation(&frozen)?;
+                }
             }
         }
         *terminal = Some(crate::prestress::Terminal { stiffness, constraints });

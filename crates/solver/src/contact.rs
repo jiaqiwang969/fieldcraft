@@ -124,7 +124,7 @@ use std::collections::BTreeMap;
 
 use fieldcraft_fem::contact::{Aabb, Grid, bounds};
 use fieldcraft_fem::dual::{Dual, Hyper, PACKED, Real, VARS, packed};
-use fieldcraft_fem::frame::{Vec3, dot, norm, unit};
+use fieldcraft_fem::frame::{Vec3, cross, dot, norm, unit};
 use fieldcraft_fem::mortar::{
     FACE_NODES, FaceSample, Sample, alpha, dot as dot_t, edge_area_vector, face_area_vector, facet_points, facet_vertices, facets, integrate,
     integrate_edges, integrate_faces, integrate_facet, interpolate_fixed, reversed, sub, vertex_weights,
@@ -323,6 +323,15 @@ pub struct ContactResult {
     pub penetration: f64,
     /// Augmentations over the step.
     pub augmentations: usize,
+}
+
+/// Qualification of a closed planar interface at the converged base state.
+struct ClosedQualification {
+    normal: Vec3,
+    min_pressure: f64,
+    min_margin: f64,
+    max_gap: f64,
+    max_shear: f64,
 }
 
 /// The contribution of one face pair to the forces and the tangent.
@@ -1092,11 +1101,120 @@ impl Interface {
         Ok(rows)
     }
 
-    /// First explicit hard-stick domain: a fully closed planar linear-face pair
-    /// against a fixed main surface. All interface increments must subsequently
-    /// vanish under the actual reduction (checked by `check_fixed_perturbation`).
-    /// Thus T^T K_contact T = 0, including the normal and friction geometry terms;
-    /// this is not a claim that those terms vanish before elimination.
+    /// Qualify the actual closed state, before selecting its incremental freedoms.
+    #[allow(clippy::too_many_arguments)]
+    fn closed_qualification(
+        &self,
+        mesh: &Mesh,
+        u: &[f64],
+        state: &State,
+        base: &crate::constraints::Reduction,
+        force_bound: f64,
+        stick: bool,
+    ) -> Result<ClosedQualification> {
+        let policy = if stick { "stick" } else { "closed_tangent_free" };
+        let refuse = |reason: &str| Error::NotSupported(format!("contact_perturbation.{reason}: contact `{}`", self.name));
+        if self.extent.is_some() || self.secondary.iter().chain(&self.main).any(|f| f.nodes.len() > 4) {
+            return Err(refuse(&format!("{policy}_requires_linear_solid_faces")));
+        }
+        for face in &self.main {
+            for dof in face.dofs.iter().flatten().flatten() {
+                if base.has_free_motion(*dof) {
+                    return Err(refuse(&format!("{policy}_requires_fixed_main")));
+                }
+            }
+        }
+        let mu = self.friction.map_or(0.0, |f| f.static_coefficient);
+        if stick && mu <= 0.0 {
+            return Err(refuse("friction_state_unavailable"));
+        }
+        let mut min_pressure = f64::INFINITY;
+        let mut min_margin = f64::INFINITY;
+        let mut max_gap = 0.0f64;
+        let mut max_shear = 0.0f64;
+        let mut normal: Option<Vec3> = None;
+        // Compare complete and covered areas in the same configuration.
+        let mut current_area = vec![0.0; self.nodes.len()];
+        if !stick {
+            for face in &self.secondary {
+                let x = Self::corners(mesh, u, face);
+                let mut own = [0.0; FACE_NODES];
+                integrate_pair(self.extent, &x, &reversed(&x), |p| {
+                    for (value, phi) in own.iter_mut().zip(p.multiplier) {
+                        *value += p.weight * phi;
+                    }
+                })
+                .ok_or_else(|| refuse("normal_derivative_unavailable"))?;
+                for (node, share) in face.nodes.iter().zip(own) {
+                    let at = self.nodes.binary_search(node).map_err(|_| Error::Internal("contact coverage node".into()))?;
+                    if let Some(area) = current_area.get_mut(at) {
+                        *area += share;
+                    }
+                }
+            }
+        }
+        let covered_area = if stick { &self.area } else { &current_area };
+        for i in 0..self.nodes.len() {
+            let (Some(&pressure), Some(Some(gap)), Some(&area), Some(&support), Some(&thickness), Some(&n)) =
+                (state.pressure.get(i), state.gap.get(i), covered_area.get(i), state.support.get(i), self.thickness.get(i), state.normal.get(i))
+            else {
+                return Err(refuse("base_evidence_missing"));
+            };
+            if support <= 0.0 || (support / area - 1.0).abs() > ROUND_OFF {
+                return Err(refuse(&format!("{policy}_requires_full_overlap")));
+            }
+            let pressure_bound = force_bound / support;
+            if !pressure.is_finite() || pressure <= pressure_bound {
+                return Err(refuse("normal_switch"));
+            }
+            if !gap.is_finite() || gap.abs() / thickness > GAP_TOLERANCE {
+                return Err(refuse("base_equilibrium_unqualified"));
+            }
+            let (traction, slipping) = if self.friction.is_some() {
+                let (Some(&traction), Some(&slipping)) = (state.traction.get(i), state.slipping.get(i)) else {
+                    return Err(refuse("base_evidence_missing"));
+                };
+                (traction, slipping)
+            } else {
+                ([0.0; 3], false)
+            };
+            let shear = norm(traction);
+            let margin = mu * pressure - shear;
+            if !shear.is_finite() || slipping || (mu > 0.0 && (!margin.is_finite() || margin <= (1.0 + mu) * pressure_bound)) {
+                return Err(refuse("friction_switch_or_sliding"));
+            }
+            if !stick && shear > pressure_bound {
+                return Err(refuse(&format!("shear_release_undefined: shear={shear:.12e} Pa exceeds guard={pressure_bound:.12e} Pa")));
+            }
+            if !norm(n).is_finite()
+                || (norm(n) - 1.0).abs() > ROUND_OFF
+                || normal.is_some_and(|first| norm(std::array::from_fn(|k| first[k] - n[k])) > ROUND_OFF)
+            {
+                return Err(refuse(&format!("{policy}_requires_planar_pair")));
+            }
+            normal = Some(n);
+            min_pressure = min_pressure.min(pressure);
+            min_margin = min_margin.min(margin);
+            max_gap = max_gap.max(gap.abs() / thickness);
+            max_shear = max_shear.max(shear);
+        }
+        let normal = normal.ok_or_else(|| refuse("base_evidence_missing"))?;
+        for faces in [&self.main, &self.secondary] {
+            let mut origin: Option<Vec3> = None;
+            for face in faces {
+                for x in Self::corners(mesh, u, face) {
+                    let first = *origin.get_or_insert(x);
+                    if dot(std::array::from_fn(|k| x[k] - first[k]), normal).abs() > ROUND_OFF * face.thickness {
+                        return Err(refuse(&format!("{policy}_requires_planar_pair")));
+                    }
+                }
+            }
+        }
+        Ok(ClosedQualification { normal, min_pressure, min_margin, max_gap, max_shear })
+    }
+
+    /// Hard stick against a fixed main: verify that the actual reduction eliminates
+    /// every interface translation, so T^T K_contact T = 0, including geometry.
     pub(crate) fn stick_rows(
         &self,
         mesh: &Mesh,
@@ -1106,85 +1224,133 @@ impl Interface {
         force_bound: f64,
         warnings: &mut Vec<String>,
     ) -> Result<Vec<crate::prestress::FrozenRow>> {
-        let refuse = |reason: &str| Error::NotSupported(format!("contact_perturbation.{reason}: contact `{}`", self.name));
-        if self.extent.is_some() || self.secondary.iter().chain(&self.main).any(|f| f.nodes.len() > 4) {
-            return Err(refuse("stick_requires_linear_solid_faces"));
-        }
-        for face in &self.main {
-            for dof in face.dofs.iter().flatten().flatten() {
-                if base.has_free_motion(*dof) {
-                    return Err(refuse("stick_requires_fixed_main"));
-                }
-            }
-        }
-        let mu = self.friction.map_or(0.0, |f| f.static_coefficient);
-        if mu <= 0.0 {
-            return Err(refuse("friction_state_unavailable"));
-        }
-        let mut min_pressure = f64::INFINITY;
-        let mut min_margin = f64::INFINITY;
-        let mut max_gap = 0.0f64;
-        let mut normal: Option<Vec3> = None;
-        for i in 0..self.nodes.len() {
-            let (Some(&pressure), Some(Some(gap)), Some(&area), Some(&support), Some(&thickness), Some(&traction), Some(&slipping), Some(&n)) = (
-                state.pressure.get(i),
-                state.gap.get(i),
-                self.area.get(i),
-                state.support.get(i),
-                self.thickness.get(i),
-                state.traction.get(i),
-                state.slipping.get(i),
-                state.normal.get(i),
-            ) else {
-                return Err(refuse("base_evidence_missing"));
-            };
-            if support <= 0.0 || (support / area - 1.0).abs() > ROUND_OFF {
-                return Err(refuse("stick_requires_full_overlap"));
-            }
-            let pressure_bound = force_bound / support;
-            if !pressure.is_finite() || pressure <= pressure_bound {
-                return Err(refuse("normal_switch"));
-            }
-            if !gap.is_finite() || gap.abs() / thickness > GAP_TOLERANCE {
-                return Err(refuse("base_equilibrium_unqualified"));
-            }
-            let margin = mu * pressure - norm(traction);
-            if !margin.is_finite() || slipping || margin <= (1.0 + mu) * pressure_bound {
-                return Err(refuse("friction_switch_or_sliding"));
-            }
-            if !norm(n).is_finite()
-                || (norm(n) - 1.0).abs() > ROUND_OFF
-                || normal.is_some_and(|first| norm(std::array::from_fn(|k| first[k] - n[k])) > ROUND_OFF)
-            {
-                return Err(refuse("stick_requires_planar_pair"));
-            }
-            normal = Some(n);
-            min_pressure = min_pressure.min(pressure);
-            min_margin = min_margin.min(margin);
-            max_gap = max_gap.max(gap.abs() / thickness);
-        }
-        if self.nodes.is_empty() {
-            return Err(refuse("base_evidence_missing"));
-        }
-        if let Some(normal) = normal {
-            for faces in [&self.main, &self.secondary] {
-                let mut origin: Option<Vec3> = None;
-                for face in faces {
-                    for x in Self::corners(mesh, u, face) {
-                        let first = *origin.get_or_insert(x);
-                        if dot(std::array::from_fn(|k| x[k] - first[k]), normal).abs() > ROUND_OFF * face.thickness {
-                            return Err(refuse("stick_requires_planar_pair"));
-                        }
-                    }
-                }
-            }
-        }
+        let ClosedQualification { min_pressure, min_margin, max_gap, .. } = self.closed_qualification(mesh, u, state, base, force_bound, true)?;
         let rows = self.frozen_rows(mesh, u, state)?;
         warnings.push(format!(
             "contact_perturbation v1: contact `{}` policy=stick state=closed_stick nodes={} rows={} min_pressure={min_pressure:.12e} Pa min_coulomb_margin={min_margin:.12e} Pa max_gap_over_thickness={max_gap:.12e} force_guard={force_bound:.12e} N; hard incremental normal and tangential constraints; contact geometry projects to zero after verified fixed-interface elimination; reference mass",
             self.name, self.nodes.len(), rows.len()
         ));
         Ok(rows)
+    }
+
+    /// A strict interior patch avoids the nondifferentiable edge of mortar clipping.
+    /// For this first tangent-free domain the main is a single convex planar face.
+    fn interior_patch(&self, mesh: &Mesh, u: &[f64], normal: Vec3) -> Result<f64> {
+        let refuse = || {
+            Error::NotSupported(format!(
+                "contact_perturbation.clipping_branch_unqualified: contact `{}` requires a secondary patch strictly inside one convex main face",
+                self.name
+            ))
+        };
+        let [main] = self.main.as_slice() else { return Err(refuse()) };
+        let xm = Self::corners(mesh, u, main);
+        let mut center = [0.0; 3];
+        for x in &xm {
+            (0..3).for_each(|k| center[k] += x[k] / xm.len() as f64);
+        }
+        let mut margin = f64::INFINITY;
+        for (a, b) in xm.iter().zip(xm.iter().cycle().skip(1)) {
+            let edge = std::array::from_fn(|k| b[k] - a[k]);
+            let inward = unit(cross(normal, edge)).ok_or_else(refuse)?;
+            let side = dot(inward, std::array::from_fn(|k| center[k] - a[k]));
+            if !side.is_finite() || side.abs() <= ROUND_OFF * main.thickness {
+                return Err(refuse());
+            }
+            let inward = inward.map(|x| x * side.signum());
+            if xm.iter().any(|x| dot(inward, std::array::from_fn(|k| x[k] - a[k])) < -ROUND_OFF * main.thickness) {
+                return Err(refuse());
+            }
+            for face in &self.secondary {
+                for x in Self::corners(mesh, u, face) {
+                    let distance = dot(inward, std::array::from_fn(|k| x[k] - a[k]));
+                    if !distance.is_finite() || distance <= ROUND_OFF * main.thickness {
+                        return Err(refuse());
+                    }
+                    margin = margin.min(distance);
+                }
+            }
+        }
+        if !margin.is_finite() {
+            return Err(refuse());
+        }
+        Ok(margin)
+    }
+
+    /// Keep the hard normal gradient and its pressure-weighted geometric Hessian;
+    /// release tangential increments only at zero base shear. This is not actual
+    /// Coulomb sliding. Both derivatives come from equilibrium's mortar integral.
+    pub(crate) fn tangent_free_rows(
+        &self,
+        mesh: &Mesh,
+        u: &[f64],
+        state: &State,
+        base: &crate::constraints::Reduction,
+        force_bound: f64,
+        warnings: &mut Vec<String>,
+    ) -> Result<(Vec<crate::prestress::FrozenRow>, Blocks)> {
+        let ClosedQualification { normal, min_pressure, max_gap, max_shear, .. } =
+            self.closed_qualification(mesh, u, state, base, force_bound, false)?;
+        let margin = self.interior_patch(mesh, u, normal)?;
+        let (rows, blocks) = self.normal_perturbation(mesh, u, state)?;
+        let friction = if self.friction.is_some() { "explicit_zero_shear_release" } else { "frictionless" };
+        warnings.push(format!(
+            "contact_perturbation v2: contact `{}` policy=closed_tangent_free state=closed_zero_shear friction={friction} nodes={} rows={} min_pressure={min_pressure:.12e} Pa max_shear={max_shear:.12e} Pa max_gap_over_thickness={max_gap:.12e} force_guard={force_bound:.12e} N clipping_margin={margin:.12e} m; hard normal gradient; tangential increments free; pressure-weighted mortar geometry included, no normal penalty; reference mass; not a Coulomb sliding tangent",
+            self.name, self.nodes.len(), rows.len()
+        ));
+        Ok((rows, blocks))
+    }
+
+    fn normal_perturbation(&self, mesh: &Mesh, u: &[f64], state: &State) -> Result<(Vec<crate::prestress::FrozenRow>, Blocks)> {
+        let pairs = self.pairs(mesh, u)?;
+        let (_, _, corner_index) = self.sums(&pairs);
+        let mut gradients: BTreeMap<usize, BTreeMap<usize, f64>> = BTreeMap::new();
+        let mut blocks = Vec::new();
+        for (s, found) in pairs.iter().enumerate() {
+            for k in 0..found.len() {
+                let term = self
+                    .pair_terms(mesh, u, state, (s, k), &pairs, &corner_index, true)?
+                    .ok_or_else(|| Error::NotSupported(format!("contact_perturbation.normal_derivative_unavailable: contact `{}`", self.name)))?;
+                for (a, &at) in term.corners.iter().enumerate() {
+                    let g = term.gradient.get(a).ok_or_else(|| Error::Internal("normal contact gradient".into()))?;
+                    let row = gradients.entry(at).or_default();
+                    for (c, dofs) in term.dofs.iter().enumerate() {
+                        for (dof, value) in dofs.iter().zip(g.get(3 * c..3 * c + 3).into_iter().flatten()) {
+                            if let Some(dof) = dof {
+                                *row.entry(*dof).or_default() += value;
+                            }
+                        }
+                    }
+                }
+                if let Some(data) = term.hessian {
+                    blocks.push((term.nodes, data));
+                }
+            }
+        }
+        let mut rows = Vec::with_capacity(self.nodes.len());
+        for (at, &node) in self.nodes.iter().enumerate() {
+            let terms = gradients.remove(&at).ok_or_else(|| Error::Internal("missing normal contact row".into()))?;
+            let scale = terms.values().map(|v| v.abs()).fold(0.0, f64::max);
+            let pivot = mesh
+                .translation_kinds()
+                .iter()
+                .map(|kind| mesh.dof(node, kind))
+                .collect::<Result<Vec<_>>>()?
+                .into_iter()
+                .max_by(|a, b| terms.get(a).copied().unwrap_or(0.0).abs().total_cmp(&terms.get(b).copied().unwrap_or(0.0).abs()));
+            let pivot = pivot
+                .filter(|p| terms.get(p).is_some_and(|v| v.abs() > ROUND_OFF * scale))
+                .ok_or_else(|| Error::NotSupported(format!("contact_perturbation.normal_rank_unqualified: contact `{}`", self.name)))?;
+            if !scale.is_finite() || terms.values().any(|v| !v.is_finite()) {
+                return Err(Error::Invalid(format!("contact `{}`: non-finite normal derivative", self.name)));
+            }
+            rows.push(crate::prestress::FrozenRow {
+                name: self.name.clone(),
+                source: crate::constraints::Source::FrozenContact,
+                pivot,
+                terms: terms.into_iter().filter(|(_, v)| *v != 0.0).map(|(d, v)| (d, v / scale)).collect(),
+            });
+        }
+        Ok((rows, blocks))
     }
 
     pub(crate) fn check_fixed_perturbation(&self, red: &crate::constraints::Reduction) -> Result<()> {
@@ -1290,6 +1456,67 @@ impl Interface {
         }
     }
 
+    /// Shared normal mortar derivatives for equilibrium and hard-normal perturbations.
+    /// The geometric block excludes the augmented-Lagrange penalty outer product.
+    #[allow(clippy::too_many_arguments)]
+    fn pair_terms(
+        &self,
+        mesh: &Mesh,
+        u: &[f64],
+        state: &State,
+        pair: (usize, usize),
+        pairs: &[Vec<Found>],
+        corner_index: &[Vec<usize>],
+        tangent: bool,
+    ) -> Result<Option<PairTerms>> {
+        let (s, k) = pair;
+        let (Some(f), Some(found), Some(corners)) = (self.secondary.get(s), pairs.get(s).and_then(|p| p.get(k)), corner_index.get(s)) else {
+            return Ok(None);
+        };
+        let Some(m) = self.main.get(found.main) else { return Ok(None) };
+        let (xs, xm) = (Interface::corners(mesh, u, f), Interface::corners(mesh, u, m));
+        let pressure: Vec<f64> = corners.iter().map(|i| state.pressure.get(*i).copied().unwrap_or(0.0)).collect();
+        let fixed = self.fixed.as_ref().and_then(|f| f.get(s)).and_then(|l| l.get(k));
+        let (ns, count) = (corners.len(), xs.len() + xm.len());
+        let (gradient, hessian) = if let Some(fixed) = fixed {
+            // Small sliding: linear in the positions.
+            ((0..ns).map(|a| fixed.gradient(a, ns, xm.len())).collect(), None)
+        } else if xs.len() > 4 || xm.len() > 4 {
+            let Some(terms) = quadratic_terms(&xs, &xm, tangent.then_some(pressure.as_slice())) else { return Ok(None) };
+            terms
+        } else if tangent {
+            let (vs, vm) = variables(&xs, &xm, Hyper::var);
+            let Some(g) = weighted_gaps(self.extent, &vs, &vm) else { return Ok(None) };
+            let mut h = vec![0.0; PACKED];
+            for (ga, p) in g.iter().zip(&pressure) {
+                h.iter_mut().zip(&ga.h).for_each(|(x, y)| *x += p * y);
+            }
+            // −Σ_a p_a ∂²g̃_a over the pair's nodes.
+            let width = 3 * count;
+            let mut data = vec![0.0; width * width];
+            for ci in 0..count {
+                for ki in 0..3 {
+                    for cj in 0..count {
+                        for kj in 0..3 {
+                            let at = packed(var(ns, ci, ki), var(ns, cj, kj));
+                            if let Some(x) = data.get_mut((3 * ci + ki) * width + 3 * cj + kj) {
+                                *x = -h.get(at).copied().unwrap_or(0.0);
+                            }
+                        }
+                    }
+                }
+            }
+            (g.iter().take(ns).map(|ga| by_node(&ga.g, ns, count)).collect::<Vec<_>>(), Some(data))
+        } else {
+            let (vs, vm) = variables(&xs, &xm, Dual::var);
+            let Some(g) = weighted_gaps(self.extent, &vs, &vm) else { return Ok(None) };
+            (g.iter().take(ns).map(|ga| by_node(&ga.g, ns, count)).collect(), None)
+        };
+        let nodes = f.nodes.iter().chain(&m.nodes).copied().collect();
+        let dofs = f.dofs.iter().chain(&m.dofs).copied().collect();
+        Ok(Some(PairTerms { nodes, dofs, corners: corners.clone(), gradient, hessian }))
+    }
+
     /// The contact's forces at displacements `u` (added to `internal`), its tangent blocks when
     /// `tangent`, and its state, from the last converged increment's state `committed` and
     /// displacements `reference`; nodes open by less than `band` of their element's thickness
@@ -1343,52 +1570,8 @@ impl Interface {
             }
         }
         let terms = parallel::map_grained(active.len(), GRAIN, |t| -> Result<Option<PairTerms>> {
-            let Some(&(s, k)) = active.get(t) else { return Ok(None) };
-            let (Some(f), Some(found), Some(corners)) = (self.secondary.get(s), pairs.get(s).and_then(|p| p.get(k)), corner_index.get(s)) else {
-                return Ok(None);
-            };
-            let Some(m) = self.main.get(found.main) else { return Ok(None) };
-            let (xs, xm) = (Interface::corners(mesh, u, f), Interface::corners(mesh, u, m));
-            let pressure: Vec<f64> = corners.iter().map(|i| state.pressure.get(*i).copied().unwrap_or(0.0)).collect();
-            let fixed = self.fixed.as_ref().and_then(|f| f.get(s)).and_then(|l| l.get(k));
-            let (ns, count) = (corners.len(), xs.len() + xm.len());
-            let (gradient, hessian) = if let Some(fixed) = fixed {
-                // Small sliding: linear in the positions.
-                ((0..ns).map(|a| fixed.gradient(a, ns, xm.len())).collect(), None)
-            } else if xs.len() > 4 || xm.len() > 4 {
-                let Some(terms) = quadratic_terms(&xs, &xm, tangent.then_some(pressure.as_slice())) else { return Ok(None) };
-                terms
-            } else if tangent {
-                let (vs, vm) = variables(&xs, &xm, Hyper::var);
-                let Some(g) = weighted_gaps(self.extent, &vs, &vm) else { return Ok(None) };
-                let mut h = vec![0.0; PACKED];
-                for (ga, p) in g.iter().zip(&pressure) {
-                    h.iter_mut().zip(&ga.h).for_each(|(x, y)| *x += p * y);
-                }
-                // −Σ_a p_a ∂²g̃_a over the pair's nodes.
-                let width = 3 * count;
-                let mut data = vec![0.0; width * width];
-                for ci in 0..count {
-                    for ki in 0..3 {
-                        for cj in 0..count {
-                            for kj in 0..3 {
-                                let at = packed(var(ns, ci, ki), var(ns, cj, kj));
-                                if let Some(x) = data.get_mut((3 * ci + ki) * width + 3 * cj + kj) {
-                                    *x = -h.get(at).copied().unwrap_or(0.0);
-                                }
-                            }
-                        }
-                    }
-                }
-                (g.iter().take(ns).map(|ga| by_node(&ga.g, ns, count)).collect::<Vec<_>>(), Some(data))
-            } else {
-                let (vs, vm) = variables(&xs, &xm, Dual::var);
-                let Some(g) = weighted_gaps(self.extent, &vs, &vm) else { return Ok(None) };
-                (g.iter().take(ns).map(|ga| by_node(&ga.g, ns, count)).collect(), None)
-            };
-            let nodes = f.nodes.iter().chain(&m.nodes).copied().collect();
-            let dofs = f.dofs.iter().chain(&m.dofs).copied().collect();
-            Ok(Some(PairTerms { nodes, dofs, corners: corners.clone(), gradient, hessian }))
+            let Some(&pair) = active.get(t) else { return Ok(None) };
+            self.pair_terms(mesh, u, &state, pair, &pairs, &corner_index, tangent)
         });
         // Forces −p_A ∂g̃_A/∂x, and per closed node its gradient over the nodes it reaches.
         let mut node_gradients: BTreeMap<usize, BTreeMap<usize, Vec3>> = BTreeMap::new();
