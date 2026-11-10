@@ -1271,6 +1271,9 @@ pub enum ContactPerturbation {
     /// A qualified closed pair: hard normal motion, no incremental tangential stiffness.
     /// This is an explicit release policy, not a Coulomb sliding tangent.
     ClosedTangentFree,
+    /// A strictly separated, unloaded pair: no incremental contact constraint or tangent.
+    /// This asserts the converged open state; it cannot remove a loaded closed contact.
+    Open,
 }
 
 /// An analysis step.

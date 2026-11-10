@@ -12,7 +12,7 @@ fn map(value: &Value) -> Result<BTreeMap<String, String>> {
     let policies: BTreeMap<String, String> =
         serde_json::from_value(value.clone()).map_err(|e| crate::Error::Invalid(format!("InvalidContactPolicyMap: {e}")))?;
     for (name, policy) in &policies {
-        if !matches!(policy.as_str(), "stick" | "closed_tangent_free") {
+        if !matches!(policy.as_str(), "stick" | "closed_tangent_free" | "open") {
             return invalid(format!("UnsupportedContactPolicy: {name}={policy}"));
         }
     }
@@ -42,7 +42,7 @@ fn check_request(model: &Model, step_name: &str, policies: &BTreeMap<String, Str
         return Ok(());
     }
     for (name, value) in policies {
-        if !matches!(value.as_str(), "stick" | "closed_tangent_free") {
+        if !matches!(value.as_str(), "stick" | "closed_tangent_free" | "open") {
             return invalid(format!("UnsupportedContactPolicy: {name}={value}"));
         }
         let Some(contact) = model.contact(name) else {
@@ -155,6 +155,8 @@ pub fn report(model: &Model) -> Result<Value> {
             "explicit_stick"
         } else if selected.values().all(|policy| policy == "closed_tangent_free") {
             "explicit_closed_tangent_free"
+        } else if selected.values().all(|policy| policy == "open") {
+            "explicit_open"
         } else {
             "explicit_mixed"
         };
@@ -170,15 +172,17 @@ pub fn report(model: &Model) -> Result<Value> {
     Ok(json!({
         "native_field":"Step.contact_perturbation",
         "native_field_available":native_field_available(),
-        "declaration_values":["stick","closed_tangent_free"],
+        "declaration_values":["stick","closed_tangent_free","open"],
+        "policy_specification":"fieldcraft-native-contact-perturbation/3",
         "steps":steps,
-        "qualification_requires":["frequency_from_earlier_nlgeom_base","unchanged_support_names","all_contacts_are_explicit_pairs","closed_planar_linear_solid_faces","fixed_main_translations","positive_pressure_above_guard","gap_over_thickness_within_solver_tolerance","friction_history_and_strict_cone_margin_when_frictional","not_slipping"],
+        "qualification_requires":["frequency_from_earlier_nlgeom_base","unchanged_support_names","all_contacts_are_explicit_pairs","planar_linear_solid_faces","fixed_main_translations"],
         "qualification_by_policy":{
-            "stick":["full_reference_overlap","positive_static_friction","interface_motion_eliminated"],
-            "closed_tangent_free":["single_convex_main_face","strict_clipping_edge_margin","full_current_overlap","base_shear_below_guard","normal_gap_gradient_eliminated","pressure_weighted_gap_geometry_retained"]
+            "stick":["positive_pressure_above_guard","gap_over_thickness_within_solver_tolerance","strict_friction_cone_margin","not_slipping","full_reference_overlap","positive_static_friction","interface_motion_eliminated"],
+            "closed_tangent_free":["positive_pressure_above_guard","gap_over_thickness_within_solver_tolerance","strict_friction_cone_margin_when_frictional","not_slipping","single_convex_main_face","strict_clipping_edge_margin","full_current_overlap","base_shear_below_guard","normal_gap_gradient_eliminated","pressure_weighted_gap_geometry_retained"],
+            "open":["single_convex_main_face","strict_clipping_edge_margin","current_planar_separation_above_gap_guard","zero_contact_force_and_history","no_initial_gap_adjustment","missing_search_pair_requires_geometric_certificate","zero_contact_constraint_and_tangent"]
         },
         "state_evidence":"pending_original_runtime_receipt; do not parse diagnostic warnings as a stable protocol",
         "commercial_keyword_mapping":"pending; no verified mapping",
-        "other_policies":"Coulomb sliding/open/finite tangential stiffness unsupported",
+        "other_policies":"Coulomb sliding/finite tangential stiffness unsupported",
     }))
 }

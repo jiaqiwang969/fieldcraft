@@ -1767,11 +1767,13 @@ fn solve_on(
         ));
     }
     if let Some((policies, terminal)) = terminal {
-        if policies.values().any(|p| *p == fieldcraft_model::ContactPerturbation::ClosedTangentFree)
+        if policies
+            .values()
+            .any(|p| matches!(p, fieldcraft_model::ContactPerturbation::ClosedTangentFree | fieldcraft_model::ContactPerturbation::Open))
             && problem.follower_asymmetry(&u, lambda)?.is_some_and(|a| a > NOTABLE_ASYMMETRY)
         {
             return Err(Error::NotSupported(
-                "contact_perturbation.nonsymmetric_follower_tangent: closed_tangent_free requires a conservative perturbation".into(),
+                "contact_perturbation.nonsymmetric_follower_tangent: closed_tangent_free and open require a conservative perturbation".into(),
             ));
         }
         let mut stiffness = problem
@@ -1780,7 +1782,7 @@ fn solve_on(
             .ok_or_else(|| Error::Internal("terminal structural tangent".into()))?;
         let mut constraints: Vec<_> =
             crate::tie::rows(model, &resolved, &mesh, &mut warnings)?.into_iter().map(crate::prestress::FrozenRow::from_row).collect();
-        for (interface, state) in problem.contacts.iter().zip(&evaluation.contact) {
+        for (i, (interface, state)) in problem.contacts.iter().zip(&evaluation.contact).enumerate() {
             match policies.get(&interface.name) {
                 Some(fieldcraft_model::ContactPerturbation::Stick) => {
                     let force_bound = (settings.tolerances.force * run.scale()).max(f64::EPSILON.sqrt() * norm_inf(&evaluation.internal));
@@ -1808,6 +1810,10 @@ fn solve_on(
                             }
                         }
                     }
+                }
+                Some(fieldcraft_model::ContactPerturbation::Open) => {
+                    let history = run.contact.get(i).ok_or_else(|| Error::Internal("terminal contact history".into()))?;
+                    interface.qualify_open(&mesh, &u, state, history, &red, &mut warnings)?;
                 }
                 None => {
                     constraints.extend(interface.frozen_rows(&mesh, &u, state)?);

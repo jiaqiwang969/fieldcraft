@@ -341,7 +341,7 @@ Pure rod2 nonlinear static equilibria now share the geometric transient St Venan
 
 MITC6-a curved modal perturbations: reference-geometry linear preload and conservative pressure stiffness verified on the fine cylindrical-ring mesh. Bounded inverse residual correction resolves the original-pencil modal residual defect; coarse preload failures and curved prestressed harmonic/nonlinear refusals remain.
 
-Closed tangentially free contact perturbation: explicit per-pair selection, NLGEOM frequency bases, fixed convex planar main with an interior linear secondary patch, qualified pressure and zero shear. Hard normal rows and pressure-weighted mortar geometry share the equilibrium derivatives; no normal penalty or Coulomb sliding tangent. Native shear-mode/derivative/refusal/persistence checks; open policies and commercial mapping remain pending.
+Closed tangentially free contact perturbation: explicit per-pair selection, NLGEOM frequency bases, fixed convex planar main with an interior linear secondary patch, qualified pressure and zero shear. Hard normal rows and pressure-weighted mortar geometry share the equilibrium derivatives; no normal penalty or Coulomb sliding tangent. Native shear-mode/derivative/refusal/persistence checks; strictly open unloaded pairs now use a separately qualified zero-contact tangent (fixed planar main, interior linear secondary, positive separation and zero force/history). Open analytic modal, legacy/thread/persistence and refusal checks; commercial mapping remains pending.
 
 ### Reference-volume F-bar kernel
 

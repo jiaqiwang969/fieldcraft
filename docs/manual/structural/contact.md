@@ -505,8 +505,8 @@ new policy. Setting an empty map explicitly restores that legacy behaviour.
 switching, sliding or a cone boundary, missing friction evidence, incomplete overlap,
 an unqualified gap, a moving main surface, nonplanar/quadratic faces or interface
 geometry not eliminated. General contact, other perturbation procedures, moving
-interfaces and open policies are outside this first domain. The separately qualified
-tangentially free selection is described below.
+interfaces are outside this first domain. The separately qualified tangentially free
+and open selections are described below.
 This does not implement a nonsymmetric Coulomb sliding tangent. Abaqus export refuses
 the explicit policy until a keyword mapping is independently verified; native
 `.fieldcraft` persistence supports it.
@@ -625,9 +625,59 @@ not certify that arbitrary finite amplitudes remain on the same contact branch.
 The `contact_perturbation v2` diagnostic is text, not a stable structured schema.
 
 `model.info` reports the selected native policy separately from runtime qualification.
-The identity request `fieldcraft-contact-policy-request/1` can freeze either native
-value, or a map containing both. `require_applied` checks the archived selection and
+The identity request `fieldcraft-contact-policy-request/1` can freeze the native
+values, including a map containing different policies for different pairs. `require_applied` checks the archived selection and
 model identity; it does not certify pressure, shear, branch margin or convergence.
 The capability report therefore keeps `runtime_qualification` as `unverified` even
 after a solve. A finite tangential spring, a friction coefficient and a contact
 status label do not imply the hard constraint used by `stick`.
+
+## Strictly open contact in a frequency perturbation
+
+Use `"contact_perturbation":{"Interface":"open"}` with the same NLGEOM-base and
+unchanged-support prerequisites. This asserts an already converged open branch; it
+does not remove a loaded interface. For unilateral contact, `g > 0` and `p = 0`
+imply locally constant zero contact force. Normal and tangential contact stiffness
+and traction-weighted geometry are therefore zero. Both incremental directions are
+free of contact constraints. The symmetric structural terminal tangent (including
+stress stiffness), reference mass and ordinary supports are retained. Significant
+nonsymmetric follower stiffness is refused, as for `closed_tangent_free`.
+
+The first supported domain is an explicit pair of planar linear solid faces. Its
+one convex main face is fully fixed; the parallel, oppositely oriented secondary
+patch projects strictly inside it. Every current corner gap divided by its element
+thickness must exceed the existing augmented-Lagrange gap tolerance. All normal
+pressure, nodal contact force and committed multipliers must be zero; frictional
+tractions/history must be zero and not slipping. Initial gap adjustment is refused.
+A search-pair absence is not evidence of opening: current geometric separation and
+all zero-force/history checks are required even outside the broad-phase range.
+
+Touching or near-switch states are refused as `normal_switch_or_not_open`; other
+reasons include `open_contact_force_nonzero`, `open_history_unqualified`,
+`base_evidence_missing`, `open_requires_fixed_main`, `open_requires_single_main_face`,
+`open_requires_planar_pair`, `open_requires_linear_solid_faces`,
+`open_adjusted_gap_unqualified` and `clipping_branch_unqualified`. This is an
+infinitesimal frozen-state policy. It does not certify that a finite perturbation
+amplitude cannot reclose the gap. Open harmonic/transient steps and generalized
+geometry are not added by this selection.
+
+`engine/tests/contact_open.rs` exercises real NLGEOM equilibrium followed by modes
+at two separations; search-pair absence is exercised separately by the state qualification test. Three coupled shear/rotation modes
+are paired by components against the directly integrated matrices
+`K=[[500,-500,-250],[-500,504,250],[-250,250,250]]` and
+`M=[[1/3,1/6,0],[1/6,1/3,0],[0,0,1/36]]`. The coordinates are lower/upper
+layer-uniform X displacement and lower-layer normal rotation about Y. The
+characteristic polynomial in squared angular frequency is
+`z³-15016 z²+27168000 z-108000000`; the separate uniform normal mode has
+`K=E A/H`, `M=rho A H/3`. The specimen has `E=1000 Pa`, `nu=0`, `rho=1 kg/m³`,
+`A=1 m²`, `H=1 m` and four real top springs of `k=1 N/m`. Tests also check
+physical pencil residuals, legacy-mode identity, thread independence, native
+save/reopen, declaration freezing and named state/geometry refusals.
+
+The [Abaqus 2025 linear perturbation introduction](https://docs.software.vt.edu/abaqusv2025/English/SIMACAEGSARefMap/simagsa-c-stptimelinpert.htm)
+describes open base contacts remaining open in the usual perturbation assumption.
+This supports the frozen-state interpretation, not a verified keyword, enforcement
+or element mapping. The three deck writers continue to refuse explicit policies.
+Finite tangential stiffness is distinct from the hard constraints of `stick`, and a
+commercial status label alone establishes neither. `contact_perturbation v3` open
+diagnostics are text; the identity report deliberately stays `unverified`.
