@@ -1277,4 +1277,192 @@ mod identity_transactions {
         println!("production_policy_unapplied={}", serde_json::json!({"error": error}));
         assert!(matches!(rejection, Err(ContractError::NativeContactPolicyNotApplied)));
     }
+
+    #[test]
+    fn native_document_and_received_result_keep_identity_across_disk_reopen() {
+        use serde_json::json;
+
+        let export = std::env::var_os("FIELDCRAFT_CROSS_IDENTITY_EVIDENCE").map(std::path::PathBuf::from);
+        let root = export.clone().unwrap_or_else(|| std::env::temp_dir().join(format!("external-cross-identity-{}", std::process::id())));
+        std::fs::create_dir(&root).unwrap();
+        std::fs::create_dir(root.join("programs")).unwrap();
+        let program = std::fs::read(std::env::current_exe().unwrap()).unwrap();
+        std::fs::write(root.join("programs/interface-fixture"), &program).unwrap();
+        let digest = fieldcraft_io::identity::artifact_digest(&program);
+        let (mut context, entities) = production_context();
+        context.artifacts = ["producer", "adapter", "receiver"].into_iter().map(|role| (role.into(), digest.clone())).collect();
+        let native = fieldcraft_io::write_with(
+            &context.model,
+            &context.geometry,
+            &[],
+            &fieldcraft_io::JournalHeader::default(),
+            &fieldcraft_io::View::default(),
+            &fieldcraft_io::Extras { run: context.run.clone(), ..Default::default() },
+        )
+        .unwrap();
+        std::fs::write(root.join("input.fieldcraft"), native).unwrap();
+        std::fs::write(root.join("fixture-source.txt"), b"protocol fixture").unwrap();
+        let run = RunKey { run_id: "native-file-cross-identity".into(), epoch: 1, worker_generation: "cpu-protocol-fixture".into() };
+        let binding = IoSnapshotProvider.freeze(&context, &entities).unwrap();
+        let mut input = production_envelope(&run, binding, entities.clone());
+        // Optional velocity rows stay unavailable, not synthetic zeroes.
+        for frame in &mut input.frames {
+            let velocity = frame.fields.iter_mut().find(|f| f.spec.quantity == Quantity::Velocity).unwrap();
+            let FieldData::Present { bytes, available, sha256, .. } = &mut velocity.data else { panic!("velocity") };
+            *available = vec![true, false, true, false];
+            bytes.truncate(6 * 8);
+            *sha256 = fieldcraft_io::sha256_hex(bytes);
+        }
+        std::fs::write(root.join("input-envelope.json"), serde_json::to_vec_pretty(&input).unwrap()).unwrap();
+        let received: ResultEnvelope = serde_json::from_slice(&std::fs::read(root.join("input-envelope.json")).unwrap()).unwrap();
+        let store = Arc::new(FileResultStore::new(root.join("store")).unwrap());
+        let host = ReceiverHost::with_store(context, run.clone(), IoSnapshotProvider, store).unwrap();
+        let tx = host.begin(&run, entities.clone(), profile(&received)).unwrap();
+        assert_eq!(tx.binding(), &received.binding);
+        let admission = tx.validate(&received).unwrap();
+        assert_eq!(admission.transfer, TransferState::Verified);
+        assert_eq!(admission.coverage, Coverage::Complete { last: 3 });
+        assert_eq!(admission.solve, SolveOutcome::Succeeded, "injected wire label, not numerical evidence");
+        let id = tx.commit(&received).unwrap();
+        drop(host);
+
+        // Reconstruct BOTH owners from disk, including the actual executable
+        // bytes. Neither the original model nor its store is the new authority.
+        let document = fieldcraft_io::read(&std::fs::read(root.join("input.fieldcraft")).unwrap()).unwrap();
+        let disk_digest = fieldcraft_io::identity::artifact_digest(&std::fs::read(root.join("programs/interface-fixture")).unwrap());
+        let disk_context = IoModelContext::new(
+            document.model,
+            document.geometry,
+            document.run,
+            ["producer", "adapter", "receiver"].into_iter().map(|role| (role.into(), disk_digest.clone())).collect(),
+        );
+        assert_eq!(IoSnapshotProvider.freeze(&disk_context, &entities).unwrap(), input.binding);
+        let disk_store = Arc::new(FileResultStore::new(root.join("store")).unwrap());
+        let reopened = disk_store.reopen(&id).unwrap();
+        assert_eq!(reopened, input, "every field byte, mask, frame and binding");
+        let fresh = ReceiverHost::with_store(disk_context.clone(), run.clone(), IoSnapshotProvider, disk_store.clone()).unwrap();
+        let tx = fresh.begin(&run, entities.clone(), profile(&reopened)).unwrap();
+        assert_eq!(tx.validate(&reopened).unwrap(), admission);
+        drop(tx);
+        assert!(matches!(
+            reopened.frames[0].fields.iter().find(|f| f.spec.quantity == Quantity::ContactEnergy).unwrap().data,
+            FieldData::Unavailable { .. }
+        ));
+        let stored_name = format!("store/{}.json", id.strip_prefix("fieldcraft-result/").unwrap());
+        let original_store = std::fs::read(root.join(&stored_name)).unwrap();
+        let mut refusals = Vec::new();
+        for mutation in ["malformed_mesh_identity", "revision", "mesh", "program", "mapping", "run", "payload"] {
+            let mut wrong = reopened.clone();
+            match mutation {
+                "revision" => wrong.binding.snapshot.model_revision = fieldcraft_io::sha256_hex(b"wrong revision"),
+                "malformed_mesh_identity" => wrong.binding.snapshot.reference_mesh_digest = fieldcraft_io::sha256_hex(b"wrong mesh"),
+                "mesh" => {
+                    wrong.binding.snapshot.reference_mesh_digest = fieldcraft_io::sha256_hex(b"wrong mesh");
+                    wrong.binding.snapshot.model_id = format!("sha256:{}", wrong.binding.snapshot.reference_mesh_digest);
+                }
+                "program" => {
+                    wrong.binding.artifacts.insert("receiver".into(), fieldcraft_io::sha256_hex(b"wrong executable"));
+                }
+                "mapping" => wrong.entities.nodes.swap(0, 1),
+                "run" => wrong.run.epoch += 1,
+                "payload" => {
+                    let FieldData::Present { bytes, .. } = &mut wrong.frames[0].fields[0].data else { panic!("present") };
+                    bytes[0] ^= 1;
+                }
+                _ => unreachable!(),
+            }
+            let error = fresh.begin(&run, entities.clone(), profile(&reopened)).unwrap().commit(&wrong).unwrap_err();
+            match mutation {
+                "malformed_mesh_identity" => assert_eq!(error, ContractError::Invalid("snapshot identity fields")),
+                "run" => assert_eq!(error, ContractError::StaleRun),
+                "payload" => assert_eq!(error, ContractError::ChecksumMismatch),
+                _ => assert!(matches!(error, ContractError::IdentityMismatch(_)), "{mutation}: {error:?}"),
+            }
+            refusals.push(json!({"case":mutation,"error":format!("{error:?}")}));
+        }
+        // Native identity is rechecked under the live transaction's commit lock.
+        for mutation in ["live_mesh", "live_revision", "live_program"] {
+            let edited = ReceiverHost::with_store(disk_context.clone(), run.clone(), IoSnapshotProvider, disk_store.clone()).unwrap();
+            let tx = edited.begin(&run, entities.clone(), profile(&reopened)).unwrap();
+            edited
+                .update_model(|current| match mutation {
+                    "live_mesh" => current.model.set_node(2, [2.0, 0.0, 0.0]).unwrap(),
+                    "live_revision" => current.model.set_element(8, fieldcraft_model::ElementKind::Tet4, vec![1, 3, 2, 4]).unwrap(),
+                    "live_program" => {
+                        current.artifacts.insert("receiver".into(), fieldcraft_io::sha256_hex(b"replacement executable"));
+                    }
+                    _ => unreachable!(),
+                })
+                .unwrap();
+            let error = tx.commit(&reopened).unwrap_err();
+            assert!(matches!(error, ContractError::IdentityMismatch(_)), "{mutation}: {error:?}");
+            refusals.push(json!({"case":mutation,"error":format!("{error:?}")}));
+        }
+        assert_eq!(std::fs::read_dir(root.join("store")).unwrap().count(), 1, "refusals publish nothing");
+        assert_eq!(std::fs::read(root.join(&stored_name)).unwrap(), original_store);
+        assert_eq!(disk_store.reopen(&id).unwrap(), input);
+        // Rehashing a changed payload still cannot retain the old result id.
+        let corrupt_store = FileResultStore::new(root.join("tampered-store")).unwrap();
+        let mut stored: serde_json::Value = serde_json::from_slice(&original_store).unwrap();
+        let mut changed = reopened.clone();
+        changed.source_scene.locator = "changed after publication".into();
+        stored["envelope"] = serde_json::to_value(&changed).unwrap();
+        stored["payload_sha256"] = json!(fieldcraft_io::sha256_hex(&serde_json::to_vec(&changed).unwrap()));
+        std::fs::write(
+            root.join("tampered-store").join(format!("{}.json", id.strip_prefix("fieldcraft-result/").unwrap())),
+            serde_json::to_vec(&stored).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(corrupt_store.reopen(&id), Err(ContractError::ChecksumMismatch));
+        refusals.push(json!({"case":"stored_payload_rehash","error":"ChecksumMismatch"}));
+
+        for (name, value) in [
+            ("entities.json", serde_json::to_value(&entities).unwrap()),
+            ("binding.json", serde_json::to_value(&input.binding).unwrap()),
+            ("admission.json", serde_json::to_value(&admission).unwrap()),
+            (
+                "request-profile.json",
+                json!({"run":run,"goal":input.goal,"evidence_kind":input.evidence_kind,
+                "source_scene":input.source_scene,"required_fields":input.required_fields,"contact_controls":null,"control_evidence":null,
+                "require_effective":false,"policy_request":null,"require_policy_applied":false}),
+            ),
+            ("refusals.json", json!(refusals)),
+        ] {
+            std::fs::write(root.join(name), serde_json::to_vec_pretty(&value).unwrap()).unwrap();
+        }
+        // Consumable by external_fixture_reopen in an independent process.
+        let files: std::collections::BTreeMap<_, _> = [
+            "input.fieldcraft",
+            "fixture-source.txt",
+            "programs/interface-fixture",
+            "input-envelope.json",
+            "entities.json",
+            "binding.json",
+            "admission.json",
+            "request-profile.json",
+            &stored_name,
+        ]
+        .into_iter()
+        .map(|name| (name, fieldcraft_io::sha256_hex(&std::fs::read(root.join(name)).unwrap())))
+        .collect();
+        std::fs::write(
+            root.join("package.json"),
+            serde_json::to_vec_pretty(&json!({
+                "schema":"fieldcraft-external-fixture-package/1","result_id":id,"files":files,
+                "evidence_class":"protocol_fixture","runtime_qualification":"unverified","numerical_solve_verified":false,"libuipc_called":false,
+                "wire_labels":"Solver/Succeeded are injected claims for the storage gate, not numerical observations",
+                "artifact_roles":"all three roles bind the actual retained CPU test executable"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        println!(
+            "CROSS_IDENTITY {}",
+            json!({"result_id":id,"reopened_equal":true,"refusals":refusals,
+            "binding":input.binding,"evidence_class":"protocol_fixture","libuipc_called":false})
+        );
+        if export.is_none() {
+            std::fs::remove_dir_all(root).unwrap();
+        }
+    }
 }
