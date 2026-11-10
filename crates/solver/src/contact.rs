@@ -1092,6 +1092,115 @@ impl Interface {
         Ok(rows)
     }
 
+    /// First explicit hard-stick domain: a fully closed planar linear-face pair
+    /// against a fixed main surface. All interface increments must subsequently
+    /// vanish under the actual reduction (checked by `check_fixed_perturbation`).
+    /// Thus T^T K_contact T = 0, including the normal and friction geometry terms;
+    /// this is not a claim that those terms vanish before elimination.
+    pub(crate) fn stick_rows(
+        &self,
+        mesh: &Mesh,
+        u: &[f64],
+        state: &State,
+        base: &crate::constraints::Reduction,
+        force_bound: f64,
+        warnings: &mut Vec<String>,
+    ) -> Result<Vec<crate::prestress::FrozenRow>> {
+        let refuse = |reason: &str| Error::NotSupported(format!("contact_perturbation.{reason}: contact `{}`", self.name));
+        if self.extent.is_some() || self.secondary.iter().chain(&self.main).any(|f| f.nodes.len() > 4) {
+            return Err(refuse("stick_requires_linear_solid_faces"));
+        }
+        for face in &self.main {
+            for dof in face.dofs.iter().flatten().flatten() {
+                if base.has_free_motion(*dof) {
+                    return Err(refuse("stick_requires_fixed_main"));
+                }
+            }
+        }
+        let mu = self.friction.map_or(0.0, |f| f.static_coefficient);
+        if mu <= 0.0 {
+            return Err(refuse("friction_state_unavailable"));
+        }
+        let mut min_pressure = f64::INFINITY;
+        let mut min_margin = f64::INFINITY;
+        let mut max_gap = 0.0f64;
+        let mut normal: Option<Vec3> = None;
+        for i in 0..self.nodes.len() {
+            let (Some(&pressure), Some(Some(gap)), Some(&area), Some(&support), Some(&thickness), Some(&traction), Some(&slipping), Some(&n)) = (
+                state.pressure.get(i),
+                state.gap.get(i),
+                self.area.get(i),
+                state.support.get(i),
+                self.thickness.get(i),
+                state.traction.get(i),
+                state.slipping.get(i),
+                state.normal.get(i),
+            ) else {
+                return Err(refuse("base_evidence_missing"));
+            };
+            if support <= 0.0 || (support / area - 1.0).abs() > ROUND_OFF {
+                return Err(refuse("stick_requires_full_overlap"));
+            }
+            let pressure_bound = force_bound / support;
+            if !pressure.is_finite() || pressure <= pressure_bound {
+                return Err(refuse("normal_switch"));
+            }
+            if !gap.is_finite() || gap.abs() / thickness > GAP_TOLERANCE {
+                return Err(refuse("base_equilibrium_unqualified"));
+            }
+            let margin = mu * pressure - norm(traction);
+            if !margin.is_finite() || slipping || margin <= (1.0 + mu) * pressure_bound {
+                return Err(refuse("friction_switch_or_sliding"));
+            }
+            if !norm(n).is_finite()
+                || (norm(n) - 1.0).abs() > ROUND_OFF
+                || normal.is_some_and(|first| norm(std::array::from_fn(|k| first[k] - n[k])) > ROUND_OFF)
+            {
+                return Err(refuse("stick_requires_planar_pair"));
+            }
+            normal = Some(n);
+            min_pressure = min_pressure.min(pressure);
+            min_margin = min_margin.min(margin);
+            max_gap = max_gap.max(gap.abs() / thickness);
+        }
+        if self.nodes.is_empty() {
+            return Err(refuse("base_evidence_missing"));
+        }
+        if let Some(normal) = normal {
+            for faces in [&self.main, &self.secondary] {
+                let mut origin: Option<Vec3> = None;
+                for face in faces {
+                    for x in Self::corners(mesh, u, face) {
+                        let first = *origin.get_or_insert(x);
+                        if dot(std::array::from_fn(|k| x[k] - first[k]), normal).abs() > ROUND_OFF * face.thickness {
+                            return Err(refuse("stick_requires_planar_pair"));
+                        }
+                    }
+                }
+            }
+        }
+        let rows = self.frozen_rows(mesh, u, state)?;
+        warnings.push(format!(
+            "contact_perturbation v1: contact `{}` policy=stick state=closed_stick nodes={} rows={} min_pressure={min_pressure:.12e} Pa min_coulomb_margin={min_margin:.12e} Pa max_gap_over_thickness={max_gap:.12e} force_guard={force_bound:.12e} N; hard incremental normal and tangential constraints; contact geometry projects to zero after verified fixed-interface elimination; reference mass",
+            self.name, self.nodes.len(), rows.len()
+        ));
+        Ok(rows)
+    }
+
+    pub(crate) fn check_fixed_perturbation(&self, red: &crate::constraints::Reduction) -> Result<()> {
+        for face in self.main.iter().chain(&self.secondary) {
+            for dof in face.dofs.iter().flatten().flatten() {
+                if red.has_free_motion(*dof) {
+                    return Err(Error::NotSupported(format!(
+                        "contact_perturbation.geometry_not_eliminated: contact `{}` retains an interface increment",
+                        self.name
+                    )));
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// The global and local search at displacements `u`: per secondary face (corners `xs`), the
     /// main faces (corners `xm`, all of them) within `reach` times their depth limit that it
     /// faces, with their integrals, passed through `keep`.

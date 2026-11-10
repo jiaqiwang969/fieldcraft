@@ -396,6 +396,7 @@ impl Quantities for Step {
             base_state: _,
             linear_base: _,
             perturbation_follower_pressure: _,
+            contact_perturbation: _,
             pretension,
             procedure,
             output: _,

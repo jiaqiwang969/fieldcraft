@@ -37,6 +37,7 @@ pub(super) fn enhanced(model: &Model, procedure: Option<&Procedure>) -> Result<(
 /// Base states the writer maps: frequency extraction and steady-state response as perturbations
 /// of an earlier general step. The pretension chain itself is checked by `validate_pretension_chain`.
 pub(super) fn mapped_base_states(model: &Model) -> Result<()> {
+    crate::refuse_contact_perturbation(FORMAT, model)?;
     for (index, step) in model.steps().iter().enumerate() {
         if step.linear_base {
             let latest = model.steps()[..index].iter().rev().find(|s| matches!(s.procedure, Procedure::Static {} | Procedure::NonlinearStatic(_)));

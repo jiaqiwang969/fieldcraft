@@ -1326,6 +1326,7 @@ pub const STEP_CREATE: &[Field] = &[
     STEP_LOADS,
     reference("base_state", "Equilibrium base", C::Step)
         .help("Earlier static/nonlinear static equilibrium for frequency, harmonic or direct/modal transient increments."),
+    json("contact_perturbation", "Contact perturbation policies").help("Map every contact name to stick: closed planar pair against a fixed main surface, strictly inside the friction cone; frequency with an NLGEOM base and unchanged supports. Empty keeps the reported legacy policy."),
     flag("linear_base", "Linear base stiffness")
         .help("Keep a linear static base dependency without initial-stress stiffness; no pretension.")
         .def("false"),
@@ -1340,6 +1341,7 @@ pub const STEP_EDIT: &[Field] = &[
     STEP_BCS,
     STEP_LOADS,
     reference("base_state", "Equilibrium base", C::Step).help("Earlier equilibrium step; null in a command clears the base."),
+    json("contact_perturbation", "Contact perturbation policies").help("Map every contact name to stick; same scope as create. An empty object restores the reported legacy policy."),
     flag("linear_base", "Linear base stiffness")
         .help("Keep a linear static base dependency without initial-stress stiffness; clear when removing the base."),
     flag("perturbation_follower_pressure", "Modal pressure stiffness").help("Frequency with a linear static base: conservative zero-offset MITC8 pressure tangent; unchanged direct supports. Default false keeps dead loads."),

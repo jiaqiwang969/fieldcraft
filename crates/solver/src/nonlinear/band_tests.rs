@@ -275,7 +275,8 @@ fn preloaded_contact_perturbation_reaction_tangent_and_bonded_constraints() {
             }
             if finite {
                 // Exercise the actual exported terminal operator and actual row elimination.
-                let (_, terminal) = terminal_tangent(&model, "Step", run.limits).unwrap();
+                let policies = std::collections::BTreeMap::from([("Interface".into(), fieldcraft_model::ContactPerturbation::Stick)]);
+                let (_, terminal) = terminal_tangent(&model, "Step", run.limits, &policies).unwrap();
                 let resolved = model.resolve().unwrap();
                 let setup = Setup { model: &model, resolved: &resolved, mesh, step: model.step("Step").unwrap() };
                 let (graph, order) = pattern(mesh);
@@ -297,4 +298,39 @@ fn preloaded_contact_perturbation_reaction_tangent_and_bonded_constraints() {
             }
         });
     }
+}
+
+#[test]
+fn explicit_stick_refuses_contact_switches_and_unqualified_gaps() {
+    let mut model = blocks();
+    let mut step = model.step("Step").unwrap().clone();
+    let Procedure::NonlinearStatic(settings) = &mut step.procedure else { panic!("step") };
+    settings.nonlinear_geometry = true;
+    model.replace_step(step).unwrap();
+    let mut c = model.contact("Interface").unwrap().clone();
+    c.friction = fieldcraft_model::Friction::coulomb(0.3);
+    model.replace_contact("Interface", c).unwrap();
+    with_run(&model, |run| {
+        let (base, _) = succeeded(solve_increment(run, &[0.; 4], 0., 1., None));
+        let u = run.problem.red.expand_scaled(&base.q, 1.);
+        let interface = &run.problem.contacts[0];
+        let state = &base.evaluation.contact[0];
+        let qualify = |s: &contact::State| interface.stick_rows(run.problem.mesh, &u, s, run.problem.red, 1e-8, &mut Vec::new());
+        assert_eq!(qualify(state).unwrap().len(), 12);
+        let mut critical = state.clone();
+        critical.traction[0] = [0.3 * critical.pressure[0], 0., 0.];
+        assert!(qualify(&critical).unwrap_err().to_string().contains("friction_switch_or_sliding"));
+        let mut slipping = state.clone();
+        slipping.slipping[0] = true;
+        assert!(qualify(&slipping).unwrap_err().to_string().contains("friction_switch_or_sliding"));
+        let mut transition = state.clone();
+        transition.pressure[0] = 0.;
+        assert!(qualify(&transition).unwrap_err().to_string().contains("normal_switch"));
+        let mut unconverged = state.clone();
+        unconverged.gap[0] = Some(-2. * contact::GAP_TOLERANCE);
+        assert!(qualify(&unconverged).unwrap_err().to_string().contains("base_equilibrium_unqualified"));
+        let mut edge = state.clone();
+        edge.support[0] *= 0.9;
+        assert!(qualify(&edge).unwrap_err().to_string().contains("stick_requires_full_overlap"));
+    });
 }
