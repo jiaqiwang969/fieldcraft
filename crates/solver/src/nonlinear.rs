@@ -1395,7 +1395,12 @@ pub fn solve_nonlinear(model: &Model, step: Option<&str>, limits: &Limits) -> Re
 /// Recompute equilibrium and capture its consistent tangent before internal history is
 /// discarded. The tangent already contains stress stiffness; do not add K_sigma again.
 /// Contact requires a frozen constraint mapping, not the contact penalty tangent.
-pub(crate) fn terminal_tangent(model: &Model, step: &str, limits: &Limits) -> Result<(StaticResult, crate::prestress::Terminal)> {
+pub(crate) fn terminal_tangent(
+    model: &Model,
+    step: &str,
+    limits: &Limits,
+    policies: &std::collections::BTreeMap<String, fieldcraft_model::ContactPerturbation>,
+) -> Result<(StaticResult, crate::prestress::Terminal)> {
     let fixed = crate::pretension::resolve_fixed(model, step, limits)?;
     let model = fixed.as_ref();
     let chosen = model.step(step).ok_or_else(|| Error::Invalid(format!("no base step `{step}`")))?;
@@ -1412,8 +1417,18 @@ pub(crate) fn terminal_tangent(model: &Model, step: &str, limits: &Limits) -> Re
         return Err(Error::NotSupported(format!("base step `{step}` has an imperfection: perturbed mesh transfer is not implemented")));
     }
     settings.validate()?;
+    if !policies.is_empty() {
+        for (name, contact) in model.contacts() {
+            if !policies.contains_key(name) {
+                return Err(Error::Invalid(format!("contact_perturbation: missing policy for contact `{name}`")));
+            }
+            if !matches!(contact.surfaces, fieldcraft_model::ContactSurfaces::Pair { .. }) {
+                return Err(Error::NotSupported(format!("contact_perturbation.pair_required: contact `{name}`")));
+            }
+        }
+    }
     let mut tangent = None;
-    let result = solve_on(model, step, limits, Vec::new(), Some(&mut tangent))?;
+    let result = solve_on(model, step, limits, Vec::new(), Some((policies, &mut tangent)))?;
     Ok((result, tangent.ok_or_else(|| Error::Internal("missing terminal tangent".into()))?))
 }
 
@@ -1447,7 +1462,7 @@ fn solve_on(
     step: &str,
     limits: &Limits,
     notes: Vec<String>,
-    terminal: Option<&mut Option<crate::prestress::Terminal>>,
+    terminal: Option<(&std::collections::BTreeMap<String, fieldcraft_model::ContactPerturbation>, &mut Option<crate::prestress::Terminal>)>,
 ) -> Result<StaticResult> {
     let resolved = model.resolve()?;
     let step = model.step(step).ok_or_else(|| Error::Internal("nonlinear static step".into()))?;
@@ -1751,7 +1766,7 @@ fn solve_on(
             "follower pressure: the skew part of its load stiffness ({a:.1e} of it, over the free degrees of freedom) is left out of the tangent; the solution is exact, Newton may converge more slowly"
         ));
     }
-    if let Some(terminal) = terminal {
+    if let Some((policies, terminal)) = terminal {
         let stiffness = problem
             .evaluate_with_contact(&u, lambda, true, &run.committed, &run.contact, &run.reference, 0.0, false)?
             .tangent
@@ -1759,12 +1774,33 @@ fn solve_on(
         let mut constraints: Vec<_> =
             crate::tie::rows(model, &resolved, &mesh, &mut warnings)?.into_iter().map(crate::prestress::FrozenRow::from_row).collect();
         for (interface, state) in problem.contacts.iter().zip(&evaluation.contact) {
-            constraints.extend(interface.frozen_rows(&mesh, &u, state)?);
+            match policies.get(&interface.name) {
+                Some(fieldcraft_model::ContactPerturbation::Stick) => {
+                    let force_bound = (settings.tolerances.force * run.scale()).max(f64::EPSILON.sqrt() * norm_inf(&evaluation.internal));
+                    constraints.extend(interface.stick_rows(&mesh, &u, state, &red, force_bound, &mut warnings)?);
+                }
+                None => {
+                    constraints.extend(interface.frozen_rows(&mesh, &u, state)?);
+                    warnings.push(format!(
+                    "contact_perturbation: contact `{}` policy=legacy_bonded_when_closed (no explicit selection); positive-pressure nodes bonded in all translations, open nodes detached; contact penalty and geometry tangent excluded; Coulomb state is not qualified",
+                    interface.name
+                ));
+                }
+            }
         }
-        warnings.push(
-            "terminal contact frozen: positive-pressure nodes bonded in all translations, open nodes detached; contact penalty tangent excluded"
-                .into(),
-        );
+        if !policies.is_empty() {
+            let frozen = crate::analysis::reduction_with_frozen(
+                &setup,
+                false,
+                &order,
+                budget(limits, &mesh, &problem.graph, 1),
+                &mut warnings,
+                Some(&constraints),
+            )?;
+            for interface in &problem.contacts {
+                interface.check_fixed_perturbation(&frozen)?;
+            }
+        }
         *terminal = Some(crate::prestress::Terminal { stiffness, constraints });
     }
     let contacts = problem.contacts.iter().zip(&evaluation.contact).map(|(c, s)| c.result(&mesh, s, run.augmentations)).collect();

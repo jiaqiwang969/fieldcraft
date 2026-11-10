@@ -1261,6 +1261,15 @@ impl OutputVariable {
         [OutputVariable::Displacement, OutputVariable::ReactionForce, OutputVariable::Stress, OutputVariable::Strain];
 }
 
+/// An explicitly selected contact policy for an equilibrium perturbation.
+/// `Stick` currently requires a closed planar pair against a fixed main surface.
+/// This is a hard incremental constraint, not the equilibrium friction penalty.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ContactPerturbation {
+    Stick,
+}
+
 /// An analysis step.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -1277,6 +1286,10 @@ pub struct Step {
     /// Include conservative reference-surface pressure stiffness in a shell modal perturbation.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub perturbation_follower_pressure: bool,
+    /// Per-contact policies. An empty map retains the explicitly reported legacy
+    /// bonded-when-closed behaviour of older models.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub contact_perturbation: BTreeMap<String, ContactPerturbation>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub pretension: BTreeMap<String, crate::PretensionControl>,
     pub output: BTreeSet<OutputVariable>,
@@ -1296,6 +1309,7 @@ impl Step {
             base_state: None,
             linear_base: false,
             perturbation_follower_pressure: false,
+            contact_perturbation: BTreeMap::new(),
             pretension: BTreeMap::new(),
             output: procedure.default_output(),
             procedure,
@@ -1454,6 +1468,26 @@ impl Model {
     }
 
     fn base_before(&self, step: &Step, at: usize) -> Result<Option<&Step>> {
+        if !step.contact_perturbation.is_empty() {
+            if !matches!(step.procedure, Procedure::Frequency { .. }) || step.base_state.is_none() {
+                return Err(Error::Invalid("contact_perturbation requires a frequency step with base_state".into()));
+            }
+            for name in step.contact_perturbation.keys() {
+                require(&self.contacts, "contact", name)?;
+            }
+            for name in self.contacts.keys() {
+                if !step.contact_perturbation.contains_key(name) {
+                    return Err(Error::Invalid(format!("contact_perturbation: missing policy for contact `{name}`")));
+                }
+            }
+            let base = step.base_state.as_deref().and_then(|name| self.step(name));
+            if !base.is_some_and(|base| {
+                matches!(&base.procedure, Procedure::NonlinearStatic(s) if s.nonlinear_geometry)
+                    && base.boundary_conditions == step.boundary_conditions
+            }) {
+                return Err(Error::Invalid("contact_perturbation requires a nonlinear_geometry base and unchanged supports".into()));
+            }
+        }
         let Some(name) = &step.base_state else {
             if step.linear_base {
                 return Err(Error::Invalid("linear_base requires base_state".into()));
