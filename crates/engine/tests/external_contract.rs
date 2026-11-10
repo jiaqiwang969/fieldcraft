@@ -126,7 +126,7 @@ fn binding() -> ModelBinding {
     let mesh = fieldcraft_io::sha256_hex(b"fixture mesh");
     ModelBinding {
         snapshot: ReceiverSnapshot {
-            scheme: "fieldcraft-receiver-snapshot/1".into(),
+            scheme: fieldcraft_io::identity::SCHEME.into(),
             model_id: format!("sha256:{mesh}"),
             model_revision: fieldcraft_io::sha256_hex(b"fixture revision"),
             reference_mesh_digest: mesh,
@@ -764,18 +764,52 @@ mod identity_transactions {
     }
 
     #[test]
-    fn binding_schema_rejects_unknown_scheme_bad_roles_and_old_backend() {
-        for which in 0..3 {
-            let mut b = binding();
+    fn production_binding_shape_rejections_do_not_publish_or_hold_the_run_lock() {
+        let run = key();
+        let (context, entities) = production_context();
+        let binding = IoSnapshotProvider.freeze(&context, &entities).unwrap();
+        let e = production_envelope(&run, binding, entities.clone());
+        let root = std::env::temp_dir().join(format!("fieldcraft-binding-shape-{}", std::process::id()));
+        let store = Arc::new(FileResultStore::new(&root).unwrap());
+        let host = ReceiverHost::with_store(context, run.clone(), IoSnapshotProvider, store.clone()).unwrap();
+        // These are protocol fixtures using the production identity/transaction/store path.
+        // Solver labels exercise the store gate, not libuipc or numerical qualification.
+        for which in ["scheme", "backend", "model_id", "producer", "adapter", "receiver"] {
+            let mut changed = e.clone();
             match which {
-                0 => b.snapshot.scheme = "future-unknown/2".into(),
-                1 => {
-                    b.artifacts.remove("receiver");
+                "scheme" => changed.binding.snapshot.scheme = "future-unknown/2".into(),
+                "backend" => changed.binding.backend_version = "0.0.28".into(),
+                "model_id" => changed.binding.snapshot.model_id = "unrecognized-model".into(),
+                role => {
+                    changed.binding.artifacts.remove(role);
                 }
-                _ => b.backend_version = "0.0.28".into(),
             }
-            assert!(b.validate_shape().is_err());
+            let expected = match which {
+                "scheme" => ContractError::Unsupported("receiver identity scheme"),
+                "backend" => ContractError::Unsupported("backend version"),
+                "model_id" => ContractError::Invalid("snapshot identity fields"),
+                _ => ContractError::Invalid("artifact roles and digests"),
+            };
+            let rejected = host.begin(&run, entities.clone(), profile(&e)).unwrap().commit(&changed);
+            assert_eq!(rejected, Err(expected));
+            assert_eq!(std::fs::read_dir(&root).unwrap().count(), 0);
+            // Every rejected commit releases the lease, without publishing a result.
+            drop(host.begin(&run, entities.clone(), profile(&e)).unwrap());
+            println!(
+                "production_binding_shape_rejection={}",
+                serde_json::json!({"field": which, "error": format!("{rejected:?}"), "published": false, "lease_released": true})
+            );
         }
+        let id = host.begin(&run, entities, profile(&e)).unwrap().commit(&e).unwrap();
+        assert_eq!(store.reopen(&id).unwrap(), e);
+        println!(
+            "production_binding_shape_positive={}",
+            serde_json::json!({
+                "scheme": e.binding.snapshot.scheme, "result_id": id, "reopened_equal": true,
+                "evidence_class": "protocol_fixture", "runtime_qualification": "unverified", "libuipc_called": false,
+            })
+        );
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
