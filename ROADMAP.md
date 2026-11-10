@@ -346,5 +346,8 @@ MITC6-a curved modal perturbations: reference-geometry linear preload and conser
 Element-level full Hex8/neo-Hookean mean-J F-bar energy, force and analytic tangent
 are available through `Solid::fbar_reference`; see
 [scope and verification](docs/manual/structural/fbar-kernel.md). The `f_bar` section switch reaches finite-strain nonlinear static Newton assembly
-and effective stress recovery. Prestress/base-state integration and benchmark
-convergence remain pending.
+and effective stress recovery. Large benchmark convergence remains pending.
+
+F-bar finite-strain pretension and locked-base frequency/harmonic/direct-modal transient
+assembly use the converged consistent tangent. Two-cube axial theory and native archive
+checks cover explicit paired cuts; continuous-face transient preparation remains unsupported.

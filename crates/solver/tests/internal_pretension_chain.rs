@@ -204,6 +204,7 @@ fn supported_continuous_cut_keeps_fixed_equilibrium_and_terminal_stiffness() {
     let foundation = 2e5;
     for force in [0., 1000.] {
         let mut m = chain(force, true);
+
         m.add_set("SupportedTrace", Set { faces: vec![ElementFace { element: 2, face: 1 }], ..Set::default() }).unwrap();
         m.add_foundation(
             "Bed",
@@ -273,4 +274,169 @@ fn zero_preload_degenerates_to_the_unsplit_frequency_and_response() {
     }
     assert!(error < 1e-18, "zero preload field mismatch {error}");
     println!("zero preload versus unsplit response max absolute difference={error:.17e}");
+}
+
+fn fbar_chain(force: f64, enabled: bool) -> Model {
+    let mut m = chain(force, true);
+    // Explicit coincident cut pairs use the existing transient interface. Continuous
+    // face preparation is supported for static/frequency/harmonic, not transient.
+    for i in 0..4u32 {
+        let x = m.node(5 + i).unwrap().xyz;
+        m.set_node(13 + i, x).unwrap();
+    }
+    m.set_element(2, ElementKind::Hex8, vec![13, 14, 15, 16, 9, 10, 11, 12]).unwrap();
+    m.add_set("OtherCut", Set { nodes: vec![13, 14, 15, 16], ..Default::default() }).unwrap();
+    let mut cut = m.pretensions()["Cut"].clone();
+    cut.face = None;
+    cut.second = "OtherCut".into();
+    m.replace_pretension("Cut", cut).unwrap();
+
+    // A single increment avoids an extrapolated near-zero work reference in the
+    // small-strain patch; retain the production Newton tolerances.
+    for name in ["Preload", "Locked"] {
+        let mut step = m.step(name).unwrap().clone();
+        if let Procedure::NonlinearStatic(n) = &mut step.procedure {
+            n.initial_increment = 1.;
+            n.max_increment = 1.;
+        }
+        m.replace_step(step).unwrap();
+    }
+    let mut section = m.section("Solid").unwrap().clone();
+    section.formulation.f_bar = enabled;
+    m.replace_section("Solid", section).unwrap();
+    let mut material = m.material("Elastic").unwrap().clone();
+    material.hyperelastic = Some(Hyperelastic::NeoHookean {});
+    m.replace_material("Elastic", material).unwrap();
+    if enabled {
+        let mut step = m.step("Response").unwrap().clone();
+        step.output = [OutputVariable::Displacement].into();
+        m.replace_step(step).unwrap();
+    }
+    for (name, modal, loaded) in [("Direct", false, true), ("Modal", true, true), ("Zero", false, false)] {
+        let t: fieldcraft_model::dynamics::Transient = serde_json::from_value(serde_json::json!({"time_step":1e-5,"increments":10,"method":if modal {serde_json::json!({"type":"modal","modes":1})} else {serde_json::json!({"type":"direct"})}})).unwrap();
+        let mut step = Step::new(name, Procedure::Transient(t));
+        step.output = [OutputVariable::Displacement].into();
+        step.base_state = Some("Locked".into());
+        step.boundary_conditions.extend(["Ends".into(), "Guide".into()]);
+        if loaded {
+            step.loads.insert("Probe".into());
+        }
+        m.add_step(step, None).unwrap();
+    }
+    m
+}
+fn chain_evidence(name: &str, value: &serde_json::Value) {
+    if let Some(root) = std::env::var_os("FIELDCRAFT_FBAR_CHAIN_EVIDENCE") {
+        let root = std::path::PathBuf::from(root);
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join(format!("{name}.json")), serde_json::to_vec_pretty(value).unwrap()).unwrap();
+    }
+}
+fn neo_axial(l: f64) -> (f64, f64) {
+    let (mu, bulk) = (5e5, 1e6 / 3.);
+    ((2. * mu / 3.) * (l.powf(1. / 3.) - l.powf(-5. / 3.)) + bulk * (l - 1.), (2. * mu / 9.) * (l.powf(-2. / 3.) + 5. * l.powf(-8. / 3.)) + bulk)
+}
+#[test]
+fn fbar_pretension_terminal_and_transients() {
+    for force in [0., 0.1, 1000.] {
+        let m = fbar_chain(force, true);
+        let pre = equilibrium(&m, "Preload", true);
+        let locked = equilibrium(&m, "Locked", true);
+        let q = locked.pretension[0].adjustment;
+        assert_eq!(q.to_bits(), pre.pretension[0].adjustment.to_bits());
+        let l = 1. + q / 2.;
+        let (p, dp) = neo_axial(l);
+        let k = 2. * dp;
+        assert!((p - force).abs() < 1e-6);
+        assert!((locked.pretension[0].section_force - force).abs() < 1e-6);
+        let h = 1e-5;
+        let fd = (neo_axial(l + h).0 - neo_axial(l - h).0) / (2. * h);
+        assert!((fd / dp - 1.).abs() < 1e-8);
+        let freq = solve_frequency(&m, Some("Modes"), &FrequencyOptions::default(), &Limits::default()).unwrap();
+        let mass = 2. / 3.;
+        let eig_error = (freq.modes[0].eigenvalue / (k / mass) - 1.).abs();
+        assert!(eig_error < 1e-9);
+        if force <= 0.1 {
+            let mut linear = chain(force, false);
+            let mut section = linear.section("Solid").unwrap().clone();
+            section.formulation.b_bar = true;
+            linear.replace_section("Solid", section).unwrap();
+            let lr = solve_static(&linear, Some("Preload"), &Limits::default()).unwrap();
+            assert!((q - lr.pretension[0].adjustment).abs() < 1e-12);
+            println!("FBAR_SMALL force={force:e} q_bbar_difference_m={:e}", (q - lr.pretension[0].adjustment).abs());
+            // At zero preload, the finite-strain tangent must reduce to B-bar.
+            if force == 0. {
+                let lf = solve_frequency(&linear, Some("Modes"), &FrequencyOptions::default(), &Limits::default()).unwrap();
+                assert!((freq.modes[0].eigenvalue / lf.modes[0].eigenvalue - 1.).abs() < 1e-12);
+            }
+        }
+        let mut evidence = serde_json::json!({"preload":pre,"locked":locked,"frequency":freq,"reference":{"force":force,"stretch":l,"stiffness":k,"mass":mass,"force_residual_N":p-force,"tangent_fd":fd,"tangent_relative_error":fd/dp-1.,"eigen_relative_error":eig_error}});
+        for mass_kind in [MassKind::Consistent, MassKind::Lumped] {
+            let reference_mass = if mass_kind == MassKind::Consistent { 2. / 3. } else { 1. };
+            let phi = 2. * ((k / reference_mass).sqrt() * 1e-5 / 2.).atan();
+            for name in ["Direct", "Modal", "Zero"] {
+                let r = fieldcraft_solver::transient::solve_with_mass(&m, Some(name), mass_kind, &Limits::default(), false).unwrap();
+                let mid = r.nodes.iter().position(|n| *n == 5).unwrap();
+                let mut errors = [0.0_f64; 3];
+                let mut comparison = Vec::new();
+                for (n, f) in r.frames.iter().enumerate() {
+                    let phase = n as f64 * phi;
+                    let want = if name == "Zero" {
+                        [0.; 3]
+                    } else {
+                        [(1. - phase.cos()) / k, phase.sin() / (k * reference_mass).sqrt(), phase.cos() / reference_mass]
+                    };
+                    comparison.push(
+                        serde_json::json!({"frame":n,"expected":want,"actual":[f.displacement[mid][2],f.velocity[mid][2],f.acceleration[mid][2]]}),
+                    );
+                    for (j, actual) in [f.displacement[mid][2], f.velocity[mid][2], f.acceleration[mid][2]].iter().enumerate() {
+                        errors[j] = errors[j].max((actual - want[j]).abs());
+                    }
+                }
+                assert!(errors[0] < 1e-12 && errors[1] < 1e-9 && errors[2] < 1e-8, "{name}: {errors:?}");
+                println!(
+                    "FBAR_CHAIN F={force:e} mass={mass_kind:?} {name} equilibrium_residual_N={:e} eigen_relative={eig_error:e} U_V_A_error={errors:?}",
+                    (p - force).abs()
+                );
+                evidence[format!("{mass_kind:?}-{name}-comparison")] = serde_json::to_value(comparison).unwrap();
+                evidence[format!("{mass_kind:?}-{name}")] = serde_json::to_value(r).unwrap();
+            }
+        }
+        for modal in [false, true] {
+            let mut hm = m.clone();
+            if modal {
+                let mut step = hm.step("Response").unwrap().clone();
+                if let Procedure::Harmonic(h) = &mut step.procedure {
+                    h.method = Method::Modal { modes: 1, damping_ratios: vec![], residual_vectors: 0 };
+                }
+                hm.replace_step(step).unwrap();
+            }
+            let hr = solve_harmonic(&hm, Some("Response"), &Limits::default()).unwrap();
+            let mid = hr.nodes.iter().position(|n| *n == 5).unwrap();
+            let mut error = 0.0_f64;
+            for f in &hr.frames {
+                let w = 2. * std::f64::consts::PI * f.frequency;
+                let a = k - w * w * mass;
+                let b = 2. * mass * w;
+                error = error.max((f.real[mid][2] - a / (a * a + b * b)).abs()).max((f.imaginary[mid][2] + b / (a * a + b * b)).abs());
+            }
+            assert!(error < 1e-12);
+            println!("FBAR_HARMONIC F={force:e} modal={modal} error_m={error:e}");
+            evidence[format!("harmonic-{modal}")] = serde_json::to_value(hr).unwrap();
+        }
+        chain_evidence(&format!("fbar-{force}"), &evidence);
+    }
+}
+#[test]
+fn fbar_off_chain_reference() {
+    let m = fbar_chain(1000., false);
+    let mut evidence = serde_json::json!({"preload":equilibrium(&m,"Preload",true),"locked":equilibrium(&m,"Locked",true),"frequency":solve_frequency(&m,Some("Modes"),&FrequencyOptions::default(),&Limits::default()).unwrap(),"harmonic":solve_harmonic(&m,Some("Response"),&Limits::default()).unwrap()});
+    for mass in [MassKind::Consistent, MassKind::Lumped] {
+        for name in ["Direct", "Modal", "Zero"] {
+            evidence[format!("{mass:?}-{name}")] =
+                serde_json::to_value(fieldcraft_solver::transient::solve_with_mass(&m, Some(name), mass, &Limits::default(), false).unwrap())
+                    .unwrap();
+        }
+    }
+    chain_evidence("off-all-results", &evidence);
 }

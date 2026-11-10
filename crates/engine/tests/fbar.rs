@@ -41,3 +41,35 @@ fn fbar_command_roundtrip_and_explicit_off() {
         std::fs::remove_file(path).unwrap();
     }
 }
+
+#[test]
+fn fbar_pretension_base_state_roundtrip() {
+    let script: Value = serde_json::from_str(include_str!("fixtures/fbar_pretension.json")).unwrap();
+    let mut s = Session::default();
+    s.run_script(&script).unwrap();
+    let root = std::env::var_os("FIELDCRAFT_FBAR_EVIDENCE")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::env::temp_dir().join(format!("fbar-base-{}", std::process::id())));
+    std::fs::create_dir_all(&root).unwrap();
+    let path = root.join("preload-locked.fieldcraft");
+    s.execute("file.save_as", &json!({"path":path})).unwrap();
+    let mut read = Session::default();
+    read.execute("file.open", &json!({"path":path})).unwrap();
+    assert!(read.model.section("S").unwrap().formulation.f_bar);
+    for name in ["Preload", "Locked", "Modes", "Direct", "Modal", "Zero"] {
+        assert_eq!(s.result(name), read.result(name));
+    }
+    for (command, name) in [
+        ("solve.nonlinear", "Locked"),
+        ("solve.frequency", "Modes"),
+        ("solve.transient", "Direct"),
+        ("solve.transient", "Modal"),
+        ("solve.transient", "Zero"),
+    ] {
+        read.execute(command, &json!({"step":name})).unwrap();
+        assert_eq!(s.result(name), read.result(name));
+    }
+    if std::env::var_os("FIELDCRAFT_FBAR_EVIDENCE").is_none() {
+        std::fs::remove_file(path).unwrap();
+    }
+}

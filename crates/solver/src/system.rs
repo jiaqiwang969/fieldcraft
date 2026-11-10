@@ -780,8 +780,20 @@ impl Mesh {
                         "section `{name}`: f_bar requires isotropic neo-Hookean without orientation, plasticity or expansion"
                     )));
                 }
-                if model.steps().iter().any(|s| !matches!(&s.procedure, fieldcraft_model::Procedure::NonlinearStatic(n) if n.nonlinear_geometry)) {
-                    return Err(Error::NotSupported(format!("section `{name}`: f_bar currently supports finite-strain nonlinear static only")));
+                if model.steps().iter().any(|s| match &s.procedure {
+                    fieldcraft_model::Procedure::NonlinearStatic(n) => !n.nonlinear_geometry,
+                    fieldcraft_model::Procedure::Frequency { .. }
+                    | fieldcraft_model::Procedure::Harmonic(_)
+                    | fieldcraft_model::Procedure::Transient(_) => !s
+                        .base_state
+                        .as_ref()
+                        .and_then(|name| model.step(name))
+                        .is_some_and(|base| matches!(&base.procedure, fieldcraft_model::Procedure::NonlinearStatic(n) if n.nonlinear_geometry)),
+                    _ => true,
+                }) {
+                    return Err(Error::NotSupported(format!(
+                        "section `{name}`: f_bar requires finite-strain nonlinear static or frequency/harmonic/transient about such a base_state"
+                    )));
                 }
             }
             if section.formulation.b_bar {
