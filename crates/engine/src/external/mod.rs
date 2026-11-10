@@ -7,12 +7,15 @@
 //! run identifiers.
 
 pub mod archive;
+pub mod chunked;
 pub mod context;
 pub mod control;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod native;
 pub mod package;
 pub mod production;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) mod program_identity;
 pub mod receive;
 pub mod run;
 mod session;

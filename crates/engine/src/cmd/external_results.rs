@@ -99,15 +99,13 @@ fn receive(s: &mut Session, p: &Value) -> Result<Value> {
 }
 fn receiver_identity() -> ReceiverIdentity {
     #[cfg(not(target_arch = "wasm32"))]
-    if let Ok(path) = std::env::current_exe()
-        && let Ok(bytes) = fieldcraft_io::fs::read_capped(&path, MAX_BYTES)
-    {
+    if let Ok(sha256) = crate::external::program_identity::current_program_sha256() {
         return ReceiverIdentity {
             source_commit: None,
             program: Some(SourceRef {
-                sha256: fieldcraft_io::sha256_hex(&bytes),
+                sha256,
                 locator: "receiving-program".into(),
-                observer: "current executable bytes at receive".into(),
+                observer: "running executable opened once and streamed through a 64 KiB SHA256 buffer at receive".into(),
                 kind: EvidenceKind::Solver,
             }),
             unknown_reason: Some(

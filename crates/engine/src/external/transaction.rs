@@ -12,7 +12,10 @@ use fieldcraft_io::identity::digest_valid;
 
 use super::control::ControlEvidenceReceipt;
 use super::production::ResultStore;
-use super::receive::{Admission, EntityMap, EvidenceCheck, ExternalReceiver, IdentityVerifier, ModelBinding, Quantity, ResultEnvelope};
+use super::receive::{
+    Admission, EntityMap, EvidenceCheck, ExternalReceiver, IdentityVerifier, ModelBinding, Quantity, ResultEnvelope, StreamingAdmission,
+    TerminalClaim,
+};
 use super::run::RunGoal;
 use super::{ContractError, EvidenceKind, RunKey, SourceRef};
 
@@ -238,7 +241,7 @@ impl<P: SnapshotProvider> ReceiveTransaction<'_, P> {
         &self.binding
     }
 
-    fn validate_locked(&self, state: &HostState<P::Model>, envelope: &ResultEnvelope) -> Result<Admission, ContractError> {
+    fn validate_header_locked(&self, state: &HostState<P::Model>, envelope: &ResultEnvelope) -> Result<bool, ContractError> {
         if state.run != self.run || envelope.run != self.run {
             return Err(ContractError::StaleRun);
         }
@@ -266,8 +269,10 @@ impl<P: SnapshotProvider> ReceiveTransaction<'_, P> {
         {
             return Err(ContractError::Invalid("frozen run goal, scene or field profile changed"));
         }
-        let verifier = ProviderVerifier { provider: &self.host.provider, current: &state.model };
-        let mut admission = ExternalReceiver::new(verifier).validate(&self.binding, &self.run, envelope)?;
+        Ok(policy_applied)
+    }
+
+    fn decorate(&self, mut admission: Admission, policy_applied: bool) -> Admission {
         if let Some(policy) = &mut admission.policy {
             policy.declaration = EvidenceCheck::Verified;
             if policy_applied {
@@ -275,7 +280,33 @@ impl<P: SnapshotProvider> ReceiveTransaction<'_, P> {
             }
         }
         admission.control = self.profile.control_evidence.as_ref().map(ControlEvidenceReceipt::admission);
-        Ok(admission)
+        admission
+    }
+
+    fn validate_locked(&self, state: &HostState<P::Model>, envelope: &ResultEnvelope) -> Result<Admission, ContractError> {
+        let policy_applied = self.validate_header_locked(state, envelope)?;
+        let verifier = ProviderVerifier { provider: &self.host.provider, current: &state.model };
+        let admission = ExternalReceiver::new(verifier).validate(&self.binding, &self.run, envelope)?;
+        Ok(self.decorate(admission, policy_applied))
+    }
+
+    /// Stream preflight holds the same model/run lock as ordinary validation. The feed
+    /// must not re-enter this host; it supplies bounded chunks, never edits the model.
+    /// This does not publish or allocate an ID. An archive adapter must replay this
+    /// check under its atomic commit lock before installing a persistent result.
+    pub fn validate_stream(
+        &self,
+        header: &ResultEnvelope,
+        terminal: Option<&TerminalClaim>,
+        feed: impl FnOnce(&mut StreamingAdmission<'_>) -> Result<(), ContractError>,
+    ) -> Result<Admission, ContractError> {
+        let state = self.host.lock()?;
+        let policy_applied = self.validate_header_locked(&state, header)?;
+        let verifier = ProviderVerifier { provider: &self.host.provider, current: &state.model };
+        let receiver = ExternalReceiver::new(verifier);
+        let mut stream = receiver.begin_stream(&self.binding, &self.run, header)?;
+        feed(&mut stream)?;
+        Ok(self.decorate(stream.finish(terminal)?, policy_applied))
     }
 
     pub fn validate(&self, envelope: &ResultEnvelope) -> Result<Admission, ContractError> {
