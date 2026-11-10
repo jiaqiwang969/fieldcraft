@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use fieldcraft_io::identity::digest_valid;
 use serde::{Deserialize, Serialize};
 
 use super::receive::{Admission, EntityMap, ModelBinding, ReceiverSnapshot, ResultEnvelope};
@@ -161,7 +162,7 @@ impl FileResultStore {
 
     fn path_for(&self, result_id: &str) -> Result<PathBuf, ContractError> {
         let digest = result_id.strip_prefix("fieldcraft-result/").ok_or(ContractError::Invalid("result identifier scheme"))?;
-        if digest.len() != 64 || !digest.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)) {
+        if !digest_valid(digest) {
             return Err(ContractError::Invalid("result identifier digest"));
         }
         Ok(self.root.join(format!("{digest}.json")))

@@ -5,10 +5,11 @@
 //! per-frame value.  The receipt digest and every source reference stay attached so a
 //! receiver can reject a copied value from another run.
 
+use fieldcraft_io::identity::digest_valid;
 use serde::{Deserialize, Serialize};
 
 use super::receive::EvidenceCheck;
-use super::{ContractError, EvidenceKind, Observed, RunKey, SourceRef, digest_valid, token_valid};
+use super::{ContractError, EvidenceKind, Observed, RunKey, SourceRef, token_valid};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

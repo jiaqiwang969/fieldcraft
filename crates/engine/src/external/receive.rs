@@ -6,11 +6,12 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use fieldcraft_io::identity::digest_valid;
 use serde::{Deserialize, Serialize};
 
 use super::control::ControlAdmission;
 use super::run::{FrameFacts, RunGoal, RunLedger, SolveOutcome};
-use super::{ContractError, EvidenceKind, RunKey, SourceRef, digest_valid, token_valid};
+use super::{ContractError, EvidenceKind, RunKey, SourceRef, token_valid};
 
 const MAX_BYTES: usize = 64 * 1024 * 1024;
 const MAX_ENTITIES: usize = 100_000;
