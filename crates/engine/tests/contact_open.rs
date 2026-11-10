@@ -183,18 +183,14 @@ fn open_refuses_touching_loaded_and_unqualified_geometry() {
     }
     for (kind, expected) in [("outside", "clipping_branch_unqualified"), ("tilted", "open_requires_planar_pair")] {
         let mut s = specimen(0.02, 0.0);
-        if kind == "moving" {
-            s.model.replace_set("base", fieldcraft_model::Set { nodes: (1..=4).collect(), ..Default::default() }).unwrap();
-        } else {
-            for label in 9..=16 {
-                let mut x = s.model.node(label).unwrap().xyz;
-                if kind == "outside" {
-                    x[0] += 3.0;
-                } else {
-                    x[2] += 0.001 * x[0];
-                }
-                s.model.set_node(label, x).unwrap();
+        for label in 9..=16 {
+            let mut x = s.model.node(label).unwrap().xyz;
+            if kind == "outside" {
+                x[0] += 3.0;
+            } else {
+                x[2] += 0.001 * x[0];
             }
+            s.model.set_node(label, x).unwrap();
         }
         let error = s.execute("solve.frequency", &json!({"step":"Modes"})).unwrap_err().to_string();
         eprintln!("OPEN_GEOMETRY_REFUSAL {kind}: {error}");
