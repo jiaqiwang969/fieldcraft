@@ -1,6 +1,7 @@
 //! A fully closed frictional pair against a fixed main surface: explicit stick,
 //! independently predicted shear mode, persistence, and bounded refusals.
 use fieldcraft_engine::{Session, StepResult};
+use fieldcraft_io::{Geometry, Run, contact_policy::PolicyRequest};
 use fieldcraft_solver::StepResult as Implicit;
 use serde_json::{Value, json};
 
@@ -20,6 +21,16 @@ fn specimen(compression: f64) -> Session {
 fn explicit_stick_base_modes_closed_form_and_saved_policy() {
     for compression in [0.01, 0.02] {
         let mut s = specimen(compression);
+        let (geometry, run) = (Geometry::default(), Run::default());
+        let declaration = json!({"Interface":"stick"});
+        let request = PolicyRequest::freeze(&s.model, &geometry, &run, "Modes", &declaration).unwrap();
+        request.require_applied(&s.model, &geometry, &run).unwrap();
+        let digest = request.digest().unwrap();
+        let info = s.execute("model.info", &json!({})).unwrap();
+        let report = &info["contact_policy_capabilities"];
+        assert_eq!(report["native_field_available"], true);
+        assert_eq!(report["steps"]["Modes"]["selection"], "explicit_stick");
+        assert_eq!(report["steps"]["Modes"]["runtime_qualification"], "unverified");
         let base_reply = s.execute("solve.nonlinear", &json!({"step":"Preload","threads":1})).unwrap();
         let mode_reply = s.execute("solve.frequency", &json!({"step":"Modes","threads":1})).unwrap();
         let StepResult::Implicit(Implicit::Static(base)) = s.result("Preload").unwrap().as_ref().clone() else { panic!("static") };
@@ -62,6 +73,13 @@ fn explicit_stick_base_modes_closed_form_and_saved_policy() {
         s.execute("file.save_as", &json!({"path":path})).unwrap();
         let mut reopened = Session::default();
         reopened.execute("file.open", &json!({"path":path})).unwrap();
+        let archive = fieldcraft_io::read(&std::fs::read(&path).unwrap()).unwrap();
+        let request_path = root.join(format!("stick-{compression}-request.json"));
+        std::fs::write(&request_path, serde_json::to_vec_pretty(&request).unwrap()).unwrap();
+        let restored =
+            PolicyRequest::decode(&std::fs::read(&request_path).unwrap(), &digest, &archive.model, &archive.geometry, &archive.run).unwrap();
+        restored.require_applied(&archive.model, &archive.geometry, &archive.run).unwrap();
+        assert_eq!(request, restored);
         assert_eq!(s.model.step("Modes"), reopened.model.step("Modes"));
         assert_eq!(Some(&saved), reopened.result("Modes"));
         assert_eq!(s.result("Preload"), reopened.result("Preload"));
@@ -76,15 +94,25 @@ fn explicit_stick_base_modes_closed_form_and_saved_policy() {
             }
         } else {
             std::fs::remove_file(path).unwrap();
+            std::fs::remove_file(request_path).unwrap();
         }
         let error = fieldcraft_decks::abaqus::write(&s.model, fieldcraft_model::units::Preset::MKgS).unwrap_err().to_string();
         assert!(error.contains("contact_perturbation"), "{error}");
+        eprintln!("writer refusal: {error}");
         let error = fieldcraft_decks::nastran::write(&s.model, fieldcraft_model::units::Preset::MKgS).unwrap_err().to_string();
         assert!(error.contains("contact_perturbation"), "{error}");
+        eprintln!("writer refusal: {error}");
         let error = fieldcraft_decks::lsdyna::write(&s.model, fieldcraft_model::units::Preset::MKgS).unwrap_err().to_string();
         assert!(error.contains("contact_perturbation"), "{error}");
+        eprintln!("writer refusal: {error}");
         s.execute("model.step.edit", &json!({"name":"Modes","contact_perturbation":{}})).unwrap();
         assert!(s.result("Modes").is_none(), "policy participates in result invalidation");
+        let stale = request.require_applied(&s.model, &geometry, &run).unwrap_err().to_string();
+        assert!(stale.contains("ModelRevisionMismatch"), "{stale}");
+        let unapplied = PolicyRequest::freeze(&s.model, &geometry, &run, "Modes", &declaration).unwrap();
+        let refused = unapplied.require_applied(&s.model, &geometry, &run).unwrap_err().to_string();
+        assert!(refused.contains("NativeContactPolicyNotApplied"), "{refused}");
+        eprintln!("request applied and reopened; after edit: {stale}; fresh unapplied: {refused}");
     }
 }
 
