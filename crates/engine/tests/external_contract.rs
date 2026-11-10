@@ -127,13 +127,16 @@ fn binding() -> ModelBinding {
     ModelBinding {
         snapshot: ReceiverSnapshot {
             scheme: fieldcraft_io::identity::SCHEME.into(),
-            model_id: format!("sha256:{mesh}"),
+            model_id: fieldcraft_io::identity::model_id(&mesh),
             model_revision: fieldcraft_io::sha256_hex(b"fixture revision"),
             reference_mesh_digest: mesh,
         },
         entity_map_digest: fieldcraft_io::sha256_hex(b"fixture map"),
-        artifacts: ["producer", "adapter", "receiver"].into_iter().map(|s| (s.into(), fieldcraft_io::sha256_hex(s.as_bytes()))).collect(),
-        backend_version: "0.0.29".into(),
+        artifacts: fieldcraft_io::identity::REQUIRED_ARTIFACT_ROLES
+            .into_iter()
+            .map(|s| (s.into(), fieldcraft_io::sha256_hex(s.as_bytes())))
+            .collect(),
+        backend_version: fieldcraft_io::identity::BACKEND_VERSION.into(),
     }
 }
 fn block(quantity: Quantity) -> FieldBlock {
@@ -638,7 +641,7 @@ mod identity_transactions {
         }
         model.set_element(8, fieldcraft_model::ElementKind::Tet4, vec![1, 2, 3, 4]).unwrap();
         let entities = production_entities();
-        let artifacts = ["producer", "adapter", "receiver"]
+        let artifacts = fieldcraft_io::identity::REQUIRED_ARTIFACT_ROLES
             .into_iter()
             .map(|role| (role.into(), fieldcraft_io::identity::artifact_digest(role.as_bytes())))
             .collect();
@@ -766,7 +769,8 @@ mod identity_transactions {
     #[test]
     fn production_binding_shape_rejections_do_not_publish_or_hold_the_run_lock() {
         let run = key();
-        let (context, entities) = production_context();
+        let (mut context, entities) = production_context();
+        context.artifacts.insert("postprocessor".into(), fieldcraft_io::identity::artifact_digest(b"protocol fixture postprocessor"));
         let binding = IoSnapshotProvider.freeze(&context, &entities).unwrap();
         let e = production_envelope(&run, binding, entities.clone());
         let root = std::env::temp_dir().join(format!("fieldcraft-binding-shape-{}", std::process::id()));
@@ -774,12 +778,15 @@ mod identity_transactions {
         let host = ReceiverHost::with_store(context, run.clone(), IoSnapshotProvider, store.clone()).unwrap();
         // These are protocol fixtures using the production identity/transaction/store path.
         // Solver labels exercise the store gate, not libuipc or numerical qualification.
-        for which in ["scheme", "backend", "model_id", "producer", "adapter", "receiver"] {
+        for which in ["scheme", "backend", "model_id", "producer", "adapter", "receiver", "extra_digest"] {
             let mut changed = e.clone();
             match which {
                 "scheme" => changed.binding.snapshot.scheme = "future-unknown/2".into(),
                 "backend" => changed.binding.backend_version = "0.0.28".into(),
                 "model_id" => changed.binding.snapshot.model_id = "unrecognized-model".into(),
+                "extra_digest" => {
+                    changed.binding.artifacts.insert("postprocessor".into(), "not-a-digest".into());
+                }
                 role => {
                     changed.binding.artifacts.remove(role);
                 }
@@ -806,6 +813,7 @@ mod identity_transactions {
             "production_binding_shape_positive={}",
             serde_json::json!({
                 "scheme": e.binding.snapshot.scheme, "result_id": id, "reopened_equal": true,
+                "artifact_roles": e.binding.artifacts.keys().collect::<Vec<_>>(),
                 "evidence_class": "protocol_fixture", "runtime_qualification": "unverified", "libuipc_called": false,
             })
         );
@@ -1102,7 +1110,7 @@ mod identity_transactions {
             let program = std::fs::read(std::env::current_exe().unwrap()).unwrap();
             std::fs::write(dir.join("programs/interface-fixture"), &program).unwrap();
             let digest = fieldcraft_io::identity::artifact_digest(&program);
-            context.artifacts = ["producer", "adapter", "receiver"].into_iter().map(|role| (role.into(), digest.clone())).collect();
+            context.artifacts = fieldcraft_io::identity::REQUIRED_ARTIFACT_ROLES.into_iter().map(|role| (role.into(), digest.clone())).collect();
             let model_bytes = fieldcraft_io::write_with(
                 &context.model,
                 &context.geometry,
@@ -1255,7 +1263,7 @@ mod identity_transactions {
         };
         let run = RunKey { run_id: "policy-production".into(), epoch: 1, worker_generation: "policy-worker".into() };
         let (context, entities) = {
-            let artifacts = ["producer", "adapter", "receiver"]
+            let artifacts = fieldcraft_io::identity::REQUIRED_ARTIFACT_ROLES
                 .into_iter()
                 .map(|role| (role.into(), fieldcraft_io::identity::artifact_digest(role.as_bytes())))
                 .collect();
@@ -1287,7 +1295,7 @@ mod identity_transactions {
         no_policy.run_script(&serde_json::from_str(include_str!("fixtures/contact-stick.json")).unwrap()).unwrap();
         no_policy.execute("model.step.edit", &serde_json::json!({"name":"Modes","contact_perturbation":{}})).unwrap();
         let (context, entities) = {
-            let artifacts = ["producer", "adapter", "receiver"]
+            let artifacts = fieldcraft_io::identity::REQUIRED_ARTIFACT_ROLES
                 .into_iter()
                 .map(|role| (role.into(), fieldcraft_io::identity::artifact_digest(role.as_bytes())))
                 .collect();

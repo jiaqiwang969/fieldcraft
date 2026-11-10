@@ -40,18 +40,18 @@ impl ModelBinding {
         if self.snapshot.scheme != fieldcraft_io::identity::SCHEME {
             return Err(ContractError::Unsupported("receiver identity scheme"));
         }
-        if self.backend_version != "0.0.29" {
+        if self.backend_version != fieldcraft_io::identity::BACKEND_VERSION {
             return Err(ContractError::Unsupported("backend version"));
         }
         if !digest_valid(&self.snapshot.model_revision)
             || !digest_valid(&self.snapshot.reference_mesh_digest)
             || !digest_valid(&self.entity_map_digest)
-            || self.snapshot.model_id != format!("sha256:{}", self.snapshot.reference_mesh_digest)
+            || self.snapshot.model_id != fieldcraft_io::identity::model_id(&self.snapshot.reference_mesh_digest)
         {
             return Err(ContractError::Invalid("snapshot identity fields"));
         }
         if self.artifacts.len() > 32
-            || ["producer", "adapter", "receiver"].iter().any(|k| !self.artifacts.contains_key(*k))
+            || fieldcraft_io::identity::REQUIRED_ARTIFACT_ROLES.iter().any(|k| !self.artifacts.contains_key(*k))
             || self.artifacts.iter().any(|(k, v)| !token_valid(k) || !digest_valid(v))
         {
             return Err(ContractError::Invalid("artifact roles and digests"));
