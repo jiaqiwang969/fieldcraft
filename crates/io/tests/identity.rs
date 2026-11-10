@@ -188,3 +188,38 @@ fn public_identity_rules_preserve_existing_bindings_and_refusals() {
     extra.insert("observer".into(), "invalid".into());
     assert!(Binding::freeze(&m, &g, &r, &map, extra, BACKEND_VERSION).is_err());
 }
+
+#[test]
+fn digest_shape_boundaries_preserve_binding_refusals() {
+    let (m, map) = fixture();
+    let (g, r) = (Geometry::default(), Run::default());
+    let cases = [
+        ("0".repeat(64), true),
+        ("0123456789abcdef".repeat(4), true),
+        (String::new(), false),
+        ("0".repeat(63), false),
+        ("0".repeat(65), false),
+        ("ABCDEF0123456789".repeat(4), false),
+        (format!("{}g", "0".repeat(63)), false),
+        (format!("{} ", "0".repeat(63)), false),
+        (format!("{}\n", "0".repeat(63)), false),
+        (format!("sha256:{}", "0".repeat(64)), false),
+        ("é".repeat(32), false),
+        ("é".repeat(64), false),
+    ];
+    for (text, accepted) in cases {
+        assert_eq!(digest_valid(&text), accepted, "{text:?}");
+        let mut a = artifacts();
+        a.insert("producer".into(), text.clone());
+        let result = Binding::freeze(&m, &g, &r, &map, a, BACKEND_VERSION);
+        if accepted {
+            assert_eq!(result.unwrap().artifacts["producer"], text);
+        } else {
+            assert!(result.unwrap_err().to_string().contains("MissingOrInvalidArtifactDigest"));
+        }
+    }
+    for byte in 0u8..=127 {
+        let text = format!("{}{}", "0".repeat(63), char::from(byte));
+        assert_eq!(digest_valid(&text), b"0123456789abcdef".contains(&byte), "byte={byte}");
+    }
+}

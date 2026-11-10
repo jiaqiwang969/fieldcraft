@@ -156,3 +156,26 @@ fn persisted_controls(c: &ContactControls, require: bool, name: &str) {
     assert_eq!(restored, bytes);
     assert_eq!(&ContactControls::decode(&restored, require).unwrap(), c);
 }
+
+#[test]
+fn observation_digest_shape_and_locator_refusals_survive_readback() {
+    for (sha, accepted) in [
+        ("0123456789abcdef".repeat(4), true),
+        ("0".repeat(64), true),
+        ("0".repeat(63), false),
+        ("0".repeat(65), false),
+        ("A".repeat(64), false),
+        ("g".repeat(64), false),
+        ("é".repeat(32), false),
+    ] {
+        let mut c = unknown_controls();
+        c.kappa_clamped = Observation::Known { value: false, source_sha256: sha, locator: "initialization/clamped".into() };
+        if accepted {
+            assert_eq!(ContactControls::decode(&c.encode(false).unwrap(), false).unwrap(), c);
+            if let Observation::Known { locator, .. } = &mut c.kappa_clamped {
+                *locator = " \n".into();
+            }
+        }
+        assert!(c.encode(false).unwrap_err().to_string().contains("MissingObservationSource"));
+    }
+}
