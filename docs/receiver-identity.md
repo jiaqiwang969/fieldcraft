@@ -59,3 +59,8 @@ remain `producer`, `adapter`, `receiver`. Additional roles are allowed but all d
 are checked. `model_id` only formats an existing digest; it does not establish its
 validity or ownership. Use `Binding::freeze/validate` to recompute authoritative identity.
 These exports do not change serialized snapshots, revisions or runtime evidence.
+
+`fieldcraft_io::identity::digest_valid(&str) -> bool` is the shared digest-shape check:
+exactly 64 lowercase ASCII hexadecimal digits, without trimming, prefixes or case normalization.
+Binding artifacts and capability observation sources use this same check. All-zero text is
+shape-valid; this function does not verify artifact content, source provenance or runtime qualification.

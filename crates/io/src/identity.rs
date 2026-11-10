@@ -12,6 +12,12 @@ pub const MODEL_ID_PREFIX: &str = "sha256:";
 /// Required roles; additional artifact roles remain permitted and digest-validated.
 pub const REQUIRED_ARTIFACT_ROLES: [&str; 3] = ["producer", "adapter", "receiver"];
 
+/// Check only the textual shape of a SHA256 digest: exactly 64 lowercase ASCII hex digits.
+/// This accepts all-zero digests and does not authenticate artifact bytes or observations.
+pub fn digest_valid(digest: &str) -> bool {
+    digest.len() == 64 && digest.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+}
+
 /// Construct the existing model identity. This does not validate a supplied digest or model.
 /// Use `Snapshot::validate` or `Binding::validate` for authoritative identity checks.
 pub fn model_id(reference_mesh_digest: &str) -> String {
@@ -138,9 +144,7 @@ impl Binding {
         if backend_version != BACKEND_VERSION {
             return invalid("UnsupportedBackendVersion");
         }
-        if REQUIRED_ARTIFACT_ROLES.iter().any(|role| !artifacts.contains_key(*role))
-            || artifacts.values().any(|s| s.len() != 64 || !s.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
-        {
+        if REQUIRED_ARTIFACT_ROLES.iter().any(|role| !artifacts.contains_key(*role)) || artifacts.values().any(|s| !digest_valid(s)) {
             return invalid("MissingOrInvalidArtifactDigest");
         }
         Ok(Self {

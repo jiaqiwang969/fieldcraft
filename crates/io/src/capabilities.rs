@@ -118,10 +118,7 @@ impl<T> Observation<T> {
     fn check_source(&self) -> Result<()> {
         match self {
             Self::Known { source_sha256, locator, .. } => {
-                if source_sha256.len() != 64
-                    || !source_sha256.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
-                    || locator.trim().is_empty()
-                {
+                if !crate::identity::digest_valid(source_sha256) || locator.trim().is_empty() {
                     return invalid("MissingObservationSource");
                 }
             }
