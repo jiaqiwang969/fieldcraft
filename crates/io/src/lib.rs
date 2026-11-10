@@ -34,6 +34,7 @@
 
 pub mod deck_source;
 pub use deck_source::DeckSource;
+pub mod capabilities;
 pub mod checkpoint;
 pub mod codec;
 pub mod fs;
@@ -457,6 +458,8 @@ pub struct ModelFile {
 #[serde(deny_unknown_fields)]
 struct Manifest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    capabilities: Option<capabilities::Report>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     identity: Option<identity::Snapshot>,
     format: String,
     generator: String,
@@ -614,6 +617,7 @@ pub fn write_with(
         source.embedded = Some(name);
     }
     let manifest = Manifest {
+        capabilities: Some(capabilities::report(model)?),
         identity: Some(identity::snapshot(model, &geometry, &extras.run)?),
         format: FORMAT.into(),
         generator: format!("FieldCraft {}", env!("CARGO_PKG_VERSION")),
@@ -809,6 +813,9 @@ pub fn read_versioned(bytes: &[u8]) -> Result<(ModelFile, u32)> {
     }
     mesh::decode_into(&mut model, &mesh_bin)?;
     drop(mesh_bin);
+    if let Some(report) = &manifest.capabilities {
+        report.validate(&model)?;
+    }
     if let Some(binding) = &manifest.identity {
         binding.validate(&model, &manifest.geometry, &manifest.run)?;
     }
