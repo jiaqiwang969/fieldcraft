@@ -527,6 +527,7 @@ pub const SECTION: &[Field] = &[
                 .help("Linear ANS/EAS10 on orthogonal affine swept hex8; thickness is node pairs 1–5, 2–6, 3–7, 4–8. Separate solid layers for laminates.")
                 .def("false"),
             flag("enhanced_strain13", "Enhanced strain Hex8 (13)").help("Thirteen-variable Hex8; C3D8I mapping only for nonhybrid small-strain isotropic static analysis.").def("false"),
+            flag("f_bar", "F-bar Hex8").help("Reference-volume mean-J projection; neo-Hookean finite-strain nonlinear static and frequency/harmonic/transient perturbations about that base_state.").def("false"),
             flag("b_bar", "B-bar Hex8").help("Volume-averaged dilatation for linear isotropic Hex8; standard remains the default.").def("false"),
             flag("incompatible_modes", "Incompatible modes")
                 .help("Extra bending modes for linear hexahedra, so a coarse hex8 mesh bends without locking.")
@@ -1326,6 +1327,7 @@ pub const STEP_CREATE: &[Field] = &[
     STEP_LOADS,
     reference("base_state", "Equilibrium base", C::Step)
         .help("Earlier static/nonlinear static equilibrium for frequency, harmonic or direct/modal transient increments."),
+    json("contact_perturbation", "Contact perturbation policies").help("Map every contact name to stick: closed planar pair against a fixed main surface, strictly inside the friction cone; frequency with an NLGEOM base and unchanged supports. Empty keeps the reported legacy policy."),
     flag("linear_base", "Linear base stiffness")
         .help("Keep a linear static base dependency without initial-stress stiffness; no pretension.")
         .def("false"),
@@ -1340,6 +1342,7 @@ pub const STEP_EDIT: &[Field] = &[
     STEP_BCS,
     STEP_LOADS,
     reference("base_state", "Equilibrium base", C::Step).help("Earlier equilibrium step; null in a command clears the base."),
+    json("contact_perturbation", "Contact perturbation policies").help("Map every contact name to stick; same scope as create. An empty object restores the reported legacy policy."),
     flag("linear_base", "Linear base stiffness")
         .help("Keep a linear static base dependency without initial-stress stiffness; clear when removing the base."),
     flag("perturbation_follower_pressure", "Modal pressure stiffness").help("Frequency with a linear static base: conservative zero-offset MITC8 pressure tangent; unchanged direct supports. Default false keeps dead loads."),

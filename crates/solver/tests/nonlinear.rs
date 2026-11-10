@@ -808,3 +808,64 @@ fn arc_length_on_a_coupled_reference_point_follows_the_same_path_in_any_units_an
         }
     }
 }
+
+fn fbar_block(lam: f64, formulation: Formulation) -> Grid {
+    let mut g = grid([2, 2, 2], ElementKind::Hex8, |x| x);
+    g.define(iso(10., 0.3), None, formulation, nonlinear());
+    neo_hookean(&mut g, 10., 0.3);
+    g.symmetry("x0", Symmetry::X, |x| near(x[0], 0.));
+    g.symmetry("y0", Symmetry::Y, |x| near(x[1], 0.));
+    g.symmetry("z0", Symmetry::Z, |x| near(x[2], 0.));
+    g.node_set("x1", |x| near(x[0], 1.));
+    g.bc("pull", BoundaryCondition::Displacement { target: Target::Set("x1".into()), values: [Some(lam - 1.), None, None, None, None, None] });
+    g
+}
+
+#[test]
+fn fbar_global_newton_and_small_strain() {
+    for lam in [1.000001, 1.5] {
+        let g = fbar_block(lam, Formulation { f_bar: true, ..Default::default() });
+        let r = solve(&g);
+        let (lateral, sigma) = neo_hookean_uniaxial(10. / 2.6, 10. / 1.2, lam);
+        let mut error: f64 = 0.;
+        for (i, n) in r.nodes.iter().enumerate() {
+            let x = g.model.node(*n).unwrap().xyz;
+            for (j, want) in [(lam - 1.) * x[0], (lateral - 1.) * x[1], (lateral - 1.) * x[2]].iter().enumerate() {
+                error = error.max((r.displacement[i][j] - want).abs());
+            }
+        }
+        let stress_error = r.stress.iter().map(|s| (s[0] - sigma).abs()).fold(0., f64::max);
+        println!(
+            "FBAR_GLOBAL lambda={lam:e} displacement_error_m={error:e} stress_error_Pa={stress_error:e} iterations={}",
+            r.nonlinear.as_ref().unwrap().iterations
+        );
+        assert!(error < 1e-8 && stress_error < 1e-7);
+        assert!(r.nonlinear.as_ref().unwrap().increments.last().is_some_and(|i| i.converged && i.load_factor == 1.));
+        println!("FBAR_CUTBACKS {}", r.nonlinear.as_ref().unwrap().increments.iter().filter(|i| !i.converged).count());
+        if lam < 1.01 {
+            let mut linear = fbar_block(lam, Formulation { b_bar: true, ..Default::default() });
+            linear.model.replace_material("Mat", Material { elastic: Some(iso(10., 0.3)), ..Default::default() }).unwrap();
+            let mut step = linear.model.step("Step").unwrap().clone();
+            step.procedure = Procedure::Static {};
+            linear.model.replace_step(step).unwrap();
+            let lr = solve_static(&linear.model, Some("Step"), &Limits::default()).unwrap();
+            let difference = lr.displacement.iter().flatten().zip(r.displacement.iter().flatten()).map(|(a, b)| (a - b).abs()).fold(0., f64::max);
+            println!("FBAR_GLOBAL_BBAR max_displacement_difference_m={difference:e}");
+            assert!(difference < 1e-11);
+            // Uniaxial linear B-bar solution: transverse strain = -nu*axial strain.
+            let linear_error = (lateral - 1. + 0.3 * (lam - 1.)).abs();
+            println!("FBAR_LINEAR_LIMIT transverse_error_m={linear_error:e}");
+            assert!(linear_error < 1e-11);
+        }
+    }
+}
+
+#[test]
+fn fbar_disabled_bitwise_baseline() {
+    let g = fbar_block(1.5, Formulation::default());
+    let r = solve(&g);
+    for (name, arrays) in [("U", &r.displacement), ("R", &r.reaction)] {
+        println!("FBAR_OFF_{name} {:?}", arrays.iter().flatten().map(|v| v.to_bits()).collect::<Vec<_>>());
+    }
+    println!("FBAR_OFF_S {:?}", r.stress.iter().flatten().map(|v| v.to_bits()).collect::<Vec<_>>());
+}

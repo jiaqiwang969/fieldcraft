@@ -101,6 +101,17 @@ pub fn express(model: &Model, units: Preset) -> Result<Model> {
     Ok(model.converted(&|q, v| system.express(q, v).ok())?)
 }
 
+/// Never discard an explicit perturbation policy in a deck whose mapping is unverified.
+pub(crate) fn refuse_contact_perturbation(format: &'static str, model: &Model) -> Result<()> {
+    if let Some(step) = model.steps().iter().find(|step| !step.contact_perturbation.is_empty()) {
+        return Err(Error::Unsupported {
+            format,
+            what: format!("step `{}`: explicit contact_perturbation policy has no verified keyword mapping", step.name),
+        });
+    }
+    Ok(())
+}
+
 /// What a preset's units are, in words, for a deck's header.
 pub(crate) fn units_in_words(units: Preset) -> &'static str {
     match units {
@@ -380,6 +391,10 @@ pub(crate) fn unique_name(base: &str, taken: &mut BTreeSet<String>) -> String {
 
 /// Formats without native policy metadata must not silently discard section mass settings.
 fn refuse_mass_policy(format: &'static str, model: &fieldcraft_model::Model) -> Result<()> {
+    let fbar: Vec<_> = model.sections().iter().filter(|(_, s)| s.formulation.f_bar).map(|(n, _)| n.as_str()).collect();
+    if !fbar.is_empty() {
+        return Err(Error::Unsupported { format, what: format!("f_bar reference-volume projection: {}", fbar.join(", ")) });
+    }
     let enhanced: Vec<_> = model.sections().iter().filter(|(_, s)| s.formulation.enhanced_strain13).map(|(n, _)| n.as_str()).collect();
     if !enhanced.is_empty() {
         return Err(Error::Unsupported { format, what: format!("enhanced_strain13 section policies: {}", enhanced.join(", ")) });

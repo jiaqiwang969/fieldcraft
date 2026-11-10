@@ -462,6 +462,75 @@ general (self) contact, a rubber ring's two ends meet and press on each other wi
 through, keeping the model's mirror symmetry; a quarter rubber bellows squeezed axially by 0.8
 folds onto itself (heavy suite).
 
+## Explicit sticking in a frequency perturbation
+
+`model.step.create` and `model.step.edit` accept a per-contact selection:
+
+```json
+{"name":"Modes", "procedure":{"type":"frequency","modes":1},
+ "base_state":"Preload", "contact_perturbation":{"Interface":"stick"},
+ "boundary_conditions":["base","upper","top"]}
+```
+
+The first supported domain is a fully closed planar pair of linear solid faces against
+a main surface whose translations are all fixed. The base must be an elastic
+`nonlinear_static` step with `nonlinear_geometry: true`; the frequency step must retain
+the same supports. Every contact must have a selection. Positive pressure and a
+strict interior of the static Coulomb cone are checked at every secondary node,
+including its known stick/slip state. Pressure and cone margins must exceed a guard
+derived from the equilibrium force tolerance and floating-point scale, divided by
+the node's contact support area. The converged gap must also satisfy the existing
+augmented-Lagrange gap tolerance. This is a numerical branch qualification, not an
+experimental uncertainty bound.
+
+`stick` imposes zero incremental normal and tangential relative motion with the
+terminal mortar rows and the existing constraint elimination. It is a hard incremental
+policy, not the finite penalty stiffness used in the static friction iteration.
+After assembling the actual constraints, the solver checks that **all** translations
+on both contact surfaces have no free increment. Consequently `Tᵀ K_contact T = 0`,
+including normal and tangential geometry terms: those terms need not vanish before
+elimination. The structural terminal tangent, including stress stiffness, and the
+reference consistent or lumped mass are reduced with the same constraints. Nothing
+is added to the source mesh. A nonzero free interface increment is refused, rather
+than silently omitting a contact geometry term.
+
+Each result records the selected policy, closed-node and row counts, minimum pressure
+and Coulomb margin, gap qualification and geometry assumption. Model persistence and
+result invalidation include the policy. Missing maps on older models retain the
+previous bonded-when-closed approximation, now reported per pair as
+`legacy_bonded_when_closed`; its friction state and geometry are not qualified by the
+new policy. Setting an empty map explicitly restores that legacy behaviour.
+
+`contact_perturbation.*` errors name the contact and the failed condition: pressure
+switching, sliding or a cone boundary, missing friction evidence, incomplete overlap,
+an unqualified gap, a moving main surface, nonplanar/quadratic faces or interface
+geometry not eliminated. General contact, other perturbation procedures, moving
+interfaces, tangentially free and open policies are outside this first domain.
+This does not implement a nonsymmetric Coulomb sliding tangent. Abaqus export refuses
+the explicit policy until a keyword mapping is independently verified; native
+`.fieldcraft` persistence supports it.
+
+The [Abaqus general and perturbation procedure manual](https://docs.software.vt.edu/abaqusv2025/English/SIMACAEANLRefMap/simaanl-c-linearnonlinear.htm)
+describes freezing contact status and assuming sticking in the presence of friction
+for ordinary static perturbations. The
+[contact controls manual](https://docs.software.vt.edu/abaqusv2025/English/SIMACAEITNRefMap/simaitn-c-contactcontrolsstd.htm)
+also describes a finite, adjustable tangential penalty in perturbations. Our hard
+constraint selection is therefore not a claim of numerical equivalence to the
+commercial default. That correspondence still needs a black-box comparison with
+matching enforcement, element and mass definitions.
+
+The command fixture `crates/engine/tests/fixtures/contact-stick.json` uses a compressed
+unit St Venant–Kirchhoff block, `E=1000 Pa`, `nu=0`, `rho=1 kg/m³`, and four real
+`1 N/m` lateral springs (one at each top node). These springs remove the unloaded
+tangential rigid motion and remain in the reference. For actual equilibrium stretch
+`lambda`, the first uniform X shear mode has
+`omega² = [(G + Szz) A/H + 4k] / (rho A H/3)` with
+`Szz = E (lambda² - 1)/2`, `A=1 m²`, `H=1 m`, and `G=E/2`.
+The static normal force is `-A lambda Szz`. The verification checks two compression
+levels, the actual mode components, thread independence, saved/reopened results and
+named refusals. The existing two-spring operator test separately distinguishes the
+finite contact penalty from hard incremental bonding.
+
 ## Limitations
 
 - Nonlinear static contact takes linear and quadratic faces (tri3, quad4, tri6, quad8: tet4, tet10,
@@ -471,8 +540,8 @@ folds onto itself (heavy suite).
 - On quadratic faces the reported nodal pressures alternate between corners and mid-side nodes
   where the pressure varies (by about a tenth in the Hertz test on hex20 and tet10); the forces
   are consistent, a node's pressure is its force over its area in the transformed basis.
-- Arc-length steps refuse contact. The linear implicit analyses (static, frequency, buckling,
-  heat) refuse contact by name.
+- Arc-length steps refuse contact. Linear analyses without a supported nonlinear base
+  refuse contact by name; the explicit frequency policy above has its own bounded domain.
 - The static friction tangent is symmetrised: convergence slows while nodes slip. A static step
   has no slip rate, so the exponential decay is not used there.
 - Explicit contact: faces exposed by eroded elements do not join the contact (eroding contact is

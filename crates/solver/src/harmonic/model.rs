@@ -356,7 +356,7 @@ fn solve_harmonic_impl(
     let (graph, order) = analysis::pattern(&mesh);
     let setup = Setup { model, resolved: &resolved, mesh: &mesh, step };
     let assembly_timing = crate::timing::Span::new("harmonic_assembly_reduction");
-    let assembled = analysis::assemble(&mesh, &graph, Some(mass))?;
+    let assembled = analysis::assemble_for_step(&setup, &graph, Some(mass))?;
     let terminal = crate::prestress::stiffness(&setup, &graph, assembled.k, limits, &mut warnings)?;
     let red = analysis::reduction_with_frozen(
         &setup,
