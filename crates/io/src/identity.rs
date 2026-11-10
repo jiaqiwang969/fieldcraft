@@ -5,6 +5,18 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub const SCHEME: &str = "fieldcraft-receiver-snapshot/1";
+/// Supported backend version for this binding contract, not a runtime version observation.
+pub const BACKEND_VERSION: &str = "0.0.29";
+/// Prefix of a model identity derived from its reference mesh digest.
+pub const MODEL_ID_PREFIX: &str = "sha256:";
+/// Required roles; additional artifact roles remain permitted and digest-validated.
+pub const REQUIRED_ARTIFACT_ROLES: [&str; 3] = ["producer", "adapter", "receiver"];
+
+/// Construct the existing model identity. This does not validate a supplied digest or model.
+/// Use `Snapshot::validate` or `Binding::validate` for authoritative identity checks.
+pub fn model_id(reference_mesh_digest: &str) -> String {
+    format!("{MODEL_ID_PREFIX}{reference_mesh_digest}")
+}
 
 /// Exact frozen reference family and definition revision, independent of paths and results.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -37,7 +49,7 @@ pub fn snapshot(model: &Model, geometry: &Geometry, run: &Run) -> Result<Snapsho
     let reference_mesh_digest = digest("fieldcraft-reference/1", &[&mesh, &sets]);
     Ok(Snapshot {
         scheme: SCHEME.into(),
-        model_id: format!("sha256:{reference_mesh_digest}"),
+        model_id: model_id(&reference_mesh_digest),
         model_revision: digest(SCHEME, &[reference_mesh_digest.as_bytes(), &definitions, &sources, &settings]),
         reference_mesh_digest,
     })
@@ -123,10 +135,10 @@ impl Binding {
         artifacts: BTreeMap<String, String>,
         backend_version: &str,
     ) -> Result<Self> {
-        if backend_version != "0.0.29" {
+        if backend_version != BACKEND_VERSION {
             return invalid("UnsupportedBackendVersion");
         }
-        if ["producer", "adapter", "receiver"].iter().any(|role| !artifacts.contains_key(*role))
+        if REQUIRED_ARTIFACT_ROLES.iter().any(|role| !artifacts.contains_key(*role))
             || artifacts.values().any(|s| s.len() != 64 || !s.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
         {
             return invalid("MissingOrInvalidArtifactDigest");

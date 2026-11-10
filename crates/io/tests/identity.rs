@@ -160,3 +160,31 @@ fn legacy_manifest_without_identity_can_be_read_then_upgraded() {
     let value: serde_json::Value = serde_json::from_str(&manifest).unwrap();
     assert_eq!(value["identity"]["scheme"], SCHEME);
 }
+
+#[test]
+fn public_identity_rules_preserve_existing_bindings_and_refusals() {
+    assert_eq!(BACKEND_VERSION, "0.0.29");
+    assert_eq!(MODEL_ID_PREFIX, "sha256:");
+    assert_eq!(REQUIRED_ARTIFACT_ROLES, ["producer", "adapter", "receiver"]);
+    let (m, map) = fixture();
+    let (g, r) = (Geometry::default(), Run::default());
+    let b = Binding::freeze(&m, &g, &r, &map, artifacts(), BACKEND_VERSION).unwrap();
+    assert_eq!(b.snapshot.reference_mesh_digest, "c5cbf11b6efb221a2a5a455a82ff187c623ce7fac3baab058108e0510d5d5d1a");
+    assert_eq!(b.snapshot.model_revision, "7b700e900a3810cabf04b68764c29c04a2203ddbccd45718e7ad5115a992fcce");
+    assert_eq!(b.snapshot.model_id, model_id(&b.snapshot.reference_mesh_digest));
+    b.validate(&m, &g, &r, &map, artifacts(), BACKEND_VERSION).unwrap();
+    assert!(Binding::freeze(&m, &g, &r, &map, artifacts(), "0.0.30").unwrap_err().to_string().contains("UnsupportedBackendVersion"));
+    for role in REQUIRED_ARTIFACT_ROLES {
+        let mut missing = artifacts();
+        missing.remove(role);
+        assert!(Binding::freeze(&m, &g, &r, &map, missing, BACKEND_VERSION).unwrap_err().to_string().contains("MissingOrInvalidArtifactDigest"));
+    }
+    let mut wrong = b.snapshot.clone();
+    wrong.model_id = "sha256:wrong".into();
+    assert!(wrong.validate(&m, &g, &r).unwrap_err().to_string().contains("ModelIdentityMismatch"));
+    let mut extra = artifacts();
+    extra.insert("observer".into(), artifact_digest(b"observer bytes"));
+    Binding::freeze(&m, &g, &r, &map, extra.clone(), BACKEND_VERSION).unwrap();
+    extra.insert("observer".into(), "invalid".into());
+    assert!(Binding::freeze(&m, &g, &r, &map, extra, BACKEND_VERSION).is_err());
+}
