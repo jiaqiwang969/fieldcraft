@@ -1277,4 +1277,48 @@ mod identity_transactions {
         println!("production_policy_unapplied={}", serde_json::json!({"error": error}));
         assert!(matches!(rejection, Err(ContractError::NativeContactPolicyNotApplied)));
     }
+    /// Mutate only owned copies of the protocol fixture; no numerical qualification is claimed.
+    #[test]
+    fn consumer_rejects_wrong_run_payload_tampering_and_missing_frame() {
+        let run = RunKey { run_id: "consumer-refusal".into(), epoch: 1, worker_generation: "fixture-worker".into() };
+        let (context, entities) = production_context();
+        let binding = IoSnapshotProvider.freeze(&context, &entities).unwrap();
+        let original = production_envelope(&run, binding, entities.clone());
+        let before = serde_json::to_vec(&original).unwrap();
+        let root = std::env::temp_dir().join(format!("consumer-refusals-{}", std::process::id()));
+        let store = Arc::new(FileResultStore::new(&root).unwrap());
+        let host = ReceiverHost::with_store(context, run.clone(), IoSnapshotProvider, store.clone()).unwrap();
+        for case in 0..3 {
+            let mut changed = original.clone();
+            match case {
+                0 => changed.run.epoch += 1,
+                1 => {
+                    let FieldData::Present { bytes, .. } = &mut changed.frames[0].fields[0].data else { panic!("fixture data") };
+                    bytes[0] ^= 1;
+                }
+                _ => {
+                    changed.frames.pop().unwrap();
+                }
+            }
+            let tx = host.begin(&run, entities.clone(), profile(&original)).unwrap();
+            if case == 2 {
+                let admission = tx.validate(&changed).unwrap();
+                assert_ne!(admission.coverage, Coverage::Complete { last: 3 });
+                assert!(!admission.blockers.is_empty());
+            }
+            let error = tx.commit(&changed).unwrap_err();
+            match case {
+                0 => assert_eq!(error, ContractError::StaleRun),
+                1 => assert_eq!(error, ContractError::ChecksumMismatch),
+                _ => assert!(matches!(error, ContractError::Invalid("result store requires a complete solver success"))),
+            }
+            println!("consumer_refusal case={case} error={error:?}");
+            assert_eq!(std::fs::read_dir(&root).unwrap().count(), 0, "rejected input must not publish");
+        }
+        assert_eq!(serde_json::to_vec(&original).unwrap(), before);
+        let tx = host.begin(&run, entities, profile(&original)).unwrap();
+        let id = tx.commit(&original).unwrap();
+        assert_eq!(store.reopen(&id).unwrap(), original);
+        std::fs::remove_dir_all(root).unwrap();
+    }
 }

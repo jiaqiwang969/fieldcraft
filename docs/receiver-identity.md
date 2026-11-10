@@ -49,3 +49,13 @@ identity, changed reference/definition, duplicate nodes, connectivity/index erro
 permutation and program/version mismatch. Synthetic artifact bytes test identity checking,
 not an installed backend or its physical capabilities. Effective contact stiffness and its
 clipping status require source observations; requested values cannot substitute for them.
+
+## Shared shape rules
+
+Consumers import `fieldcraft_io::identity::{SCHEME, BACKEND_VERSION, MODEL_ID_PREFIX,
+REQUIRED_ARTIFACT_ROLES, model_id}`. The backend version remains `0.0.29`, model IDs
+remain `sha256:` followed by the reference mesh digest, and required artifact roles
+remain `producer`, `adapter`, `receiver`. Additional roles are allowed but all digests
+are checked. `model_id` only formats an existing digest; it does not establish its
+validity or ownership. Use `Binding::freeze/validate` to recompute authoritative identity.
+These exports do not change serialized snapshots, revisions or runtime evidence.
