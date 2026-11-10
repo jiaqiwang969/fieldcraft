@@ -3,9 +3,11 @@
 //! Frame facts are source claims, distinct from receipt/transport success. The default
 //! numerical policy rejects unknown diagnostics and either iteration limit. The receiver
 //! independently checks a contiguous prefix. Persistent model identity and durable result
-//! registration are integration seams, not inferred from temporary run identifiers.
+//! identity and receiver-owned storage are explicit adapters, not values inferred from temporary
+//! run identifiers.
 
 pub mod control;
+pub mod production;
 pub mod receive;
 pub mod run;
 pub mod transaction;
@@ -113,4 +115,6 @@ pub enum ContractError {
     Worker(String),
     #[error("worker has not exited within the observation budget")]
     WorkerTimeout,
+    #[error("production provider or storage rejected the operation: {0}")]
+    Provider(String),
 }

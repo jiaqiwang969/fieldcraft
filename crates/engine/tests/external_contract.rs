@@ -409,6 +409,7 @@ fn all_forward_fields_accept_real_binary_layout_but_remain_fixture_evidence() {
 mod identity_transactions {
     use super::*;
     use fieldcraft_engine::external::control::{ControlAvailability, ControlEvidenceReceipt, ControlEvidenceScope, NativeIpcStatus};
+    use fieldcraft_engine::external::production::{FileResultStore, IoModelContext, IoSnapshotProvider, ResultStore};
     use fieldcraft_engine::external::transaction::{ContactControlPayload, PolicyRequestPayload, ReceiveProfile, ReceiverHost, SnapshotProvider};
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -606,6 +607,86 @@ mod identity_transactions {
             policy_request: None,
             require_policy_applied: false,
         }
+    }
+
+    fn production_entities() -> EntityMap {
+        EntityMap {
+            nodes: vec![1, 2, 3, 4],
+            elements: vec![MappedElement { target: 8, kind: fieldcraft_model::ElementKind::Tet4, source_nodes: vec![0, 1, 2, 3] }],
+            objects: vec![],
+        }
+    }
+
+    fn entities_for_model(model: &fieldcraft_model::Model) -> EntityMap {
+        let nodes: Vec<u32> = model.nodes().keys().copied().collect();
+        let elements = model
+            .elements()
+            .iter()
+            .map(|(target, element)| MappedElement {
+                target: *target,
+                kind: element.kind,
+                source_nodes: element.nodes.iter().map(|label| nodes.iter().position(|candidate| candidate == label).unwrap()).collect(),
+            })
+            .collect();
+        EntityMap { nodes, elements, objects: vec![] }
+    }
+
+    fn production_context() -> (IoModelContext, EntityMap) {
+        let mut model = fieldcraft_model::Model::default();
+        for (index, position) in [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]].into_iter().enumerate() {
+            model.set_node(index as u32 + 1, position).unwrap();
+        }
+        model.set_element(8, fieldcraft_model::ElementKind::Tet4, vec![1, 2, 3, 4]).unwrap();
+        let entities = production_entities();
+        let artifacts = ["producer", "adapter", "receiver"]
+            .into_iter()
+            .map(|role| (role.into(), fieldcraft_io::identity::artifact_digest(role.as_bytes())))
+            .collect();
+        (IoModelContext::new(model, fieldcraft_io::Geometry::default(), fieldcraft_io::Run::default(), artifacts), entities)
+    }
+
+    fn production_envelope(run: &RunKey, binding: ModelBinding, entities: EntityMap) -> ResultEnvelope {
+        let mut e = envelope();
+        e.binding = binding;
+        let node_count = entities.nodes.len();
+        e.entities = entities;
+        e.run = run.clone();
+        e.evidence_kind = EvidenceKind::Solver;
+        e.source_scene.kind = EvidenceKind::Solver;
+        if let Some(terminal) = &mut e.terminal {
+            terminal.source.kind = EvidenceKind::Solver;
+        }
+        for frame in &mut e.frames {
+            frame.facts.run = run.clone();
+            for fact in [
+                &mut frame.facts.completed,
+                &mut frame.facts.converged,
+                &mut frame.facts.hit_newton_limit,
+                &mut frame.facts.hit_line_search_limit,
+                &mut frame.facts.world_valid,
+                &mut frame.facts.snapshot_complete,
+            ] {
+                if let Observed::Known { source, .. } = fact {
+                    source.kind = EvidenceKind::Solver;
+                }
+            }
+            for field in &mut frame.fields {
+                if let FieldData::Present { source, .. } = &mut field.data {
+                    source.kind = EvidenceKind::Solver;
+                }
+                if field.spec.location == Location::Node {
+                    let values = vec![1.0_f64; field.spec.components * node_count];
+                    let bytes = values.into_iter().flat_map(f64::to_le_bytes).collect::<Vec<_>>();
+                    field.data = FieldData::Present {
+                        sha256: fieldcraft_io::sha256_hex(&bytes),
+                        bytes,
+                        available: vec![true; node_count],
+                        source: SourceRef { kind: EvidenceKind::Solver, ..source() },
+                    };
+                }
+            }
+        }
+        e
     }
 
     #[test]
@@ -950,5 +1031,157 @@ mod identity_transactions {
         let tx = host.begin(&run, e.entities.clone(), p).unwrap();
         e.contact_control_record_sha256 = Some("0".repeat(64));
         assert_eq!(tx.validate(&e), Err(ContractError::Invalid("frozen contact control record changed")));
+    }
+
+    #[test]
+    fn production_identity_lock_commits_and_reopens_a_real_file_store() {
+        let run = RunKey { run_id: "production-run".into(), epoch: 1, worker_generation: "production-worker".into() };
+        let (context, entities) = production_context();
+        let provider = IoSnapshotProvider;
+        let binding = provider.freeze(&context, &entities).unwrap();
+        let e = production_envelope(&run, binding, entities.clone());
+        let frozen_profile = profile(&e);
+        let root = std::env::temp_dir().join(format!("fieldcraft-engine-result-store-{}", std::process::id()));
+        let store = Arc::new(FileResultStore::new(&root).unwrap());
+        let host = ReceiverHost::with_store(context, run.clone(), provider, store.clone()).unwrap();
+        let tx = host.begin(&run, entities.clone(), frozen_profile.clone()).unwrap();
+        assert!(matches!(host.begin(&run, entities.clone(), frozen_profile.clone()), Err(ContractError::InvalidState)));
+        let preview = tx.validate(&e).unwrap();
+        assert_eq!(preview.coverage, Coverage::Complete { last: 3 });
+        let result_id = tx.commit(&e).unwrap();
+        assert!(result_id.starts_with("fieldcraft-result/"));
+        let reopened = store.reopen(&result_id).unwrap();
+        assert_eq!(reopened, e);
+        let tx = host.begin(&run, entities.clone(), frozen_profile).unwrap();
+        assert_eq!(tx.validate(&reopened).unwrap().coverage, Coverage::Complete { last: 3 });
+        drop(tx);
+        println!(
+            "production_store_receipt={}",
+            serde_json::json!({
+                "run": run,
+                "result_id": result_id,
+                "reopened_equal": reopened == e,
+                "coverage": preview.coverage,
+                "model_revision": e.binding.snapshot.model_revision,
+                "reference_mesh_digest": e.binding.snapshot.reference_mesh_digest,
+                "entity_map_digest": e.binding.entity_map_digest,
+                "backend_version": e.binding.backend_version,
+            })
+        );
+        let mut forged = reopened.clone();
+        forged.binding.snapshot.model_revision = fieldcraft_io::sha256_hex(b"forged production revision");
+        let tx = host.begin(&run, entities, profile(&reopened)).unwrap();
+        let mismatch = tx.commit(&forged);
+        println!("production_identity_rejection={}", serde_json::json!({"error": format!("{mismatch:?}")}));
+        assert!(matches!(mismatch, Err(ContractError::IdentityMismatch(_))));
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn production_identity_rejects_model_and_mapping_changes_at_the_running_commit_boundary() {
+        let run = RunKey { run_id: "production-mismatch".into(), epoch: 1, worker_generation: "production-worker".into() };
+        for change_mesh in [true, false] {
+            let (context, entities) = production_context();
+            let provider = IoSnapshotProvider;
+            let binding = provider.freeze(&context, &entities).unwrap();
+            let e = production_envelope(&run, binding, entities.clone());
+            let host = ReceiverHost::new(context, run.clone(), provider).unwrap();
+            let tx = host.begin(&run, entities.clone(), profile(&e)).unwrap();
+            host.update_model(|current| {
+                if change_mesh {
+                    current.model.set_node(2, [2.0, 0.0, 0.0]).unwrap();
+                } else {
+                    current.model.set_element(8, fieldcraft_model::ElementKind::Tet4, vec![1, 3, 2, 4]).unwrap();
+                }
+            })
+            .unwrap();
+            let mismatch = tx.commit(&e);
+            println!("production_running_identity_rejection={}", serde_json::json!({"changed_mesh": change_mesh, "error": format!("{mismatch:?}")}));
+            assert!(matches!(mismatch, Err(ContractError::IdentityMismatch(_))));
+        }
+        let (context, entities) = production_context();
+        let provider = IoSnapshotProvider;
+        let binding = provider.freeze(&context, &entities).unwrap();
+        let e = production_envelope(&run, binding, entities.clone());
+        let host = ReceiverHost::new(context, run.clone(), provider).unwrap();
+        let mut wrong = entities;
+        wrong.nodes.swap(0, 1);
+        let mismatch = host.begin(&run, wrong, profile(&e));
+        let error = mismatch.as_ref().err().map(ToString::to_string).unwrap_or_else(|| "unexpected success".into());
+        println!("production_mapping_rejection={}", serde_json::json!({"error": error}));
+        assert!(matches!(mismatch, Err(ContractError::Provider(_))));
+    }
+
+    #[test]
+    fn production_policy_application_is_verified_only_when_the_native_field_is_stored() {
+        let mut session = fieldcraft_engine::Session::default();
+        session.run_script(&serde_json::from_str(include_str!("fixtures/contact-stick.json")).unwrap()).unwrap();
+        let policy_value = serde_json::json!({"Interface":"stick"});
+        let geometry = fieldcraft_io::Geometry::default();
+        let io_run = fieldcraft_io::Run::default();
+        let request = fieldcraft_io::contact_policy::PolicyRequest::freeze(&session.model, &geometry, &io_run, "Modes", &policy_value).unwrap();
+        let policy_bytes = serde_json::to_vec(&request).unwrap();
+        let payload = PolicyRequestPayload {
+            wire_sha256: fieldcraft_io::sha256_hex(&policy_bytes),
+            bytes: policy_bytes,
+            request_digest: request.digest().unwrap(),
+        };
+        let run = RunKey { run_id: "policy-production".into(), epoch: 1, worker_generation: "policy-worker".into() };
+        let (context, entities) = {
+            let artifacts = ["producer", "adapter", "receiver"]
+                .into_iter()
+                .map(|role| (role.into(), fieldcraft_io::identity::artifact_digest(role.as_bytes())))
+                .collect();
+            (IoModelContext::new(session.model.clone(), geometry.clone(), io_run.clone(), artifacts), entities_for_model(&session.model))
+        };
+        let provider = IoSnapshotProvider;
+        let binding = provider.freeze(&context, &entities).unwrap();
+        let mut e = production_envelope(&run, binding, entities.clone());
+        e.policy_request_digest = Some(payload.request_digest.clone());
+        let mut p = profile(&e);
+        p.policy_request = Some(payload.clone());
+        p.require_policy_applied = true;
+        let host = ReceiverHost::new(context, run.clone(), provider).unwrap();
+        let tx = host.begin(&run, entities.clone(), p).unwrap();
+        let policy = tx.validate(&e).unwrap().policy.unwrap();
+        assert_eq!(policy.declaration, EvidenceCheck::Verified);
+        assert_eq!(policy.application, EvidenceCheck::Verified);
+        assert_eq!(policy.runtime_qualification, EvidenceCheck::Unverified);
+        println!(
+            "production_policy_applied={}",
+            serde_json::json!({
+                "declaration": policy.declaration,
+                "application": policy.application,
+                "runtime_qualification": policy.runtime_qualification,
+            })
+        );
+
+        let mut no_policy = fieldcraft_engine::Session::default();
+        no_policy.run_script(&serde_json::from_str(include_str!("fixtures/contact-stick.json")).unwrap()).unwrap();
+        no_policy.execute("model.step.edit", &serde_json::json!({"name":"Modes","contact_perturbation":{}})).unwrap();
+        let (context, entities) = {
+            let artifacts = ["producer", "adapter", "receiver"]
+                .into_iter()
+                .map(|role| (role.into(), fieldcraft_io::identity::artifact_digest(role.as_bytes())))
+                .collect();
+            let entities = entities_for_model(&no_policy.model);
+            (IoModelContext::new(no_policy.model, geometry, io_run, artifacts), entities)
+        };
+        let request =
+            fieldcraft_io::contact_policy::PolicyRequest::freeze(&context.model, &context.geometry, &context.run, "Modes", &policy_value).unwrap();
+        let bytes = serde_json::to_vec(&request).unwrap();
+        let payload = PolicyRequestPayload { wire_sha256: fieldcraft_io::sha256_hex(&bytes), bytes, request_digest: request.digest().unwrap() };
+        let provider = IoSnapshotProvider;
+        let binding = provider.freeze(&context, &entities).unwrap();
+        let mut e = production_envelope(&run, binding, entities.clone());
+        e.policy_request_digest = Some(payload.request_digest.clone());
+        let mut p = profile(&e);
+        p.policy_request = Some(payload);
+        p.require_policy_applied = true;
+        let host = ReceiverHost::new(context, run, provider).unwrap();
+        let rejection = host.begin(&e.run, entities, p);
+        let error = rejection.as_ref().err().map(ToString::to_string).unwrap_or_else(|| "unexpected success".into());
+        println!("production_policy_unapplied={}", serde_json::json!({"error": error}));
+        assert!(matches!(rejection, Err(ContractError::NativeContactPolicyNotApplied)));
     }
 }

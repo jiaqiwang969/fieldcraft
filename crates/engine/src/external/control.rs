@@ -26,7 +26,7 @@ pub enum ControlEvidenceScope {
     NativeIpcDisabled,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ControlAvailability {
     InitializationKnown,
@@ -60,7 +60,7 @@ pub struct ControlEvidenceReceipt {
     pub kappa_clamped: Observed<bool>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ControlAdmission {
     pub availability: ControlAvailability,
     pub native_ipc: NativeIpcStatus,

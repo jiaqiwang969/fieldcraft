@@ -1,12 +1,13 @@
 //! Begin/commit identity gates with one active receiver lease and a model consistency lock.
 //!
 //! The provider must delegate to the authoritative IO Binding::freeze/validate implementation.
-//! This module supplies no replacement canonicalization or persistent storage. A fixture
-//! provider is useful only for checking lock and failure behavior, not production identity.
+//! This module supplies no replacement canonicalization. A fixture provider is useful only for
+//! checking lock and failure behavior; production identity and storage are explicit adapters.
 
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use super::control::ControlEvidenceReceipt;
+use super::production::ResultStore;
 use super::receive::{Admission, EntityMap, EvidenceCheck, ExternalReceiver, IdentityVerifier, ModelBinding, Quantity, ResultEnvelope};
 use super::run::RunGoal;
 use super::{ContractError, EvidenceKind, RunKey, SourceRef, digest_valid};
@@ -59,6 +60,11 @@ pub trait SnapshotProvider {
     fn validate_policy_declaration(&self, _current: &Self::Model, _run: &RunKey, _bytes: &[u8], _request_digest: &str) -> Result<(), ContractError> {
         Err(ContractError::Unsupported("policy declaration provider not integrated"))
     }
+    /// Verify that the frozen declaration is present in the native model. Runtime
+    /// qualification remains a separate evidence state.
+    fn validate_policy_application(&self, _current: &Self::Model, _run: &RunKey, _bytes: &[u8], _request_digest: &str) -> Result<(), ContractError> {
+        Err(ContractError::NativeContactPolicyNotApplied)
+    }
 }
 
 struct HostState<M> {
@@ -71,6 +77,7 @@ struct HostState<M> {
 pub struct ReceiverHost<P: SnapshotProvider> {
     state: Mutex<HostState<P::Model>>,
     provider: P,
+    store: Option<Arc<dyn ResultStore>>,
 }
 
 /// Non-cloneable and non-deserializable. Dropping it releases only this lease.
@@ -86,7 +93,12 @@ pub struct ReceiveTransaction<'a, P: SnapshotProvider> {
 impl<P: SnapshotProvider> ReceiverHost<P> {
     pub fn new(model: P::Model, run: RunKey, provider: P) -> Result<Self, ContractError> {
         run.validate()?;
-        Ok(Self { state: Mutex::new(HostState { model, run, next_lease: 0, active: None }), provider })
+        Ok(Self { state: Mutex::new(HostState { model, run, next_lease: 0, active: None }), provider, store: None })
+    }
+
+    pub fn with_store(model: P::Model, run: RunKey, provider: P, store: Arc<dyn ResultStore>) -> Result<Self, ContractError> {
+        run.validate()?;
+        Ok(Self { state: Mutex::new(HostState { model, run, next_lease: 0, active: None }), provider, store: Some(store) })
     }
 
     fn lock(&self) -> Result<MutexGuard<'_, HostState<P::Model>>, ContractError> {
@@ -162,7 +174,7 @@ impl<P: SnapshotProvider> ReceiverHost<P> {
         self.provider.validate_controls(&state.model, &state.run, &control.bytes, profile.require_effective)
     }
 
-    fn validate_policy(&self, state: &HostState<P::Model>, profile: &ReceiveProfile) -> Result<(), ContractError> {
+    fn validate_policy(&self, state: &HostState<P::Model>, profile: &ReceiveProfile) -> Result<bool, ContractError> {
         if let Some(policy) = &profile.policy_request {
             if policy.bytes.len() > 1024 * 1024 || !digest_valid(&policy.request_digest) {
                 return Err(ContractError::Invalid("policy receipt size or canonical digest"));
@@ -171,11 +183,12 @@ impl<P: SnapshotProvider> ReceiverHost<P> {
                 return Err(ContractError::ChecksumMismatch);
             }
             self.provider.validate_policy_declaration(&state.model, &state.run, &policy.bytes, &policy.request_digest)?;
+            if profile.require_policy_applied {
+                self.provider.validate_policy_application(&state.model, &state.run, &policy.bytes, &policy.request_digest)?;
+                return Ok(true);
+            }
         }
-        if profile.require_policy_applied {
-            return Err(ContractError::NativeContactPolicyNotApplied);
-        }
-        Ok(())
+        if profile.require_policy_applied { Err(ContractError::NativeContactPolicyNotApplied) } else { Ok(false) }
     }
 
     /// Edits may invalidate an outstanding run. They cannot race the commit check.
@@ -223,7 +236,7 @@ impl<P: SnapshotProvider> ReceiveTransaction<'_, P> {
             return Err(ContractError::InvalidState);
         }
         self.host.validate_controls(state, &self.profile)?;
-        self.host.validate_policy(state, &self.profile)?;
+        let policy_applied = self.host.validate_policy(state, &self.profile)?;
         if envelope.policy_request_digest.as_deref() != self.profile.policy_request.as_ref().map(|p| p.request_digest.as_str()) {
             return Err(ContractError::Invalid("frozen policy declaration changed"));
         }
@@ -247,6 +260,9 @@ impl<P: SnapshotProvider> ReceiveTransaction<'_, P> {
         let mut admission = ExternalReceiver::new(verifier).validate(&self.binding, &self.run, envelope)?;
         if let Some(policy) = &mut admission.policy {
             policy.declaration = EvidenceCheck::Verified;
+            if policy_applied {
+                policy.application = EvidenceCheck::Verified;
+            }
         }
         admission.control = self.profile.control_evidence.as_ref().map(ControlEvidenceReceipt::admission);
         Ok(admission)
@@ -259,10 +275,13 @@ impl<P: SnapshotProvider> ReceiveTransaction<'_, P> {
 
     /// Rechecks the live identity and run under the same lock that a future atomic publisher
     /// must hold. No result number, durability claim or success receipt is created here.
-    pub fn commit(self, envelope: &ResultEnvelope) -> Result<(), ContractError> {
+    pub fn commit(self, envelope: &ResultEnvelope) -> Result<String, ContractError> {
         let state = self.host.lock()?;
-        let _admission = self.validate_locked(&state, envelope)?;
-        Err(ContractError::StorageUnavailable)
+        let admission = self.validate_locked(&state, envelope)?;
+        let Some(store) = &self.host.store else {
+            return Err(ContractError::StorageUnavailable);
+        };
+        store.publish(envelope, &admission)
     }
 }
 

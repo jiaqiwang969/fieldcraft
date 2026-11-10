@@ -1,8 +1,8 @@
 # External backend contract foundation
 
 `fieldcraft_engine::external` is a Rust library boundary for a separately hosted backend.
-It has no CUDA dependency and does not launch a numerical solver on its own. This first
-implementation is not a CLI/MCP command, a saved result type or a complete worker protocol.
+It has no CUDA dependency and does not launch a numerical solver on its own. The production
+seams below are library APIs, not a CLI/MCP command or a complete worker protocol.
 
 `run::RunLedger` is an in-memory state machine. A `RunKey` binds a temporary run, epoch and
 worker generation; it is not a persistent model identity. The ledger distinguishes native
@@ -55,18 +55,27 @@ reference, evidence kind and required fields. `ReceiveTransaction::validate` and
 them again; a producer cannot shorten the goal to make an incomplete trajectory look complete.
 Model edits use the same lock, and are permitted between checks: changed identity is refused at
 commit. Reset/replacement invalidates an older run/epoch/generation and lease; dropping an old
-transaction cannot release a newer lease. A future atomic publisher must execute **inside**
-the commit guard. No storage publisher is currently installed, so even a matching identity
-returns `StorageUnavailable`, never a successful result identifier. Mutable aliases outside
-this host are not permitted by the integration contract.
+transaction cannot release a newer lease. `ReceiverHost::with_store` holds a receiver-owned
+`ResultStore` and invokes it while the commit lock is held; `ReceiverHost::new` remains the
+deliberately unconfigured path and returns `StorageUnavailable` after successful validation.
+Mutable aliases outside this host are not permitted by the integration contract.
 
 `SnapshotProvider` is the adapter seam to IO `Binding::freeze` and `Binding::validate`, receiving
 current Model/Geometry/Run settings, full entity mapping and actual artifact hashes. The wire
-shape and transaction gate compile independently of that implementation; the current branch
-still needs the authoritative IO dependency integrated by its owner. No canonicalization
-algorithm is duplicated here. Fixture providers test gates/locks only. The
-`external_identity_receipt` example can read a provider-produced binding and check wire
-compatibility, and explicitly reports `model_identity_recomputed=false`.
+shape and transaction gate compile independently of that implementation. The production
+`external::production::IoSnapshotProvider` delegates to the merged `fieldcraft_io` identity
+codec and does not duplicate canonicalization; it also delegates controls and policy decoding.
+Fixture providers remain test-only. The `external_identity_receipt` example can read a
+provider-produced binding and check wire compatibility, and explicitly reports
+`model_identity_recomputed=false` because it is only a wire reader.
+
+`production::FileResultStore` is the minimal receiver-owned durable seam. It accepts only a
+`Solver` admission with complete coverage and `SolveOutcome::Succeeded`, serializes the envelope
+and admission, writes one self-checking JSON record through `fieldcraft_io::fs::write_atomic`,
+and returns `fieldcraft-result/<sha256>` only after that write succeeds. Reopening verifies the
+schema, identifier and envelope digest; publishing the same bytes is idempotent and a digest
+collision is rejected. This is a library store, not a project result-kind allocator or a
+240-frame production entry point.
 
 The profile optionally freezes the bytes and SHA-256 of a
 `fieldcraft-contact-controls/1` receipt plus a receiver-owned `require_effective` policy.
@@ -102,23 +111,25 @@ value, Unknown reasons, or IPC-disabled state in `Admission.control`; it does no
 states into a solve or a result identifier. The shared 0.0.29 five-case audit currently has
 10 initialization Known records, 70 initialization Unknown records and 10 IPC-disabled
 records, with all 80 non-IPC trajectories still lacking per-frame effective/clamp values.
-This is source/availability consumption only; no GPU run or production identity/storage
-provider is implied.
+This route-20 receipt remains source/availability consumption only; it is now carried through
+`ReceiverHost` without upgrading its observation state. The production identity/store seam below
+is independent of the still-missing per-frame observations; no GPU run is implied.
 
 An optional `PolicyRequestPayload` freezes a `fieldcraft-contact-policy-request/1` declaration
 separately from controls. It holds the wire bytes/SHA (at most 1 MiB) **and** the independently
 frozen `PolicyRequest::digest`; pretty JSON's wire SHA is not that canonical digest. The
 `validate_policy_declaration` provider must use IO `PolicyRequest::decode` against the current
-model/geometry/run at begin and commit. The default provider refuses. No policy rules or
-canonicalization are reimplemented here. Only the provider can mark a declaration verified;
-the receiver keeps application and runtime qualification `Unverified` and never reports a
-policy-bearing trajectory as a successful solve. `require_policy_applied=true` always returns
-`NativeContactPolicyNotApplied` in this foundation, including when the declaration is valid.
-This deliberately conservative quantitative gate cannot be weakened by producer fields.
-Diagnostic declarations may be retained; an empty declaration is not explicit stick. A later
-native adapter needs both IO `require_applied` and separate original runtime qualification
-evidence after the native model/form/solver implementation is integrated. No automatic legacy
-fallback, contact-state inference from warnings or commercial keyword mapping is provided.
+model/geometry/run at begin and commit. The production provider calls IO `PolicyRequest::decode`
+and, when `require_policy_applied=true`, IO `require_applied`; the receiver marks
+`application=Verified` only when that native field is present in the current model. Runtime
+qualification remains `Unverified`, and a declaration alone cannot make a trajectory a
+successful solve. Providers without this seam still refuse with
+`NativeContactPolicyNotApplied`; a native application failure keeps that same named refusal.
+This conservative quantitative gate cannot be weakened by producer fields. Diagnostic declarations
+may be retained; an empty declaration is not explicit stick. No automatic legacy fallback,
+contact-state inference from warnings or commercial keyword mapping is provided. Finite penalty
+stiffness is not treated as hard stick, and runtime qualification still requires original solver
+evidence.
 
 The envelope declares run/epoch/generation, run goal, source scene, source evidence kind,
 required-field profile and terminal source. Each frame explicitly declares position,
@@ -142,15 +153,16 @@ The returned states are independent:
 | `transfer = Verified` | The submitted block checksums, shapes and structural checks passed. A structural error returns a named error, not an admission. |
 | `coverage` | Empty, a contiguous qualified prefix, or all requested frames; never renumbered to hide a gap. Missing required data or a first frame failure cuts the prefix. |
 | `solve` | Qualified source facts plus a terminal claim for the entire goal, distinct from byte integrity. A protocol fixture can never produce `Succeeded` at the receiver. |
-| `commit = NotAttempted` | No project result has been registered or saved. `commit()` returns `StorageUnavailable`. There is no result identifier. |
+| `commit = NotAttempted` | The admission object is the pre-storage report. With `ReceiverHost::new`, `commit()` returns `StorageUnavailable`; with `with_store`, the atomic store returns a result identifier only after a complete solver-success write. |
 
 Sealed incomplete data remains partial/unknown/failed/cancelled according to its evidence;
 unsealed data remains staging. Future full admission requires a real solver source, complete
 coverage, successful terminal evidence, purpose policy, current identity and atomic storage.
 Future diagnostic prefix admission requires an explicitly allowed, sealed nonempty prefix;
 it must retain the full requested domain and the first rejection, and cannot be promoted to a
-full solve. Durable commits, archive reopen checks, general transport retransmission and
-source-artifact authentication are not implemented in this preflight layer.
+full solve. The minimal file-store reopen check is implemented by `production::FileResultStore`;
+project result registration, archive indexing, general transport retransmission and
+source-artifact authentication remain outside this layer.
 
 `crates/engine/tests/external_contract.rs` uses original protocol fixtures and real bounded OS
 child processes. Its fabricated arrays and convergence facts are **not numerical validation**.
