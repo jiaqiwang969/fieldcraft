@@ -52,6 +52,11 @@ type Result<T> = std::result::Result<T, CodecError>;
 
 /// `value` encoded, appended to `out`.
 pub fn encode_into<T: Serialize + ?Sized>(value: &T, out: &mut Vec<u8>) -> Result<()> {
+    encode_to(value, out)
+}
+
+/// Encode without an intermediate byte vector, with identical wire bytes.
+pub fn encode_to<T: Serialize + ?Sized>(value: &T, out: &mut dyn std::io::Write) -> Result<()> {
     value.serialize(&mut Encoder { out })
 }
 
@@ -64,21 +69,22 @@ pub fn encode<T: Serialize + ?Sized>(value: &T) -> Result<Vec<u8>> {
 
 /// A `T` decoded from all of `bytes` (bytes left over are an error).
 pub fn decode<'de, T: de::Deserialize<'de>>(bytes: &'de [u8]) -> Result<T> {
-    let mut d = Decoder { input: bytes };
+    let mut d = Decoder { input: Input::Slice(bytes) };
     let value = T::deserialize(&mut d)?;
-    if !d.input.is_empty() {
+    if d.input.len() != 0 {
         return Err(CodecError(format!("{} bytes left over after the value", d.input.len())));
     }
     Ok(value)
 }
 
 struct Encoder<'a> {
-    out: &'a mut Vec<u8>,
+    out: &'a mut dyn std::io::Write,
 }
 
 impl Encoder<'_> {
-    fn len(&mut self, n: usize) {
-        self.out.extend_from_slice(&(n as u64).to_le_bytes());
+    fn len(&mut self, n: usize) -> Result<()> {
+        self.out.write_all(&(n as u64).to_le_bytes()).map_err(|e| CodecError(e.to_string()))?;
+        Ok(())
     }
 }
 
@@ -99,47 +105,47 @@ impl ser::Serializer for &mut Encoder<'_> {
     type SerializeStructVariant = Self;
 
     fn serialize_bool(self, v: bool) -> Result<()> {
-        self.out.push(u8::from(v));
+        self.out.write_all(&[u8::from(v)]).map_err(|e| CodecError(e.to_string()))?;
         Ok(())
     }
     fn serialize_i8(self, v: i8) -> Result<()> {
-        self.out.extend_from_slice(&v.to_le_bytes());
+        self.out.write_all(&v.to_le_bytes()).map_err(|e| CodecError(e.to_string()))?;
         Ok(())
     }
     fn serialize_i16(self, v: i16) -> Result<()> {
-        self.out.extend_from_slice(&v.to_le_bytes());
+        self.out.write_all(&v.to_le_bytes()).map_err(|e| CodecError(e.to_string()))?;
         Ok(())
     }
     fn serialize_i32(self, v: i32) -> Result<()> {
-        self.out.extend_from_slice(&v.to_le_bytes());
+        self.out.write_all(&v.to_le_bytes()).map_err(|e| CodecError(e.to_string()))?;
         Ok(())
     }
     fn serialize_i64(self, v: i64) -> Result<()> {
-        self.out.extend_from_slice(&v.to_le_bytes());
+        self.out.write_all(&v.to_le_bytes()).map_err(|e| CodecError(e.to_string()))?;
         Ok(())
     }
     fn serialize_u8(self, v: u8) -> Result<()> {
-        self.out.push(v);
+        self.out.write_all(&[v]).map_err(|e| CodecError(e.to_string()))?;
         Ok(())
     }
     fn serialize_u16(self, v: u16) -> Result<()> {
-        self.out.extend_from_slice(&v.to_le_bytes());
+        self.out.write_all(&v.to_le_bytes()).map_err(|e| CodecError(e.to_string()))?;
         Ok(())
     }
     fn serialize_u32(self, v: u32) -> Result<()> {
-        self.out.extend_from_slice(&v.to_le_bytes());
+        self.out.write_all(&v.to_le_bytes()).map_err(|e| CodecError(e.to_string()))?;
         Ok(())
     }
     fn serialize_u64(self, v: u64) -> Result<()> {
-        self.out.extend_from_slice(&v.to_le_bytes());
+        self.out.write_all(&v.to_le_bytes()).map_err(|e| CodecError(e.to_string()))?;
         Ok(())
     }
     fn serialize_f32(self, v: f32) -> Result<()> {
-        self.out.extend_from_slice(&v.to_le_bytes());
+        self.out.write_all(&v.to_le_bytes()).map_err(|e| CodecError(e.to_string()))?;
         Ok(())
     }
     fn serialize_f64(self, v: f64) -> Result<()> {
-        self.out.extend_from_slice(&v.to_le_bytes());
+        self.out.write_all(&v.to_le_bytes()).map_err(|e| CodecError(e.to_string()))?;
         Ok(())
     }
     fn serialize_char(self, v: char) -> Result<()> {
@@ -149,16 +155,16 @@ impl ser::Serializer for &mut Encoder<'_> {
         self.serialize_bytes(v.as_bytes())
     }
     fn serialize_bytes(self, v: &[u8]) -> Result<()> {
-        self.len(v.len());
-        self.out.extend_from_slice(v);
+        self.len(v.len())?;
+        self.out.write_all(v).map_err(|e| CodecError(e.to_string()))?;
         Ok(())
     }
     fn serialize_none(self) -> Result<()> {
-        self.out.push(0);
+        self.out.write_all(&[0]).map_err(|e| CodecError(e.to_string()))?;
         Ok(())
     }
     fn serialize_some<T: Serialize + ?Sized>(self, value: &T) -> Result<()> {
-        self.out.push(1);
+        self.out.write_all(&[1]).map_err(|e| CodecError(e.to_string()))?;
         value.serialize(self)
     }
     fn serialize_unit(self) -> Result<()> {
@@ -178,7 +184,7 @@ impl ser::Serializer for &mut Encoder<'_> {
         value.serialize(self)
     }
     fn serialize_seq(self, len: Option<usize>) -> Result<Self> {
-        self.len(len.ok_or_else(unknown_length)?);
+        self.len(len.ok_or_else(unknown_length)?)?;
         Ok(self)
     }
     fn serialize_tuple(self, _: usize) -> Result<Self> {
@@ -192,7 +198,7 @@ impl ser::Serializer for &mut Encoder<'_> {
         Ok(self)
     }
     fn serialize_map(self, len: Option<usize>) -> Result<Self> {
-        self.len(len.ok_or_else(unknown_length)?);
+        self.len(len.ok_or_else(unknown_length)?)?;
         Ok(self)
     }
     fn serialize_struct(self, _: &'static str, _: usize) -> Result<Self> {
@@ -269,11 +275,11 @@ impl ser::SerializeStruct for &mut Encoder<'_> {
     type Ok = ();
     type Error = CodecError;
     fn serialize_field<T: Serialize + ?Sized>(&mut self, _: &'static str, value: &T) -> Result<()> {
-        self.out.push(1);
+        self.out.write_all(&[1]).map_err(|e| CodecError(e.to_string()))?;
         value.serialize(&mut **self)
     }
     fn skip_field(&mut self, _: &'static str) -> Result<()> {
-        self.out.push(0);
+        self.out.write_all(&[0]).map_err(|e| CodecError(e.to_string()))?;
         Ok(())
     }
     fn end(self) -> Result<()> {
@@ -285,11 +291,11 @@ impl ser::SerializeStructVariant for &mut Encoder<'_> {
     type Ok = ();
     type Error = CodecError;
     fn serialize_field<T: Serialize + ?Sized>(&mut self, _: &'static str, value: &T) -> Result<()> {
-        self.out.push(1);
+        self.out.write_all(&[1]).map_err(|e| CodecError(e.to_string()))?;
         value.serialize(&mut **self)
     }
     fn skip_field(&mut self, _: &'static str) -> Result<()> {
-        self.out.push(0);
+        self.out.write_all(&[0]).map_err(|e| CodecError(e.to_string()))?;
         Ok(())
     }
     fn end(self) -> Result<()> {
@@ -297,26 +303,66 @@ impl ser::SerializeStructVariant for &mut Encoder<'_> {
     }
 }
 
-struct Decoder<'de> {
-    input: &'de [u8],
+enum Input<'a> {
+    Slice(&'a [u8]),
+    Stream(&'a mut dyn std::io::Read, usize),
 }
-
-impl<'de> Decoder<'de> {
-    fn take(&mut self, n: usize) -> Result<&'de [u8]> {
-        if n > self.input.len() {
-            return Err(CodecError(format!("the data ends early: {n} bytes wanted, {} left", self.input.len())));
+impl Input<'_> {
+    fn len(&self) -> usize {
+        match self {
+            Self::Slice(s) => s.len(),
+            Self::Stream(_, n) => *n,
         }
-        let (head, rest) = self.input.split_at(n);
-        self.input = rest;
-        Ok(head)
     }
-
+}
+struct Decoder<'de> {
+    input: Input<'de>,
+}
+/// Decode owned values from a bounded stream, never retaining encoded bytes beside the value.
+pub fn decode_from<T: de::DeserializeOwned>(reader: &mut dyn std::io::Read, bytes: usize) -> Result<T> {
+    let mut d = Decoder { input: Input::Stream(reader, bytes) };
+    let value = T::deserialize(&mut d)?;
+    if d.input.len() != 0 {
+        return Err(CodecError(format!("{} bytes left over", d.input.len())));
+    }
+    Ok(value)
+}
+impl<'de> Decoder<'de> {
+    fn take(&mut self, n: usize) -> Result<std::borrow::Cow<'de, [u8]>> {
+        if n > self.input.len() {
+            return Err(CodecError("the data ends early".into()));
+        }
+        match &mut self.input {
+            Input::Slice(s) => {
+                let (head, rest) = s.split_at(n);
+                *s = rest;
+                Ok(std::borrow::Cow::Borrowed(head))
+            }
+            Input::Stream(r, left) => {
+                let mut b = vec![0; n];
+                r.read_exact(&mut b).map_err(|e| CodecError(e.to_string()))?;
+                *left -= n;
+                Ok(std::borrow::Cow::Owned(b))
+            }
+        }
+    }
     fn array<const N: usize>(&mut self) -> Result<[u8; N]> {
-        let mut a = [0u8; N];
-        a.copy_from_slice(self.take(N)?);
+        if N > self.input.len() {
+            return Err(CodecError("the data ends early".into()));
+        }
+        let mut a = [0; N];
+        match &mut self.input {
+            Input::Slice(s) => {
+                a.copy_from_slice(&s[..N]);
+                *s = &s[N..]
+            }
+            Input::Stream(r, left) => {
+                r.read_exact(&mut a).map_err(|e| CodecError(e.to_string()))?;
+                *left -= N;
+            }
+        }
         Ok(a)
     }
-
     fn u8(&mut self) -> Result<u8> {
         Ok(self.array::<1>()?[0])
     }
@@ -338,13 +384,16 @@ impl<'de> Decoder<'de> {
         }
     }
 
-    fn bytes(&mut self) -> Result<&'de [u8]> {
+    fn bytes(&mut self) -> Result<std::borrow::Cow<'de, [u8]>> {
         let n = self.count()?;
         self.take(n)
     }
 
-    fn str(&mut self) -> Result<&'de str> {
-        std::str::from_utf8(self.bytes()?).map_err(|e| CodecError(format!("a string is not UTF-8: {e}")))
+    fn str(&mut self) -> Result<std::borrow::Cow<'de, str>> {
+        match self.bytes()? {
+            std::borrow::Cow::Borrowed(b) => Ok(std::borrow::Cow::Borrowed(std::str::from_utf8(b).map_err(|e| CodecError(e.to_string()))?)),
+            std::borrow::Cow::Owned(b) => Ok(std::borrow::Cow::Owned(String::from_utf8(b).map_err(|e| CodecError(e.to_string()))?)),
+        }
     }
 }
 
@@ -400,16 +449,28 @@ impl<'de> de::Deserializer<'de> for &mut Decoder<'de> {
         v.visit_char(char::from_u32(n).ok_or_else(|| CodecError(format!("{n} is not a character")))?)
     }
     fn deserialize_str<V: Visitor<'de>>(self, v: V) -> Result<V::Value> {
-        v.visit_borrowed_str(self.str()?)
+        match self.str()? {
+            std::borrow::Cow::Borrowed(s) => v.visit_borrowed_str(s),
+            std::borrow::Cow::Owned(s) => v.visit_string(s),
+        }
     }
     fn deserialize_string<V: Visitor<'de>>(self, v: V) -> Result<V::Value> {
-        v.visit_borrowed_str(self.str()?)
+        match self.str()? {
+            std::borrow::Cow::Borrowed(s) => v.visit_borrowed_str(s),
+            std::borrow::Cow::Owned(s) => v.visit_string(s),
+        }
     }
     fn deserialize_bytes<V: Visitor<'de>>(self, v: V) -> Result<V::Value> {
-        v.visit_borrowed_bytes(self.bytes()?)
+        match self.bytes()? {
+            std::borrow::Cow::Borrowed(s) => v.visit_borrowed_bytes(s),
+            std::borrow::Cow::Owned(s) => v.visit_byte_buf(s),
+        }
     }
     fn deserialize_byte_buf<V: Visitor<'de>>(self, v: V) -> Result<V::Value> {
-        v.visit_borrowed_bytes(self.bytes()?)
+        match self.bytes()? {
+            std::borrow::Cow::Borrowed(s) => v.visit_borrowed_bytes(s),
+            std::borrow::Cow::Owned(s) => v.visit_byte_buf(s),
+        }
     }
     fn deserialize_option<V: Visitor<'de>>(self, v: V) -> Result<V::Value> {
         match self.u8()? {
