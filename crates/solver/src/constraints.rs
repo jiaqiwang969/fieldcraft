@@ -720,6 +720,31 @@ impl Reduction {
         self.free.row(dof).any(|(_, coefficient)| coefficient != 0.0)
     }
 
+    /// Relative infinity norm of c T_f, for checking a frozen homogeneous row.
+    /// Accumulate only its participating equations, without a dense mesh-size vector.
+    pub(crate) fn homogeneous_row_residual(&self, terms: &[(usize, f64)]) -> f64 {
+        let mut projected = BTreeMap::<usize, f64>::new();
+        let mut scale = 0.0;
+        for &(dof, coefficient) in terms {
+            for (equation, value) in self.free.row(dof) {
+                let term = coefficient * value;
+                if !term.is_finite() {
+                    return f64::INFINITY;
+                }
+                *projected.entry(equation).or_default() += term;
+                scale += term.abs();
+            }
+        }
+        let residual = projected.values().map(|v| v.abs()).fold(0.0, f64::max);
+        if !scale.is_finite() {
+            f64::INFINITY
+        } else if scale > 0.0 {
+            residual / scale
+        } else {
+            residual
+        }
+    }
+
     /// T_fᵀ A T_f for each matrix, all over the mesh's degrees of freedom and on one pattern
     /// (reference points carry no stiffness or mass of their own). Row by row with a dense
     /// accumulator (F. G. Gustavson, *Two fast algorithms for sparse matrices*, ACM TOMS

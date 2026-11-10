@@ -355,3 +355,5 @@ assembly use the converged consistent tangent. Two-cube axial theory and native 
 checks cover explicit paired cuts; continuous-face transient preparation remains unsupported.
 
 - Reference-J F-bar also retains isotropic St Venant–Kirchhoff elasticity in finite-strain static and preloaded perturbation paths, with a coupled potential Hessian and effective stress recovery; unsupported laws remain refused.
+
+Native frozen contact perturbations now include planar quadratic solid faces and moving main surfaces for hard terminal-mortar stick and strictly open zero-contact response. Quadratic open faces need straight midpoint edges for whole-face separation; moving-main tangential release and shear transport remain refused. Analytic quadratic-bar, reduced-force difference, bitwise empty-policy and persistence regressions cover the new scope; commercial mapping remains pending.

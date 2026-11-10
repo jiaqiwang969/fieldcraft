@@ -472,8 +472,8 @@ folds onto itself (heavy suite).
  "boundary_conditions":["base","upper","top"]}
 ```
 
-The first supported domain is a fully closed planar pair of linear solid faces against
-a main surface whose translations are all fixed. The base must be an elastic
+The supported domain is a fully closed planar pair of linear or quadratic solid faces
+(tri3, quad4, tri6, quad8). Either main or secondary surface may move. The base must be an elastic
 `nonlinear_static` step with `nonlinear_geometry: true`; the frequency step must retain
 the same supports. Every contact must have a selection. Positive pressure and a
 strict interior of the static Coulomb cone are checked at every secondary node,
@@ -486,13 +486,15 @@ experimental uncertainty bound.
 `stick` imposes zero incremental normal and tangential relative motion with the
 terminal mortar rows and the existing constraint elimination. It is a hard incremental
 policy, not the finite penalty stiffness used in the static friction iteration.
-After assembling the actual constraints, the solver checks that **all** translations
-on both contact surfaces have no free increment. Consequently `Tᵀ K_contact T = 0`,
-including normal and tangential geometry terms: those terms need not vanish before
-elimination. The structural terminal tangent, including stress stiffness, and the
-reference consistent or lumped mass are reduced with the same constraints. Nothing
-is added to the source mesh. A nonzero free interface increment is refused, rather
-than silently omitting a contact geometry term.
+The terminal mortar integrals form a constant matrix `C0=[D0,-M0]` in each global
+translation, and the actual elimination is checked for `C0 T=0`. This binds the
+surfaces at the base state; it does not freeze their absolute translations. Since
+this selected constraint is affine, its traction-weighted Hessian is zero. The
+structural terminal tangent, including stress stiffness, and reference mass use
+that same reduction. No normal/tangential penalty is added. In particular this is
+not a claim that the original moving Coulomb-contact Hessian projects to zero:
+its geometry, rotating traction basis and history transport belong to a different
+policy. The empty-map legacy operator remains unchanged. No source nodes are added.
 
 Each result records the selected policy, closed-node and row counts, minimum pressure
 and Coulomb margin, gap qualification and geometry assumption. Model persistence and
@@ -503,9 +505,9 @@ new policy. Setting an empty map explicitly restores that legacy behaviour.
 
 `contact_perturbation.*` errors name the contact and the failed condition: pressure
 switching, sliding or a cone boundary, missing friction evidence, incomplete overlap,
-an unqualified gap, a moving main surface, nonplanar/quadratic faces or interface
-geometry not eliminated. General contact, other perturbation procedures, moving
-interfaces are outside this first domain. The separately qualified tangentially free
+an unqualified gap, nonplanar faces or residual relative mortar motion after
+elimination. General contact, other perturbation procedures, moving-main
+tangential release and shear-history transport remain outside this domain. The separately qualified tangentially free
 and open selections are described below.
 This does not implement a nonsymmetric Coulomb sliding tangent. Abaqus export refuses
 the explicit policy until a keyword mapping is independently verified; native
@@ -643,9 +645,11 @@ free of contact constraints. The symmetric structural terminal tangent (includin
 stress stiffness), reference mass and ordinary supports are retained. Significant
 nonsymmetric follower stiffness is refused, as for `closed_tangent_free`.
 
-The first supported domain is an explicit pair of planar linear solid faces. Its
-one convex main face is fully fixed; the parallel, oppositely oriented secondary
-patch projects strictly inside it. Every current corner gap divided by its element
+The supported domain is an explicit pair of planar linear or quadratic solid faces.
+Quadratic edge nodes must be at their corner averages in the base configuration;
+this gives a convex-hull separation certificate over the whole affine triangle or
+bilinear quadrilateral, not just at sampled nodes. Its one convex main face may
+move; the parallel, oppositely oriented secondary patch projects strictly inside it. Every current corner gap divided by its element
 thickness must exceed the existing augmented-Lagrange gap tolerance. All normal
 pressure, nodal contact force and committed multipliers must be zero; frictional
 tractions/history must be zero and not slipping. Initial gap adjustment is refused.
@@ -654,8 +658,9 @@ all zero-force/history checks are required even outside the broad-phase range.
 
 Touching or near-switch states are refused as `normal_switch_or_not_open`; other
 reasons include `open_contact_force_nonzero`, `open_history_unqualified`,
-`base_evidence_missing`, `open_requires_fixed_main`, `open_requires_single_main_face`,
-`open_requires_planar_pair`, `open_requires_linear_solid_faces`,
+`base_evidence_missing`, `open_requires_single_main_face`,
+`open_requires_planar_pair`, `open_requires_solid_faces`,
+`open_quadratic_geometry_unqualified`,
 `open_adjusted_gap_unqualified` and `clipping_branch_unqualified`. This is an
 infinitesimal frozen-state policy. It does not certify that a finite perturbation
 amplitude cannot reclose the gap. Open harmonic/transient steps and generalized
@@ -679,5 +684,26 @@ describes open base contacts remaining open in the usual perturbation assumption
 This supports the frozen-state interpretation, not a verified keyword, enforcement
 or element mapping. The three deck writers continue to refuse explicit policies.
 Finite tangential stiffness is distinct from the hard constraints of `stick`, and a
-commercial status label alone establishes neither. `contact_perturbation v3` open
+commercial status label alone establishes neither. `contact_perturbation v4` open
 diagnostics are text; the identity report deliberately stays `unverified`.
+
+
+The moving-quadratic regression (`engine/tests/contact_quadratic_policy.rs`) uses
+plane-section guides on two original Hex20 blocks, with separate shear and axial
+freedoms. The guides are part of the declared model, not added stabilization.
+Independently integrating the quadratic bar polynomials gives
+`Ke=k/3 [[7,-8,1],[-8,16,-8],[1,-8,7]]` and
+`Me=rho/30 [[4,2,-1],[2,16,2],[-1,2,4]]` for unit length and area.
+With fixed outer ends, a bonded pair has dimensionless eigenvalues
+`10, (52-8 sqrt(31))/3, (52+8 sqrt(31))/3`; each separated fixed-free block
+has the latter two. Here `k=G lambda^2` in shear or
+`E(3 lambda^2-1)/2` axially for the actual homogeneous StVK base.
+These are discrete analytic references, not exact continuum string frequencies.
+Tests pair by components, retain repeated roots, check forces and physical pencil
+residuals, compare empty-policy results bitwise, and reopen native archives.
+The solver test differences the actual reduced structural force with terminal
+mortar coefficients fixed; the open test retains the real zero-force contact path.
+It does not difference the re-searched finite-friction law and label it hard stick.
+The mortar interpolation follows Puso and Laursen (2004) and Puso, Laursen and
+Solberg (2008), cited in the solver's contact module. This native affine freeze is
+an explicit modeling assumption; no commercial keyword equivalence follows.

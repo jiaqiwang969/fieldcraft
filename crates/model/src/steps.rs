@@ -1262,7 +1262,8 @@ impl OutputVariable {
 }
 
 /// An explicitly selected contact policy for an equilibrium perturbation.
-/// `Stick` currently requires a closed planar pair against a fixed main surface.
+/// `Stick` freezes the terminal mortar binding of a closed planar solid pair,
+/// including quadratic faces and moving main surfaces.
 /// This is a hard incremental constraint, not the equilibrium friction penalty.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

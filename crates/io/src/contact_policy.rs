@@ -173,13 +173,13 @@ pub fn report(model: &Model) -> Result<Value> {
         "native_field":"Step.contact_perturbation",
         "native_field_available":native_field_available(),
         "declaration_values":["stick","closed_tangent_free","open"],
-        "policy_specification":"fieldcraft-native-contact-perturbation/3",
+        "policy_specification":"fieldcraft-native-contact-perturbation/4",
         "steps":steps,
-        "qualification_requires":["frequency_from_earlier_nlgeom_base","unchanged_support_names","all_contacts_are_explicit_pairs","planar_linear_solid_faces","fixed_main_translations"],
+        "qualification_requires":["frequency_from_earlier_nlgeom_base","unchanged_support_names","all_contacts_are_explicit_pairs"],
         "qualification_by_policy":{
-            "stick":["positive_pressure_above_guard","gap_over_thickness_within_solver_tolerance","strict_friction_cone_margin","not_slipping","full_reference_overlap","positive_static_friction","interface_motion_eliminated"],
-            "closed_tangent_free":["positive_pressure_above_guard","gap_over_thickness_within_solver_tolerance","strict_friction_cone_margin_when_frictional","not_slipping","single_convex_main_face","strict_clipping_edge_margin","full_current_overlap","base_shear_below_guard","normal_gap_gradient_eliminated","pressure_weighted_gap_geometry_retained"],
-            "open":["single_convex_main_face","strict_clipping_edge_margin","current_planar_separation_above_gap_guard","zero_contact_force_and_history","no_initial_gap_adjustment","missing_search_pair_requires_geometric_certificate","zero_contact_constraint_and_tangent"]
+            "stick":["planar_linear_or_quadratic_solid_faces","fixed_or_moving_main","terminal_mortar_coefficients_frozen","positive_pressure_above_guard","gap_over_thickness_within_solver_tolerance","strict_friction_cone_margin","not_slipping","full_reference_overlap","positive_static_friction","relative_mortar_motion_eliminated","affine_constraint_zero_hessian"],
+            "closed_tangent_free":["planar_linear_solid_faces","fixed_main_translations","positive_pressure_above_guard","gap_over_thickness_within_solver_tolerance","strict_friction_cone_margin_when_frictional","not_slipping","single_convex_main_face","strict_clipping_edge_margin","full_current_overlap","base_shear_below_guard","normal_gap_gradient_eliminated","pressure_weighted_gap_geometry_retained"],
+            "open":["planar_linear_or_straight_midpoint_quadratic_solid_faces","fixed_or_moving_main","single_convex_main_face","strict_clipping_edge_margin","current_planar_separation_above_gap_guard","zero_contact_force_and_history","no_initial_gap_adjustment","missing_search_pair_requires_geometric_certificate","zero_contact_constraint_and_tangent"]
         },
         "state_evidence":"pending_original_runtime_receipt; do not parse diagnostic warnings as a stable protocol",
         "commercial_keyword_mapping":"pending; no verified mapping",

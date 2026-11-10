@@ -60,7 +60,6 @@ fn with_run<T>(model: &Model, f: impl FnOnce(&mut Run<'_>) -> T) -> T {
     let mut warnings = Vec::new();
     let setup = Setup { model, resolved: &resolved, mesh: &mesh, step };
     let red = reduction(&setup, true, &order, budget(&limits, &mesh, &graph, 1), &mut warnings).unwrap();
-    assert_eq!(red.neq(), 4);
     let kinds: Vec<_> = mesh.elements.iter().map(|e| e.kernel().unwrap().dofs().node).collect();
     let problem = Problem {
         scalar_controls: Default::default(),
@@ -506,4 +505,201 @@ fn open_qualification_requires_zero_force_history_and_geometric_separation() {
             assert!(error.contains("open_history_unqualified"), "{error}");
         }
     });
+}
+
+/// Quadratic two-solid patch with a deformable main; no rigid-body freedoms.
+fn quadratic_policy_blocks(open: bool) -> Model {
+    let mut model = blocks();
+    let edges = [(0, 1), (1, 2), (2, 3), (3, 0), (4, 5), (5, 6), (6, 7), (7, 4), (0, 4), (1, 5), (2, 6), (3, 7)];
+    for b in 0..2u32 {
+        let mut labels: Vec<_> = (8 * b + 1..=8 * b + 8).collect();
+        for &label in &labels {
+            let mut x = model.node(label).unwrap().xyz;
+            if open {
+                if b == 0 {
+                    x[0] = 1.5 * (x[0] - 0.5) + 0.5;
+                    x[1] = 1.5 * (x[1] - 0.5) + 0.5;
+                } else {
+                    x[2] += 0.02;
+                }
+            }
+            model.set_node(label, x).unwrap();
+        }
+        for (i, (a, c)) in edges.iter().enumerate() {
+            let xa = model.node(labels[*a]).unwrap().xyz;
+            let xc = model.node(labels[*c]).unwrap().xyz;
+            let label = 17 + 12 * b + i as u32;
+            model.set_node(label, std::array::from_fn(|k| (xa[k] + xc[k]) / 2.)).unwrap();
+            labels.push(label);
+        }
+        model.set_element(b + 1, ElementKind::Hex20, labels).unwrap();
+    }
+    model.replace_set("base", Set { nodes: (1..=4).chain(17..=20).collect(), ..Default::default() }).unwrap();
+    model.replace_set("upper", Set { nodes: (1..=40).collect(), ..Default::default() }).unwrap();
+    model.replace_set("top", Set { nodes: (13..=16).chain(33..=36).collect(), ..Default::default() }).unwrap();
+    model
+        .replace_boundary_condition(
+            "top",
+            BoundaryCondition::Displacement {
+                target: Target::Set("top".into()),
+                values: [None, None, Some(if open { 0. } else { -1e-4 }), None, None, None],
+            },
+        )
+        .unwrap();
+    let mut contact = model.contact("Interface").unwrap().clone();
+    contact.friction = fieldcraft_model::Friction::coulomb(0.3);
+    model.replace_contact("Interface", contact).unwrap();
+    let mut step = model.step("Step").unwrap().clone();
+    let Procedure::NonlinearStatic(settings) = &mut step.procedure else { panic!("settings") };
+    settings.nonlinear_geometry = true;
+    settings.initial_increment = 1.;
+    settings.max_increment = 1.;
+    model.replace_step(step).unwrap();
+    model
+}
+
+/// Tri6 faces use the same qualified policies; layer guides make the base planar.
+fn quadratic_tri_policy_blocks(open: bool) -> Model {
+    use fieldcraft_model::{Coupling, CouplingKind, Dofs, ReferencePoint};
+    let mut m = blocks();
+    let corners = [[[0., 0., 1.], [0., 1., 1.], [1., 0., 1.], [0., 0., 0.]], [[0., 0., 1.], [1., 0., 1.], [0., 1., 1.], [0., 0., 2.]]];
+    let edges = [(0, 1), (1, 2), (2, 0), (0, 3), (1, 3), (2, 3)];
+    for b in 0..2u32 {
+        let mut xyz = corners[b as usize].to_vec();
+        for (a, c) in edges {
+            xyz.push(std::array::from_fn(|k| (corners[b as usize][a][k] + corners[b as usize][c][k]) / 2.));
+        }
+        for (i, mut x) in xyz.into_iter().enumerate() {
+            if open {
+                if b == 0 {
+                    x[0] = 2. * x[0] - 0.25;
+                    x[1] = 2. * x[1] - 0.25;
+                } else {
+                    x[2] += 0.02;
+                }
+            }
+            m.set_node(10 * b + i as u32 + 1, x).unwrap();
+        }
+        m.set_element(b + 1, ElementKind::Tet10, (10 * b + 1..=10 * b + 10).collect()).unwrap();
+    }
+    m.replace_set("main", Set { faces: vec![ElementFace { element: 1, face: 1 }], ..Default::default() }).unwrap();
+    m.replace_set("secondary", Set { faces: vec![ElementFace { element: 2, face: 1 }], ..Default::default() }).unwrap();
+    m.replace_set("base", Set { nodes: vec![4], ..Default::default() }).unwrap();
+    m.replace_set("upper", Set { nodes: (1..=20).collect(), ..Default::default() }).unwrap();
+    m.replace_set("top", Set { nodes: vec![14], ..Default::default() }).unwrap();
+    m.replace_boundary_condition(
+        "top",
+        BoundaryCondition::Displacement {
+            target: Target::Set("top".into()),
+            values: [None, None, Some(if open { 0. } else { -1e-4 }), None, None, None],
+        },
+    )
+    .unwrap();
+    for (i, nodes) in [vec![1, 2, 3, 5, 6, 7], vec![8, 9, 10], vec![11, 12, 13, 15, 16, 17], vec![18, 19, 20]].into_iter().enumerate() {
+        let name = format!("Plane{i}");
+        let xyz = m.node(nodes[0]).unwrap().xyz;
+        m.add_set(&name, Set { nodes, ..Default::default() }).unwrap();
+        m.add_reference_point(&name, ReferencePoint { xyz, label: 100 + i as u32 }).unwrap();
+        m.add_coupling(
+            &name,
+            Coupling {
+                reference_point: name.clone(),
+                set: name.clone(),
+                kind: CouplingKind::Kinematic,
+                dofs: serde_json::from_value::<Dofs>(serde_json::json!([3])).unwrap(),
+            },
+        )
+        .unwrap();
+        m.add_boundary_condition(
+            &name,
+            BoundaryCondition::Displacement {
+                target: Target::ReferencePoint(name.clone()),
+                values: [Some(0.), Some(0.), None, Some(0.), Some(0.), Some(0.)],
+            },
+        )
+        .unwrap();
+        m.set_boundary_condition_active("Step", &name, true).unwrap();
+    }
+    let mut c = m.contact("Interface").unwrap().clone();
+    c.friction = fieldcraft_model::Friction::coulomb(0.3);
+    m.replace_contact("Interface", c).unwrap();
+    let mut step = m.step("Step").unwrap().clone();
+    let Procedure::NonlinearStatic(n) = &mut step.procedure else { panic!("step") };
+    n.nonlinear_geometry = true;
+    n.initial_increment = 1.;
+    n.max_increment = 1.;
+    m.replace_step(step).unwrap();
+    m
+}
+
+#[test]
+fn quadratic_frozen_policy_terminal_tangent_difference_and_relative_elimination() {
+    for (tri, open) in [(false, false), (false, true), (true, false), (true, true)] {
+        let model = if tri { quadratic_tri_policy_blocks(open) } else { quadratic_policy_blocks(open) };
+        let policy = if open { fieldcraft_model::ContactPerturbation::Open } else { fieldcraft_model::ContactPerturbation::Stick };
+        let policies = std::collections::BTreeMap::from([("Interface".into(), policy)]);
+        let (base, terminal) = terminal_tangent(&model, "Step", &Limits::default(), &policies).unwrap();
+        with_run(&model, |run| {
+            let mesh = run.problem.mesh;
+            let mut u = vec![0.; mesh.dofs()];
+            for (i, label) in base.nodes.iter().enumerate() {
+                if let Some(node) = mesh.node(*label) {
+                    for (k, kind) in mesh.translation_kinds().iter().enumerate() {
+                        u[mesh.dof(node, kind).unwrap()] = base.displacement[i][k];
+                    }
+                }
+            }
+            let resolved = model.resolve().unwrap();
+            let setup = Setup { model: &model, resolved: &resolved, mesh, step: model.step("Step").unwrap() };
+            let (graph, order) = pattern(mesh);
+            let frozen = crate::analysis::reduction_with_frozen(
+                &setup,
+                false,
+                &order,
+                budget(run.limits, mesh, &graph, 1),
+                &mut Vec::new(),
+                Some(&terminal.constraints),
+            )
+            .unwrap();
+            let main = mesh.dof(mesh.node(if tri { 1 } else { 5 }).unwrap(), fieldcraft_fem::DofKind::Uz).unwrap();
+            assert!(frozen.has_free_motion(main));
+            if open {
+                assert!(terminal.constraints.is_empty());
+            } else {
+                assert_eq!(terminal.constraints.len(), if tri { 18 } else { 24 });
+                assert!(terminal.constraints.iter().any(|r| run.problem.red.homogeneous_row_residual(&r.terms) > 1e-3));
+                assert!(terminal.constraints.iter().all(|r| frozen.homogeneous_row_residual(&r.terms) < 1e-12));
+                let bad = run.problem.contacts[0].check_stick_perturbation(&terminal.constraints, run.problem.red).unwrap_err().to_string();
+                assert!(bad.contains("stick_constraint_not_eliminated"));
+                eprintln!("QUADRATIC_ELIMINATION_REFUSAL {bad}");
+            }
+            let [k] = frozen.reduce([&terminal.stiffness]).unwrap();
+            let q: Vec<_> = (0..frozen.neq()).map(|i| ((i * 7 % 13) as f64 - 6.) / 13.).collect();
+            let direction = frozen.expand(&q, false);
+            let mut exact = vec![0.; q.len()];
+            k.mul(&q, &mut exact);
+            for h in [1e-6, 5e-7] {
+                let mut forces = Vec::new();
+                for sign in [-1., 1.] {
+                    let trial: Vec<_> = u.iter().zip(&direction).map(|(v, d)| v + sign * h * d).collect();
+                    // The explicit stick law is C0*(u-u0)=0, with C0 held fixed.
+                    // Its Lagrange reaction has zero derivative at fixed multiplier.
+                    // Structural force differences therefore test its whole reduced K.
+                    let e = run.problem.evaluate_with_contact(&trial, 1., false, &run.committed, &run.contact, &run.reference, 0., open).unwrap();
+                    if open {
+                        assert!(e.contact.iter().all(|c| c.nodal_force.iter().all(|f| *f == [0.; 3])));
+                    }
+                    forces.push(frozen.restrict(&e.internal));
+                }
+                let error =
+                    exact.iter().enumerate().map(|(i, v)| ((forces[1][i] - forces[0][i]) / (2. * h) - v).abs()).fold(0., f64::max) / norm_inf(&exact);
+                eprintln!(
+                    "QUADRATIC_TANGENT tri={tri} open={open} h={h:e} neq={} rows={} relative={error:.15e}",
+                    frozen.neq(),
+                    terminal.constraints.len()
+                );
+                assert!(error < 1e-6);
+            }
+        });
+    }
 }

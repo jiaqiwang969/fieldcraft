@@ -8,7 +8,7 @@ serialization, not inferred from another build's documentation.
 
 The declaration is a map from case-sensitive contact names to `"stick"`,
 `"closed_tangent_free"` or `"open"`. The native policy specification is
-`fieldcraft-native-contact-perturbation/3`; the request schema remains version 1. A nonempty
+`fieldcraft-native-contact-perturbation/4`; the request schema remains version 1. A nonempty
 map must cover every contact. Only explicit pairs, a frequency step, an earlier nonlinear
 geometry base, and unchanged support names pass declaration inspection. `slide`,
 unknown names, omissions, a linear base and general/self contact are refused. Empty maps
@@ -32,10 +32,11 @@ The proposal JSON and native model remain distinct artifacts. Do not pass a prop
 solver as if it had already modified that model.
 
 Even successful native application is **not runtime qualification**. Explicit hard stick
-requires fully closed planar linear solid faces, a fixed main surface, full reference
+requires fully closed planar linear or quadratic solid faces, a fixed or moving main, full reference
 coverage, positive guarded pressure, acceptable gap/thickness, positive static friction,
-strict friction-cone margin, no slipping and zero interface increments after the actual
-constraint reduction. These must come from the actual equilibrium and reduction, not input
+strict friction-cone margin, no slipping and zero relative mortar increments after the
+actual constraint reduction. Terminal mortar coefficients stay fixed; this affine
+binding has zero constraint Hessian, not a transported Coulomb-contact tangent. These must come from the actual equilibrium and reduction, not input
 friction alone. Pairing, normals, active set, mortar rows, terminal structural tangent and
 reference mass must belong to that same qualified state. This module deliberately does not
 duplicate solver eligibility calculations or parse warning text into structured facts.
@@ -43,12 +44,12 @@ duplicate solver eligibility calculations or parse warning text into structured 
 The report says runtime qualification is unverified. There is no `qualified=true` field in
 a request. Native warning text is not a stable state protocol; original runtime receipts and
 program identities remain necessary. No verified commercial keyword mapping is claimed;
-existing writer refusals must remain when the native field is integrated. Actual sliding and generalized moving interfaces remain outside this scope.
+existing writer refusals must remain when the native field is integrated. Actual sliding, moving-main tangential release and shear-history transport remain outside this scope.
 
 `closed_tangent_free` requires a strictly interior closed patch with guarded positive
 pressure and zero shear; only normal rows and pressure-weighted geometry are retained.
-`open` asserts strictly separated, unloaded planar linear faces over one fixed convex
-main face, with a strictly interior projection and no initial gap adjustment or held
+`open` asserts strictly separated, unloaded planar solid faces over one convex
+main face (fixed or moving). Quadratic faces require straight midpoint edges, with a strictly interior projection and no initial gap adjustment or held
 normal/tangential history. A missing search pair must have independent geometric
 separation evidence. It adds no contact constraint, stiffness or geometry. Structural
 terminal tangent and reference mass remain. Touching, near-switch, loaded, unsupported
@@ -78,10 +79,10 @@ stick. Runtime qualification in the capability report remains unverified.
 `closed_tangent_free` releases tangential increments at a qualified closed, zero-base-shear
 interface; it is not Coulomb sliding or finite tangential stiffness. Its qualification needs
 one convex main face, strict clipping-edge margin, full current overlap, guarded base shear,
-eliminated normal gap gradient and retained pressure-weighted gap geometry. The common
-fixed-main and equilibrium checks still apply. `qualification_by_policy` separates these
+eliminated normal gap gradient and retained pressure-weighted gap geometry. The fixed-main and linear-face checks remain specific to this tangential-release
+policy; common equilibrium and identity checks still apply. `qualification_by_policy` separates these
 conditions from hard stick's full reference overlap, positive friction and eliminated
-interface motion. Mixed maps report `explicit_mixed`; all runtime qualifications remain
+relative mortar motion. Mixed maps report `explicit_mixed`; all runtime qualifications remain
 unverified by the declaration layer. Empty maps retain legacy selection.
 
 Consumers should import `fieldcraft_io::identity::SCHEME` for the existing snapshot scheme,
@@ -89,3 +90,8 @@ Consumers should import `fieldcraft_io::identity::SCHEME` for the existing snaps
 `fieldcraft_io::capabilities::{SCHEME, CONTACT_SCHEME}` for parameter and contact-control
 receipts. These are public module constants, not new identity rules. Backend version and
 program digests remain separately bound values; no commit name replaces an artifact SHA.
+
+Native qualification specification `fieldcraft-native-contact-perturbation/4` extends
+stick/open geometry as above; the request and identity schemes are unchanged.
+Declaration acceptance remains distinct from runtime qualification, and all three
+writers still refuse an explicit map without a verified commercial mapping.
