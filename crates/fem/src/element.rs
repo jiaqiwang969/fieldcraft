@@ -159,6 +159,8 @@ pub enum Formulation {
     Full,
     /// Hughes (1980), volume-averaged dilatation, linear Hex8 only.
     BBar,
+    /// Reference-volume mean-J finite-strain F-bar.
+    FBar,
     /// Nine gradient modes plus four dilatational modes, statically condensed.
     EnhancedStrain13,
     Reduced,
@@ -186,6 +188,10 @@ impl Formulation {
     /// The formulation a model section asks for, if this element type has it.
     pub fn from_section(kind: ElementKind, f: &fieldcraft_model::Formulation) -> Result<Formulation> {
         let ty = element_type(kind)?;
+        if f.f_bar {
+            f.validate_for(&fieldcraft_model::SectionKind::Solid {}).map_err(|e| Error::Invalid(e.to_string()))?;
+            return if kind == ElementKind::Hex8 { Ok(Formulation::FBar) } else { Err(Error::NotSupported("f_bar requires Hex8".into())) };
+        }
         if f.solid_shell {
             if f.b_bar
                 || f.enhanced_strain13
@@ -323,7 +329,7 @@ impl<'a> Solid<'a> {
         let ok = match formulation {
             Formulation::SolidShell => kind == ElementKind::Hex8,
             Formulation::Full => true,
-            Formulation::BBar | Formulation::EnhancedStrain13 => kind == ElementKind::Hex8,
+            Formulation::FBar | Formulation::BBar | Formulation::EnhancedStrain13 => kind == ElementKind::Hex8,
             Formulation::Reduced => ty.reduced.is_some(),
             Formulation::IncompatibleModes => ty.incompatible_modes,
             Formulation::Hybrid { pressures } => crate::hybrid::pressures(kind) == Some(pressures),
@@ -454,6 +460,9 @@ impl<'a> Solid<'a> {
 
     /// The stiffness matrix, 3n × 3n, degrees of freedom ordered node by node (x, y, z).
     pub fn stiffness(&self, d: &Elasticity) -> Result<Matrix> {
+        if self.formulation == Formulation::FBar {
+            return Err(Error::NotSupported("f_bar requires finite-strain nonlinear evaluation".into()));
+        }
         if self.formulation == Formulation::SolidShell {
             return self.solid_shell_stiffness(d);
         }
@@ -677,6 +686,9 @@ impl<'a> Solid<'a> {
         thermal: Option<&ThermalStrain>,
         initial: Option<&[[f64; 6]]>,
     ) -> Result<Vec<PointStress>> {
+        if self.formulation == Formulation::FBar {
+            return Err(Error::NotSupported("f_bar requires nonlinear stress recovery".into()));
+        }
         if self.formulation == Formulation::SolidShell {
             if thermal.is_some() || initial.is_some() {
                 return Err(Error::NotSupported("solid-shell thermal or initial stress recovery".into()));

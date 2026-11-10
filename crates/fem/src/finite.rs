@@ -88,6 +88,9 @@
 //! tangent's negative pivots.)
 //! Plane stress stays refused, with or without the modes.
 
+mod fbar;
+pub use fbar::FbarEvaluation;
+
 use crate::constitutive::{MaterialModel, Response, add_pressure, logarithmic_strain};
 use crate::dense::{Cholesky, Matrix, inverse3};
 use crate::element::{Formulation, PointStress, Solid, accumulate_symmetric, b_block};
@@ -560,6 +563,23 @@ impl Solid<'_> {
     ) -> Result<(Finite, Vec<(PointKinematics, Response)>)> {
         if self.formulation == Formulation::SolidShell {
             return Err(Error::NotSupported("solid-shell nonlinear analysis".into()));
+        }
+        if self.formulation == Formulation::FBar {
+            if kin != Kinematics::Finite || thermal.is_some() || !committed.is_empty() || !updated.is_empty() {
+                return Err(Error::NotSupported("f_bar requires finite strain without temperature or material history".into()));
+            }
+            let evaluation = self.fbar_reference(m, u, tangent)?;
+            let pressure = m.volumetric(evaluation.mean_j, false).ok_or_else(|| Error::Invalid("f_bar volumetric response".into()))?.0;
+            let points = self.kinematics(u, kin, None)?;
+            let mut out = Vec::with_capacity(points.len());
+            for p in points {
+                let mut r = m.isochoric(&p.f, None, &[], &mut [])?;
+                for v in r.stress.iter_mut().take(3) {
+                    *v += p.j * pressure;
+                }
+                out.push((p, r));
+            }
+            return Ok((evaluation.response, out));
         }
         self.check_nonlinear(m, u)?;
         let modes = self.dofs().internal.incompatible_modes;

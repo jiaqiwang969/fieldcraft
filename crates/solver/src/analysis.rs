@@ -187,6 +187,26 @@ pub(crate) const GRAIN: usize = 16;
 
 /// Assemble the stiffness (and the mass when `mass` is set) on the mesh's node graph.
 pub(crate) fn assemble(mesh: &Mesh, graph: &NodeGraph, mass: Option<MassKind>) -> Result<Assembled> {
+    assemble_impl(mesh, graph, mass, false)
+}
+
+/// F-bar has no ordinary linear stiffness. For an explicitly nonlinear base, build
+/// the mass and graph only for these elements: prestress::stiffness replaces this
+/// seed with the converged consistent tangent before any solve or reduction.
+pub(crate) fn assemble_for_step(setup: &Setup<'_>, graph: &NodeGraph, mass: Option<MassKind>) -> Result<Assembled> {
+    let fbar = setup.mesh.elements.iter().any(|e| e.formulation == fieldcraft_fem::element::Formulation::FBar);
+    if fbar
+        && !setup
+            .model
+            .perturbation_base(setup.step)?
+            .is_some_and(|base| matches!(&base.procedure, Procedure::NonlinearStatic(n) if n.nonlinear_geometry))
+    {
+        return Err(Error::NotSupported("f_bar perturbation requires a finite-strain nonlinear base_state".into()));
+    }
+    assemble_impl(setup.mesh, graph, mass, fbar)
+}
+
+fn assemble_impl(mesh: &Mesh, graph: &NodeGraph, mass: Option<MassKind>, nonlinear_fbar_base: bool) -> Result<Assembled> {
     let _timing = crate::timing::Span::new("assembly");
     let layout = &mesh.layout;
     let mut k = graph.zero_matrix(layout);
@@ -198,7 +218,11 @@ pub(crate) fn assemble(mesh: &Mesh, graph: &NodeGraph, mass: Option<MassKind>) -
         let matrices = parallel::map_grained(elements.len(), GRAIN, |i| -> Result<_> {
             let Some(e) = elements.get(i) else { return Err(Error::Internal("element index".into())) };
             let kernel = e.kernel()?;
-            let stiffness = e.stiffness()?.data;
+            let stiffness = if nonlinear_fbar_base && e.formulation == fieldcraft_fem::element::Formulation::FBar {
+                vec![0.0; 9 * e.nodes.len() * e.nodes.len()]
+            } else {
+                e.stiffness()?.data
+            };
             let element_mass = match mass {
                 None => None,
                 Some(kind) => {
@@ -1047,7 +1071,7 @@ fn frequency_once(
     let (graph, order) = pattern_with_order(&mesh, use_multilevel);
     ignored_dashpots(&mesh, &mut warnings);
     let setup = Setup { model, resolved: &resolved, mesh: &mesh, step };
-    let Assembled { k, m } = assemble(&mesh, &graph, Some(options.mass))?;
+    let Assembled { k, m } = assemble_for_step(&setup, &graph, Some(options.mass))?;
     let terminal = crate::prestress::stiffness(&setup, &graph, k, limits, &mut warnings)?;
     let red = reduction_with_frozen(
         &setup,

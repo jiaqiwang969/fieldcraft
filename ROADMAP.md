@@ -342,3 +342,14 @@ Pure rod2 nonlinear static equilibria now share the geometric transient St Venan
 MITC6-a curved modal perturbations: reference-geometry linear preload and conservative pressure stiffness verified on the fine cylindrical-ring mesh. Bounded inverse residual correction resolves the original-pencil modal residual defect; coarse preload failures and curved prestressed harmonic/nonlinear refusals remain.
 
 Closed tangentially free contact perturbation: explicit per-pair selection, NLGEOM frequency bases, fixed convex planar main with an interior linear secondary patch, qualified pressure and zero shear. Hard normal rows and pressure-weighted mortar geometry share the equilibrium derivatives; no normal penalty or Coulomb sliding tangent. Native shear-mode/derivative/refusal/persistence checks; open policies and commercial mapping remain pending.
+
+### Reference-volume F-bar kernel
+
+Element-level full Hex8/neo-Hookean mean-J F-bar energy, force and analytic tangent
+are available through `Solid::fbar_reference`; see
+[scope and verification](docs/manual/structural/fbar-kernel.md). The `f_bar` section switch reaches finite-strain nonlinear static Newton assembly
+and effective stress recovery. Large benchmark convergence remains pending.
+
+F-bar finite-strain pretension and locked-base frequency/harmonic/direct-modal transient
+assembly use the converged consistent tangent. Two-cube axial theory and native archive
+checks cover explicit paired cuts; continuous-face transient preparation remains unsupported.

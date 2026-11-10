@@ -229,7 +229,7 @@ pub fn solve_with_mass(model: &Model, name: Option<&str>, mass: MassKind, limits
     warnings.extend(system::inelastic_warnings(model));
     let (graph, order) = analysis::pattern(&mesh);
     let setup = Setup { model, resolved: &resolved, mesh: &mesh, step };
-    let assembled = analysis::assemble(&mesh, &graph, Some(mass))?;
+    let assembled = analysis::assemble_for_step(&setup, &graph, Some(mass))?;
     let terminal = crate::prestress::stiffness(&setup, &graph, assembled.k, limits, &mut warnings)?;
     let red = analysis::reduction_with_frozen(
         &setup,
