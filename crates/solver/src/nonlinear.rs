@@ -1835,7 +1835,7 @@ fn solve_on(
             )?;
             for interface in &problem.contacts {
                 if policies.get(&interface.name) == Some(&fieldcraft_model::ContactPerturbation::Stick) {
-                    interface.check_fixed_perturbation(&frozen)?;
+                    interface.check_stick_perturbation(&constraints, &frozen)?;
                 }
             }
         }

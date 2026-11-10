@@ -13,7 +13,8 @@
 //!                    5 harmonic with mass, 6 linear dynamics with energy and mass,
 //!                    7 static with fatigue, 8 harmonic with mass and fatigue,
 //!                    12 frequency with recorded mass provenance,
-//!                    11 nonlinear total-Lagrangian St. Venant–Kirchhoff rod2),
+//!                    11 nonlinear total-Lagrangian St. Venant–Kirchhoff rod2,
+//!                    13 external backend trajectory),
 //!           u64 length, the result in the [`crate::codec`] encoding }   names ascending
 //! ```
 //!
@@ -92,6 +93,7 @@ impl LegacyFrequency {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Solved {
+    External(crate::external_results::ArchivedTrajectory),
     /// A static, frequency, buckling, heat transfer or harmonic step.
     Implicit(fieldcraft_solver::StepResult),
     Explicit(ExplicitResult),
@@ -102,6 +104,7 @@ pub enum Solved {
 /// A step's result to write, borrowed.
 #[derive(Debug, Clone, Copy)]
 pub enum SolvedRef<'a> {
+    External(&'a crate::external_results::ArchivedTrajectory),
     Implicit(&'a fieldcraft_solver::StepResult),
     Explicit(&'a ExplicitResult),
     Fluid(&'a FluidResult),
@@ -115,6 +118,7 @@ impl Solved {
             Solved::Explicit(r) => SolvedRef::Explicit(r),
             Solved::Fluid(r) => SolvedRef::Fluid(r),
             Solved::Nonlinear(r) => SolvedRef::Nonlinear(r),
+            Solved::External(r) => SolvedRef::External(r),
         }
     }
 
@@ -130,6 +134,7 @@ impl<'a> SolvedRef<'a> {
             SolvedRef::Explicit(r) => &r.step,
             SolvedRef::Fluid(r) => &r.step,
             SolvedRef::Nonlinear(r) => &r.step,
+            SolvedRef::External(r) => &r.archive_key,
         }
     }
 
@@ -162,6 +167,7 @@ impl<'a> SolvedRef<'a> {
             SolvedRef::Explicit(_) => 3,
             SolvedRef::Fluid(_) => 4,
             SolvedRef::Nonlinear(_) => 11,
+            SolvedRef::External(_) => 13,
         }
     }
 
@@ -181,6 +187,7 @@ impl<'a> SolvedRef<'a> {
             SolvedRef::Explicit(r) => codec::encode_into(r, out),
             SolvedRef::Fluid(r) => codec::encode_into(r, out),
             SolvedRef::Nonlinear(r) => codec::encode_into(r, out),
+            SolvedRef::External(r) => codec::encode_into(r, out),
         }
     }
 }
@@ -244,6 +251,9 @@ pub fn encode(results: &[(&str, StoredRef<'_>)]) -> Result<Vec<u8>> {
     let mut sorted: Vec<&(&str, StoredRef<'_>)> = results.iter().collect();
     sorted.sort_by(|a, b| a.0.cmp(b.0));
     if sorted.windows(2).any(|w| w.first().map(|a| a.0) == w.get(1).map(|b| b.0)) {
+        if results.iter().any(|(_, r)| matches!(r.result, SolvedRef::External(_))) {
+            return invalid("ExternalArchiveDuplicateKey");
+        }
         return invalid(format!("{PART}: a step's result is listed twice"));
     }
     let mut out = MAGIC.to_vec();
@@ -251,6 +261,11 @@ pub fn encode(results: &[(&str, StoredRef<'_>)]) -> Result<Vec<u8>> {
     for (name, stored) in sorted {
         if stored.result.step() != *name {
             return invalid(format!("{PART}: the result of step `{name}` is step `{}`'s", stored.result.step()));
+        }
+        if let SolvedRef::External(r) = stored.result
+            && r.definition()? != stored.definition
+        {
+            return invalid("ExternalArchiveDefinitionMismatch");
         }
         if let SolvedRef::Nonlinear(r) = stored.result {
             r.validate().map_err(|e| Error::Invalid(format!("{PART}: nonlinear step `{name}`: {e}")))?;
@@ -322,13 +337,16 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded> {
     for _ in 0..count {
         let len = u64::from_le_bytes(r.array("a step name's length")?);
         let name = std::str::from_utf8(r.take(len, "a step name")?).map_err(|_| Error::Invalid(format!("{PART}: a step name is not UTF-8")))?;
-        fieldcraft_model::check_name("step", name).map_err(|e| Error::Invalid(format!("{PART}: {e}")))?;
+
         if last.is_some_and(|l| l >= name) {
             return invalid(format!("{PART}: steps must be in name order, each once (`{name}`)"));
         }
         last = Some(name);
         let definition: [u8; 32] = r.array("a definition hash")?;
         let [kind] = r.array::<1>("a result kind")?;
+        if kind != 13 {
+            fieldcraft_model::check_name("step", name).map_err(|e| Error::Invalid(format!("{PART}: {e}")))?;
+        }
         if &magic != MAGIC && kind > 5 {
             return invalid(format!(
                 "{PART}: step `{name}` stores result kind {kind} under an older results version; kinds 6 and above from versions 05 and 06 are ambiguous development layouts, so regenerate the file with the program that wrote it"
@@ -377,6 +395,7 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded> {
                 Solved::Implicit(fieldcraft_solver::StepResult::Harmonic(r))
             }
             11 => Solved::Nonlinear(codec::decode(payload).map_err(damaged)?),
+            13 => Solved::External(codec::decode(payload).map_err(damaged)?),
             k => return invalid(format!("{PART}: step `{name}` has a result of unknown kind {k}")),
         };
         if result.step() != name {
@@ -384,6 +403,14 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded> {
                 "{PART}: the result listed for step `{name}` is step `{}`'s",
                 result.step().chars().take(80).collect::<String>()
             ));
+        }
+        if let Solved::External(value) = &result {
+            if value.definition()? != definition {
+                return invalid("ExternalArchiveDefinitionMismatch");
+            }
+            if out.iter().any(|prior: &Stored| prior.result.step() == name) {
+                return invalid("ExternalArchiveDuplicateKey");
+            }
         }
         check(&result).map_err(|why| Error::Invalid(format!("{PART}: the result of step `{name}`: {why}")))?;
         out.push(Stored { definition, result });
@@ -567,6 +594,7 @@ pub fn check(r: &Solved) -> std::result::Result<(), String> {
         }
         Solved::Fluid(f) => check_fluid(f),
         Solved::Nonlinear(r) => r.validate(),
+        Solved::External(r) => r.validate().map_err(|e| e.to_string()),
     }
 }
 

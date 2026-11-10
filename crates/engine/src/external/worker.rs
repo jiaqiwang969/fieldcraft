@@ -4,6 +4,7 @@
 //! running. Descendant process-group cancellation is not implemented by this first seam.
 //! A wait receipt describes only this child; it never claims GPU or driver resource release.
 
+use std::path::Path;
 use std::process::{Child, Command, ExitStatus, Stdio};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -61,16 +62,45 @@ impl OwnedWorker {
     /// Host code supplies an already-authorized executable, never an untrusted JSON command.
     /// Pipes are disabled here so an unconsumed stream cannot deadlock the worker.
     pub fn spawn(command: &mut Command, run: RunKey) -> Result<Self, ContractError> {
+        command.stdout(Stdio::null()).stderr(Stdio::null());
+        Self::spawn_configured(command, run)
+    }
+
+    /// Retain both native output streams in a newly created file, without a pipe that
+    /// could block the child. The host supplies an authorized path and executable.
+    pub fn spawn_logged(command: &mut Command, run: RunKey, log: &Path) -> Result<Self, ContractError> {
+        let output = std::fs::OpenOptions::new().write(true).create_new(true).open(log).map_err(|e| ContractError::Worker(e.to_string()))?;
+        let error = output.try_clone().map_err(|e| ContractError::Worker(e.to_string()))?;
+        command.stdout(output).stderr(error);
+        Self::spawn_configured(command, run)
+    }
+
+    fn spawn_configured(command: &mut Command, run: RunKey) -> Result<Self, ContractError> {
         run.validate()?;
         let program = command.get_program().to_string_lossy().into_owned();
         let args = command.get_args().map(|a| a.to_string_lossy().into_owned()).collect();
-        command.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
+        command.stdin(Stdio::null());
         let child = command.spawn().map_err(|e| ContractError::Worker(e.to_string()))?;
         Ok(Self { child, run, program, args, exit: None })
     }
 
     pub fn pid(&self) -> u32 {
         self.child.id()
+    }
+
+    /// The mailbox owner calls this only after a checked native reset acknowledgement.
+    /// The OS process generation stays fixed; the scene epoch advances exactly once.
+    pub(super) fn reset_epoch(&mut self, next: RunKey) -> Result<(), ContractError> {
+        if self.exit.is_some()
+            || next.run_id != self.run.run_id
+            || next.worker_generation != self.run.worker_generation
+            || self.run.epoch.checked_add(1) != Some(next.epoch)
+        {
+            return Err(ContractError::StaleRun);
+        }
+        next.validate()?;
+        self.run = next;
+        Ok(())
     }
 
     pub fn try_exit(&mut self) -> Result<Option<ProcessExit>, ContractError> {

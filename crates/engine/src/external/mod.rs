@@ -6,10 +6,16 @@
 //! identity and receiver-owned storage are explicit adapters, not values inferred from temporary
 //! run identifiers.
 
+pub mod archive;
+pub mod context;
 pub mod control;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod native;
+pub mod package;
 pub mod production;
 pub mod receive;
 pub mod run;
+mod session;
 pub mod transaction;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod worker;
@@ -106,6 +112,10 @@ pub enum ContractError {
     NativeContactPolicyNotApplied,
     #[error("binary field checksum mismatch")]
     ChecksumMismatch,
+    #[error("ExternalArchivePayloadMismatch: stored envelope bytes do not match the payload digest")]
+    ArchivePayloadMismatch,
+    #[error("ExternalArchivePublicationMismatch: frozen publication receipt does not match the stored result ID or payload digest")]
+    ArchivePublicationMismatch,
     #[error("not supported yet: {0}")]
     Unsupported(&'static str),
     #[error("worker operation failed: {0}")]

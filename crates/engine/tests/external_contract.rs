@@ -809,6 +809,12 @@ mod identity_transactions {
         }
         let id = host.begin(&run, entities, profile(&e)).unwrap().commit(&e).unwrap();
         assert_eq!(store.reopen(&id).unwrap(), e);
+        let raw = store.read_published(&id).unwrap();
+        assert_eq!(raw.envelope_json, serde_json::to_vec(&e).unwrap());
+        assert_eq!(fieldcraft_io::sha256_hex(&raw.envelope_json), raw.payload_sha256);
+        assert_eq!(raw.result_id, id);
+        let read_admission: Admission = serde_json::from_slice(&raw.admission_json).unwrap();
+        assert_eq!(read_admission.solve, SolveOutcome::Succeeded);
         println!(
             "production_binding_shape_positive={}",
             serde_json::json!({
@@ -952,6 +958,8 @@ mod identity_transactions {
         let tx = host.begin(&key(), e.entities.clone(), p).unwrap();
         let report = tx.validate(&e).unwrap();
         assert_eq!(report.solve, SolveOutcome::Unknown);
+        assert!(report.blockers.iter().any(|b| b.starts_with("RuntimeQualificationUnverified:")));
+        assert!(!report.blockers.iter().any(|b| b.starts_with("NativeContactPolicyNotApplied:")));
         let policy = report.policy.unwrap();
         assert_eq!(policy.declaration, EvidenceCheck::Verified);
         assert_eq!(policy.application, EvidenceCheck::Unverified);
@@ -1303,9 +1311,15 @@ mod identity_transactions {
         let mut p = profile(&e);
         p.policy_request = Some(payload.clone());
         p.require_policy_applied = true;
-        let host = ReceiverHost::new(context, run.clone(), provider).unwrap();
+        let root = std::env::temp_dir().join(format!("applied-policy-unqualified-{}", std::process::id()));
+        let store = Arc::new(FileResultStore::new(&root).unwrap());
+        let host = ReceiverHost::with_store(context, run.clone(), provider, store).unwrap();
         let tx = host.begin(&run, entities.clone(), p).unwrap();
-        let policy = tx.validate(&e).unwrap().policy.unwrap();
+        let admission = tx.validate(&e).unwrap();
+        assert_eq!(admission.solve, SolveOutcome::Unknown);
+        assert!(admission.blockers.iter().any(|b| b.starts_with("RuntimeQualificationUnverified:")));
+        assert!(!admission.blockers.iter().any(|b| b.starts_with("NativeContactPolicyNotApplied:")));
+        let policy = admission.policy.unwrap();
         assert_eq!(policy.declaration, EvidenceCheck::Verified);
         assert_eq!(policy.application, EvidenceCheck::Verified);
         assert_eq!(policy.runtime_qualification, EvidenceCheck::Unverified);
@@ -1315,8 +1329,12 @@ mod identity_transactions {
                 "declaration": policy.declaration,
                 "application": policy.application,
                 "runtime_qualification": policy.runtime_qualification,
+                "blockers": admission.blockers,
             })
         );
+        assert!(matches!(tx.commit(&e), Err(ContractError::Invalid("result store requires a complete solver success"))));
+        assert_eq!(std::fs::read_dir(&root).unwrap().count(), 0);
+        std::fs::remove_dir(&root).unwrap();
 
         let mut no_policy = fieldcraft_engine::Session::default();
         no_policy.run_script(&serde_json::from_str(include_str!("fixtures/contact-stick.json")).unwrap()).unwrap();

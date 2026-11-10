@@ -202,15 +202,17 @@ impl StepResult {
     }
 }
 
-impl From<fieldcraft_io::results::Solved> for StepResult {
-    fn from(r: fieldcraft_io::results::Solved) -> Self {
+impl TryFrom<fieldcraft_io::results::Solved> for StepResult {
+    type Error = EngineError;
+    fn try_from(r: fieldcraft_io::results::Solved) -> Result<Self> {
         use fieldcraft_io::results::Solved;
-        match r {
+        Ok(match r {
             Solved::Implicit(r) => StepResult::Implicit(r),
             Solved::Explicit(r) => StepResult::Explicit(r),
             Solved::Fluid(r) => StepResult::Fluid(r),
             Solved::Nonlinear(r) => StepResult::Nonlinear(r),
-        }
+            Solved::External(_) => return Err(EngineError::Params("external trajectory is not a native StepResult".into())),
+        })
     }
 }
 
@@ -377,6 +379,8 @@ pub struct Session {
     /// The latest result of each solved step, by step name, with the revision it was solved at;
     /// [`Session::result`] hands out only those that describe the current state.
     results: BTreeMap<String, (u64, Arc<StepResult>)>,
+    /// Original, identity-bound external trajectories. Each archive keeps its own run/profile.
+    external_results: BTreeMap<String, Arc<fieldcraft_io::external_results::ArchivedTrajectory>>,
     /// The definition each solved step was solved from ([`fieldcraft_io::results::definition_hash`]): an edit
     /// that leaves it the same keeps the step's result current. Files keep it with the result.
     result_inputs: BTreeMap<String, [u8; 32]>,
@@ -482,6 +486,12 @@ impl Session {
     /// [`Session::execute`] once the command is found and can run.
     fn run_command(&mut self, spec: &'static CommandSpec, params: &Value) -> Result<Value> {
         let id = spec.id;
+        if id.starts_with("results.")
+            && !id.starts_with("results.external.")
+            && params.get("step").and_then(Value::as_str).is_some_and(|name| self.external_results.contains_key(name))
+        {
+            return Err(EngineError::Params("external trajectories support receiving and storage; this native result query is unsupported".into()));
+        }
         // Session commands (open, save, undo, redo) change the session only in their last step,
         // after everything that can fail, so they need no copy of the model to restore.
         let before = (spec.kind == CommandKind::Model).then(|| (self.snapshot(), self.document()));
@@ -839,14 +849,27 @@ impl Session {
 
     /// Every step's latest result with the definition it was solved from, as files keep them (a
     /// result whose step is gone is kept with a definition no model has).
-    pub(crate) fn stored_results(&self) -> Vec<(&str, fieldcraft_io::results::StoredRef<'_>)> {
-        self.results
+    pub(crate) fn stored_results(&self) -> Result<Vec<(&str, fieldcraft_io::results::StoredRef<'_>)>> {
+        let mut stored: Vec<_> = self
+            .results
             .iter()
             .map(|(step, (_, r))| {
                 let definition = self.result_inputs.get(step).copied().unwrap_or([0; 32]);
                 (step.as_str(), fieldcraft_io::results::StoredRef { definition, result: r.as_stored() })
             })
-            .collect()
+            .collect();
+        for (name, record) in &self.external_results {
+            record.validate_binding(&self.model, &self.sources, &self.run)?;
+            if self.results.contains_key(name) || self.model.step(name).is_some() {
+                return Err(EngineError::Params("ExternalArchiveNameConflict".into()));
+            }
+            stored.push((
+                AsRef::<str>::as_ref(name),
+                fieldcraft_io::results::StoredRef { definition: record.definition()?, result: fieldcraft_io::results::SolvedRef::External(record) },
+            ));
+        }
+        stored.sort_by_key(|(name, _)| *name);
+        Ok(stored)
     }
 
     /// After the state changed (an edit, undo or redo): a result whose step reads what it read

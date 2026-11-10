@@ -187,7 +187,10 @@ fn open_declaration_is_frozen_but_does_not_certify_separation() {
     let info = report(&m).unwrap();
     assert_eq!(info["steps"]["Modes"]["selection"], "explicit_open");
     assert_eq!(info["steps"]["Modes"]["runtime_qualification"], "unverified");
-    assert_eq!(info["policy_specification"], "fieldcraft-native-contact-perturbation/3");
+    assert_eq!(info["policy_specification"], "fieldcraft-native-contact-perturbation/4");
+    assert!(info["qualification_requires"].as_array().unwrap().iter().all(|v| v != "fixed_main_translations"));
+    assert!(info["qualification_by_policy"]["closed_tangent_free"].as_array().unwrap().iter().any(|v| v == "fixed_main_translations"));
+    assert!(info["qualification_by_policy"]["open"].as_array().unwrap().iter().any(|v| v == "fixed_or_moving_main"));
     let bytes = fieldcraft_io::write(&m, &g, &[], &Default::default(), &Default::default()).unwrap();
     let reopened = fieldcraft_io::read(&bytes).unwrap();
     let recovered =

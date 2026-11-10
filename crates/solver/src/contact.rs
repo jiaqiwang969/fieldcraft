@@ -1114,10 +1114,10 @@ impl Interface {
     ) -> Result<ClosedQualification> {
         let policy = if stick { "stick" } else { "closed_tangent_free" };
         let refuse = |reason: &str| Error::NotSupported(format!("contact_perturbation.{reason}: contact `{}`", self.name));
-        if self.extent.is_some() || self.secondary.iter().chain(&self.main).any(|f| f.nodes.len() > 4) {
+        if self.extent.is_some() || (!stick && self.secondary.iter().chain(&self.main).any(|f| f.nodes.len() > 4)) {
             return Err(refuse(&format!("{policy}_requires_linear_solid_faces")));
         }
-        for face in &self.main {
+        for face in self.main.iter().filter(|_| !stick) {
             for dof in face.dofs.iter().flatten().flatten() {
                 if base.has_free_motion(*dof) {
                     return Err(refuse(&format!("{policy}_requires_fixed_main")));
@@ -1213,8 +1213,11 @@ impl Interface {
         Ok(ClosedQualification { normal, min_pressure, min_margin, max_gap, max_shear })
     }
 
-    /// Hard stick against a fixed main: verify that the actual reduction eliminates
-    /// every interface translation, so T^T K_contact T = 0, including geometry.
+    /// Bind the qualified pair at its terminal configuration: C0 delta_u = 0,
+    /// with C0 = [D0, -M0] in each translation. The mortar coefficients are frozen,
+    /// not differentiated again as sliding geometry. Thus the affine constraint's
+    /// Hessian is zero even when both surfaces move. This is a declared bonded
+    /// perturbation, not the consistent tangent of the finite-friction return map.
     pub(crate) fn stick_rows(
         &self,
         mesh: &Mesh,
@@ -1227,7 +1230,7 @@ impl Interface {
         let ClosedQualification { min_pressure, min_margin, max_gap, .. } = self.closed_qualification(mesh, u, state, base, force_bound, true)?;
         let rows = self.frozen_rows(mesh, u, state)?;
         warnings.push(format!(
-            "contact_perturbation v1: contact `{}` policy=stick state=closed_stick nodes={} rows={} min_pressure={min_pressure:.12e} Pa min_coulomb_margin={min_margin:.12e} Pa max_gap_over_thickness={max_gap:.12e} force_guard={force_bound:.12e} N; hard incremental normal and tangential constraints; contact geometry projects to zero after verified fixed-interface elimination; reference mass",
+            "contact_perturbation v4: contact `{}` policy=stick state=closed_stick nodes={} rows={} min_pressure={min_pressure:.12e} Pa min_coulomb_margin={min_margin:.12e} Pa max_gap_over_thickness={max_gap:.12e} force_guard={force_bound:.12e} N; hard incremental normal and tangential constraints; terminal mortar coefficients frozen in global translations, affine constraint Hessian zero; moving main allowed; no finite-friction or shear-history transport tangent; structural terminal tangent and reference mass retained",
             self.name, self.nodes.len(), rows.len()
         ));
         Ok(rows)
@@ -1243,7 +1246,7 @@ impl Interface {
             ))
         };
         let [main] = self.main.as_slice() else { return Err(refuse()) };
-        let xm = Self::corners(mesh, u, main);
+        let xm = self.planar_outline(mesh, u, main)?;
         let mut center = [0.0; 3];
         for x in &xm {
             (0..3).for_each(|k| center[k] += x[k] / xm.len() as f64);
@@ -1261,7 +1264,7 @@ impl Interface {
                 return Err(refuse());
             }
             for face in &self.secondary {
-                for x in Self::corners(mesh, u, face) {
+                for x in self.planar_outline(mesh, u, face)? {
                     let distance = dot(inward, std::array::from_fn(|k| x[k] - a[k]));
                     if !distance.is_finite() || distance <= ROUND_OFF * main.thickness {
                         return Err(refuse());
@@ -1276,11 +1279,39 @@ impl Interface {
         Ok(margin)
     }
 
+    /// A quadratic face with edge midpoints at their corner averages reduces to
+    /// an affine triangle or bilinear quad. Its whole image lies in the convex
+    /// corner hull, making the open-branch separation certificate valid between
+    /// nodes too. General curved edges need a different certificate, not a nodal
+    /// gap check (quadratic shape functions need not be non-negative).
+    fn planar_outline(&self, mesh: &Mesh, u: &[f64], face: &Face) -> Result<Vec<Vec3>> {
+        let x = Self::corners(mesh, u, face);
+        let count = match x.len() {
+            6 => 3,
+            8 => 4,
+            _ => return Ok(x),
+        };
+        for i in 0..count {
+            let (Some(a), Some(b), Some(mid)) = (x.get(i), x.get((i + 1) % count), x.get(count + i)) else {
+                return Err(Error::Internal("quadratic contact outline".into()));
+            };
+            let error = norm(std::array::from_fn(|k| mid[k] - (a[k] + b[k]) / 2.0));
+            if !error.is_finite() || error > ROUND_OFF * face.thickness {
+                return Err(Error::NotSupported(format!(
+                    "contact_perturbation.open_quadratic_geometry_unqualified: contact `{}` requires straight midpoint edges",
+                    self.name
+                )));
+            }
+        }
+        Ok(x.into_iter().take(count).collect())
+    }
+
     /// Certify a strictly open branch of unilateral contact (g > 0, p = 0).
     /// Its contact force is identically zero in a neighbourhood, hence both normal/
     /// tangential stiffness and the traction-weighted geometry vanish. A missing
     /// search pair alone proves nothing: certify separation from the current plane.
-    /// The first domain uses linear planar faces inside one fixed convex main face.
+    /// The planar domain includes quadratic faces with straight midpoint edges,
+    /// inside one convex main face. Either side may move in the perturbation.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn qualify_open(
         &self,
@@ -1292,17 +1323,15 @@ impl Interface {
         warnings: &mut Vec<String>,
     ) -> Result<()> {
         let refuse = |reason: &str| Error::NotSupported(format!("contact_perturbation.{reason}: contact `{}`", self.name));
-        if self.extent.is_some() || self.secondary.iter().chain(&self.main).any(|f| !matches!(f.nodes.len(), 3 | 4)) {
-            return Err(refuse("open_requires_linear_solid_faces"));
+        if self.extent.is_some() || self.secondary.iter().chain(&self.main).any(|f| !matches!(f.nodes.len(), 3 | 4 | 6 | 8)) {
+            return Err(refuse("open_requires_solid_faces"));
         }
         let [main] = self.main.as_slice() else { return Err(refuse("open_requires_single_main_face")) };
-        if main.dofs.iter().flatten().flatten().any(|d| base.has_free_motion(*d)) {
-            return Err(refuse("open_requires_fixed_main"));
-        }
+        let moving_main = main.dofs.iter().flatten().flatten().any(|d| base.has_free_motion(*d));
         if self.offset.iter().any(|x| *x != 0.0) {
             return Err(refuse("open_adjusted_gap_unqualified"));
         }
-        let xm = Self::corners(mesh, u, main);
+        let xm = self.planar_outline(mesh, u, main)?;
         let normal = face_area_vector(&xm).and_then(unit).ok_or_else(|| refuse("open_requires_planar_pair"))?;
         let origin = xm.first().copied().ok_or_else(|| refuse("base_evidence_missing"))?;
         if xm.iter().any(|x| {
@@ -1315,7 +1344,7 @@ impl Interface {
         let mut minimum = f64::INFINITY;
         let mut min_relative = f64::INFINITY;
         for face in &self.secondary {
-            let xs = Self::corners(mesh, u, face);
+            let xs = self.planar_outline(mesh, u, face)?;
             let n = face_area_vector(&xs).and_then(unit).ok_or_else(|| refuse("open_requires_planar_pair"))?;
             if norm(std::array::from_fn(|k| n[k] + normal[k])) > ROUND_OFF {
                 return Err(refuse("open_requires_planar_pair"));
@@ -1367,7 +1396,7 @@ impl Interface {
             }
         }
         warnings.push(format!(
-            "contact_perturbation v3: contact `{}` policy=open state=strictly_separated nodes={} rows=0 min_gap={minimum:.12e} m min_gap_over_thickness={min_relative:.12e} guard={GAP_TOLERANCE:.12e} clipping_margin={margin:.12e} m unpaired_nodes={unpaired}; zero base contact force and history; current planar separation certified; normal/tangential increments free; zero contact stiffness and geometry; structural terminal tangent and reference mass retained; infinitesimal fixed-state policy",
+            "contact_perturbation v4: contact `{}` policy=open state=strictly_separated nodes={} rows=0 min_gap={minimum:.12e} m min_gap_over_thickness={min_relative:.12e} guard={GAP_TOLERANCE:.12e} clipping_margin={margin:.12e} m unpaired_nodes={unpaired} moving_main={moving_main}; zero base contact force and history; whole planar separation certified; normal/tangential increments free; zero contact stiffness and geometry; structural terminal tangent and reference mass retained; infinitesimal fixed-state policy",
             self.name, self.nodes.len()
         ));
         Ok(())
@@ -1450,15 +1479,14 @@ impl Interface {
         Ok((rows, blocks))
     }
 
-    pub(crate) fn check_fixed_perturbation(&self, red: &crate::constraints::Reduction) -> Result<()> {
-        for face in self.main.iter().chain(&self.secondary) {
-            for dof in face.dofs.iter().flatten().flatten() {
-                if red.has_free_motion(*dof) {
-                    return Err(Error::NotSupported(format!(
-                        "contact_perturbation.geometry_not_eliminated: contact `{}` retains an interface increment",
-                        self.name
-                    )));
-                }
+    pub(crate) fn check_stick_perturbation(&self, rows: &[crate::prestress::FrozenRow], red: &crate::constraints::Reduction) -> Result<()> {
+        for row in rows.iter().filter(|row| row.name == self.name && row.source == crate::constraints::Source::FrozenContact) {
+            let residual = red.homogeneous_row_residual(&row.terms);
+            if !residual.is_finite() || residual > ROUND_OFF {
+                return Err(Error::NotSupported(format!(
+                    "contact_perturbation.stick_constraint_not_eliminated: contact `{}` retains relative mortar motion ({residual:.12e})",
+                    self.name
+                )));
             }
         }
         Ok(())

@@ -1327,7 +1327,7 @@ pub const STEP_CREATE: &[Field] = &[
     STEP_LOADS,
     reference("base_state", "Equilibrium base", C::Step)
         .help("Earlier static/nonlinear static equilibrium for frequency, harmonic or direct/modal transient increments."),
-    json("contact_perturbation", "Contact perturbation policies").help("Map every contact to stick, closed_tangent_free or open: planar linear solid pair, fixed main, frequency/NLGEOM and unchanged supports. stick requires a strict friction-cone interior; closed_tangent_free requires zero shear and strict interior overlap; open requires strict separation with zero contact force and history. Empty keeps the reported legacy policy."),
+    json("contact_perturbation", "Contact perturbation policies").help("Map every contact to stick, closed_tangent_free or open: frequency/NLGEOM and unchanged supports. stick permits planar linear/quadratic solid faces and a fixed or moving main, with strict friction-cone interior and frozen relative mortar rows. closed_tangent_free requires linear faces, a fixed main, zero shear and strict interior overlap. open permits planar linear or straight-midpoint quadratic faces and a fixed or moving main, with strict separation and zero contact force/history. Empty keeps the reported legacy policy."),
     flag("linear_base", "Linear base stiffness")
         .help("Keep a linear static base dependency without initial-stress stiffness; no pretension.")
         .def("false"),
@@ -2873,6 +2873,14 @@ pub const SOLVE_PROBE: &[Field] = &[
 
 // ---- Results ----
 
+pub const EXTERNAL_RECEIVE: &[Field] = &[
+    path("path", "Trajectory package", false).req().help("Package manifest and retained source files; no code is executed."),
+    path("profile", "Expected run profile", false).req().help("Independently frozen run, required quantities and producer identities."),
+    text("name", "Result name").req().help("A unique name, separate from native analysis steps."),
+    path("store", "Published result directory", true).req().help("Atomic receiving store; save the model separately to embed the trajectory."),
+];
+pub const EXTERNAL_REMOVE: &[Field] = &[text("name", "Result name").req().help("Remove this session's external result; published files remain.")];
+
 pub const DEFORMED: &[Field] = &[
     SOLVED,
     flag("show", "Show").help("Show the deformed shape.").def("true"),
@@ -3263,6 +3271,7 @@ mod tests {
         "no relaxation field",
         "no saved view",
         "no render",
+        "no external result",
         "is not a composite shell",
         "lock source must precede the target",
         "no pretension section result",
