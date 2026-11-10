@@ -310,11 +310,11 @@ mod tests {
             let tau = [[t[0], t[3], t[4]], [t[3], t[1], t[5]], [t[4], t[5], t[2]]];
             for (a, gradient) in p.gradients.iter().enumerate() {
                 for i in 0..3 {
-                    recovered[3*a+i] += p.weight * (0..3).map(|j| tau[i][j] * gradient[j]).sum::<f64>();
+                    recovered[3 * a + i] += p.weight * (0..3).map(|j| tau[i][j] * gradient[j]).sum::<f64>();
                 }
             }
         }
-        let recovery = recovered.iter().zip(&r.response.force).map(|(a,b)|(a-b).abs()).fold(0.0,f64::max);
+        let recovery = recovered.iter().zip(&r.response.force).map(|(a, b)| (a - b).abs()).fold(0.0, f64::max);
         println!("StVK Fbar recovered-stress virtual-work force error_N={recovery:e}");
         assert!(recovery < 1e-10);
         let energy = (r.energy - stvk_potential(&s, &u, &d)).abs();

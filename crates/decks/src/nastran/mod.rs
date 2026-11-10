@@ -84,6 +84,7 @@ pub fn write(model: &Model, units: Preset) -> Result<String> {
 
 /// [`write`] for a model already expressed in `units` ([`crate::express`]) and resolved.
 pub fn write_resolved(model: &Model, r: &Resolved, units: Preset) -> Result<String> {
+    crate::refuse_contact_perturbation(FORMAT, model)?;
     if model.sections().values().any(|s| s.formulation.axisymmetric_shell) {
         return Err(Error::Unsupported { format: FORMAT, what: "axisymmetric conical ring shell: no faithful SAX1-equivalent mapping".into() });
     }

@@ -38,7 +38,7 @@ pub(crate) fn stiffness(setup: &Setup<'_>, graph: &NodeGraph, k: Csr, limits: &L
         ));
     }
     if matches!(base.procedure, Procedure::NonlinearStatic(_)) {
-        let (preload, terminal) = crate::nonlinear::terminal_tangent(setup.model, &base.name, limits)?;
+        let (preload, terminal) = crate::nonlinear::terminal_tangent(setup.model, &base.name, limits, &setup.step.contact_perturbation)?;
         if preload.nodes != setup.mesh.labels || terminal.stiffness.n != k.n {
             return Err(Error::Invalid(format!("base_state `{}` changed the degree-of-freedom layout", base.name)));
         }

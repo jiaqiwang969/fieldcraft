@@ -715,6 +715,11 @@ impl Reduction {
         self.eq_dof.len()
     }
 
+    /// Whether a homogeneous increment can move this coordinate.
+    pub(crate) fn has_free_motion(&self, dof: usize) -> bool {
+        self.free.row(dof).any(|(_, coefficient)| coefficient != 0.0)
+    }
+
     /// T_fᵀ A T_f for each matrix, all over the mesh's degrees of freedom and on one pattern
     /// (reference points carry no stiffness or mass of their own). Row by row with a dense
     /// accumulator (F. G. Gustavson, *Two fast algorithms for sparse matrices*, ACM TOMS

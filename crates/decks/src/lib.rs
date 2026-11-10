@@ -101,6 +101,17 @@ pub fn express(model: &Model, units: Preset) -> Result<Model> {
     Ok(model.converted(&|q, v| system.express(q, v).ok())?)
 }
 
+/// Never discard an explicit perturbation policy in a deck whose mapping is unverified.
+pub(crate) fn refuse_contact_perturbation(format: &'static str, model: &Model) -> Result<()> {
+    if let Some(step) = model.steps().iter().find(|step| !step.contact_perturbation.is_empty()) {
+        return Err(Error::Unsupported {
+            format,
+            what: format!("step `{}`: explicit contact_perturbation policy has no verified keyword mapping", step.name),
+        });
+    }
+    Ok(())
+}
+
 /// What a preset's units are, in words, for a deck's header.
 pub(crate) fn units_in_words(units: Preset) -> &'static str {
     match units {
