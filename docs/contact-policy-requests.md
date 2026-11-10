@@ -6,7 +6,7 @@ It is separate from the versioned parameter report: no existing snapshot, capabi
 schema or result encoding is changed. Availability is checked against the actual `Step`
 serialization, not inferred from another build's documentation.
 
-The limited declaration is a map from case-sensitive contact names to `"stick"`. A nonempty
+The limited declaration is a map from case-sensitive contact names to `"stick"` or `"closed_tangent_free"`. A nonempty
 map must cover every contact. Only explicit pairs, a frequency step, an earlier nonlinear
 geometry base, and unchanged support names pass declaration inspection. `slide`, `open`,
 unknown names, omissions, a linear base and general/self contact are refused. Empty maps
@@ -41,7 +41,7 @@ duplicate solver eligibility calculations or parse warning text into structured 
 The report says runtime qualification is unverified. There is no `qualified=true` field in
 a request. Native warning text is not a stable state protocol; original runtime receipts and
 program identities remain necessary. No verified commercial keyword mapping is claimed;
-existing writer refusals must remain when the native field is integrated. Open/slide policies
+existing writer refusals must remain when the native field is integrated. Coulomb sliding/open policies
 and generalized moving interfaces are outside this declaration scope.
 
 Tests in `crates/io/tests/contact_policy.rs` cover declaration/reference checks, exact proposal
@@ -60,3 +60,18 @@ instead fails `NativeContactPolicyNotApplied`. The solved fixed-main benchmark r
 closed-form force/frequency checks and all three deck-writer refusals. This is not a receipt
 for per-frame backend kappa, nor an equivalence between finite tangential stiffness and hard
 stick. Runtime qualification in the capability report remains unverified.
+
+`closed_tangent_free` releases tangential increments at a qualified closed, zero-base-shear
+interface; it is not Coulomb sliding or finite tangential stiffness. Its qualification needs
+one convex main face, strict clipping-edge margin, full current overlap, guarded base shear,
+eliminated normal gap gradient and retained pressure-weighted gap geometry. The common
+fixed-main and equilibrium checks still apply. `qualification_by_policy` separates these
+conditions from hard stick's full reference overlap, positive friction and eliminated
+interface motion. Mixed maps report `explicit_mixed`; all runtime qualifications remain
+unverified by the declaration layer. Empty maps retain legacy selection.
+
+Consumers should import `fieldcraft_io::identity::SCHEME` for the existing snapshot scheme,
+`fieldcraft_io::contact_policy::REQUEST_SCHEME` for requests, and
+`fieldcraft_io::capabilities::{SCHEME, CONTACT_SCHEME}` for parameter and contact-control
+receipts. These are public module constants, not new identity rules. Backend version and
+program digests remain separately bound values; no commit name replaces an artifact SHA.
