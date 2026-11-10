@@ -52,6 +52,7 @@ fn info(s: &mut Session, _: &Value) -> Result<Value> {
         "own_units": s.model.display_units().is_some(),
         "definitions": definitions,
         "parameter_capabilities": fieldcraft_io::capabilities::report(&s.model)?,
+        "contact_policy_capabilities": fieldcraft_io::contact_policy::report(&s.model)?,
     }))
 }
 
@@ -214,5 +215,51 @@ mod capability_tests {
         assert_eq!(reopened.execute("model.info", &json!({})).unwrap()["parameter_capabilities"], before);
         fieldcraft_io::fs::write_atomic(&dir.join("capabilities.json"), &serde_json::to_vec_pretty(&before).unwrap(), false).unwrap();
         println!("PARAMETER_CAPABILITIES {before}");
+    }
+}
+
+#[cfg(test)]
+mod contact_policy_tests {
+    use crate::Session;
+    use serde_json::json;
+    #[test]
+    fn contact_policy_input_is_not_silently_lost() {
+        let mut s = Session::default();
+        let input = json!({"name":"Trial","procedure":{"type":"static"},"contact_perturbation":{"Missing":"stick"}});
+        let error = s.execute("model.step.create", &input).unwrap_err();
+        assert!(error.to_string().contains("contact_perturbation"));
+        assert!(s.model.step("Trial").is_none());
+        println!("POLICY_REFUSED input={input} error={error}");
+        s.execute("model.step.create", &json!({"name":"Legacy","procedure":{"type":"static"}})).unwrap();
+        let before = s.model.clone();
+        for policy in [json!({"Missing":"stick"}), json!({"Missing":"slide"}), json!({"Missing":"open"}), json!(null)] {
+            assert!(s.execute("model.step.edit", &json!({"name":"Legacy","contact_perturbation":policy})).is_err());
+            assert_eq!(s.model, before);
+        }
+        let empty = s.execute("model.step.edit", &json!({"name":"Legacy","contact_perturbation":{}}));
+        if fieldcraft_io::contact_policy::native_field_available() {
+            empty.unwrap();
+        } else {
+            assert!(empty.is_err());
+        }
+        let info = s.execute("model.info", &json!({})).unwrap();
+        assert_eq!(info["contact_policy_capabilities"]["steps"]["Legacy"]["selection"], "not_requested");
+        assert_eq!(info["contact_policy_capabilities"]["steps"]["Legacy"]["runtime_qualification"], "unverified");
+        let dir = std::env::var_os("FIELDCRAFT_POLICY_EVIDENCE")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| std::env::temp_dir().join(format!("fieldcraft-policy-command-{}", std::process::id())));
+        fieldcraft_io::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("command-model.fieldcraft");
+        s.execute("file.save", &json!({"path":path})).unwrap();
+        let mut reopened = Session::default();
+        reopened.execute("file.open", &json!({"path":path})).unwrap();
+        let after = reopened.execute("model.info", &json!({})).unwrap();
+        assert_eq!(after["contact_policy_capabilities"], info["contact_policy_capabilities"]);
+        fieldcraft_io::fs::write_atomic(
+            &dir.join("command-policy-report.json"),
+            &serde_json::to_vec_pretty(&after["contact_policy_capabilities"]).unwrap(),
+            false,
+        )
+        .unwrap();
     }
 }

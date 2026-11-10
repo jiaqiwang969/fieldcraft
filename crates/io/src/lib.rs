@@ -37,6 +37,7 @@ pub use deck_source::DeckSource;
 pub mod capabilities;
 pub mod checkpoint;
 pub mod codec;
+pub mod contact_policy;
 pub mod fs;
 pub mod gmsh;
 pub mod identity;
