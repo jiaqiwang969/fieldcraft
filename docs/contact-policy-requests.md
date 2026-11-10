@@ -6,9 +6,11 @@ It is separate from the versioned parameter report: no existing snapshot, capabi
 schema or result encoding is changed. Availability is checked against the actual `Step`
 serialization, not inferred from another build's documentation.
 
-The limited declaration is a map from case-sensitive contact names to `"stick"`. A nonempty
+The declaration is a map from case-sensitive contact names to `"stick"`,
+`"closed_tangent_free"` or `"open"`. The native policy specification is
+`fieldcraft-native-contact-perturbation/3`; the request schema remains version 1. A nonempty
 map must cover every contact. Only explicit pairs, a frequency step, an earlier nonlinear
-geometry base, and unchanged support names pass declaration inspection. `slide`, `open`,
+geometry base, and unchanged support names pass declaration inspection. `slide`,
 unknown names, omissions, a linear base and general/self contact are refused. Empty maps
 retain legacy selection; they do not implicitly select explicit stick. Non-perturbation
 steps are reported as `not_requested`.
@@ -41,8 +43,20 @@ duplicate solver eligibility calculations or parse warning text into structured 
 The report says runtime qualification is unverified. There is no `qualified=true` field in
 a request. Native warning text is not a stable state protocol; original runtime receipts and
 program identities remain necessary. No verified commercial keyword mapping is claimed;
-existing writer refusals must remain when the native field is integrated. Open/slide policies
-and generalized moving interfaces are outside this declaration scope.
+existing writer refusals must remain when the native field is integrated. Actual sliding and generalized moving interfaces remain outside this scope.
+
+`closed_tangent_free` requires a strictly interior closed patch with guarded positive
+pressure and zero shear; only normal rows and pressure-weighted geometry are retained.
+`open` asserts strictly separated, unloaded planar linear faces over one fixed convex
+main face, with a strictly interior projection and no initial gap adjustment or held
+normal/tangential history. A missing search pair must have independent geometric
+separation evidence. It adds no contact constraint, stiffness or geometry. Structural
+terminal tangent and reference mass remain. Touching, near-switch, loaded, unsupported
+geometry and missing evidence are refused by the solver, not accepted by this report.
+The capability report lists common prerequisites separately from each policy’s
+qualification conditions; receivers must not interpret declaration acceptance as a
+physical state certificate. Tests include a touching model whose open declaration is
+valid while runtime qualification is deliberately not claimed.
 
 Tests in `crates/io/tests/contact_policy.rs` cover declaration/reference checks, exact proposal
 binding, native archive and request-file readback, mismatched requests/models and forged

@@ -184,7 +184,7 @@ fn closed_tangent_free_refuses_unqualified_states() {
     let mut s = specimen(false, 0.01, None, true);
     for params in [
         json!({"name":"Modes","base_state":null}),
-        json!({"name":"Modes","contact_perturbation":{"Interface":"open"}}),
+        json!({"name":"Modes","contact_perturbation":{"Interface":"coulomb_sliding"}}),
         json!({"name":"Modes","boundary_conditions":["base","top"]}),
         json!({"name":"Modes","procedure":{"type":"harmonic","frequencies":[1.0]}}),
     ] {

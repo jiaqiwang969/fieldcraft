@@ -1327,7 +1327,7 @@ pub const STEP_CREATE: &[Field] = &[
     STEP_LOADS,
     reference("base_state", "Equilibrium base", C::Step)
         .help("Earlier static/nonlinear static equilibrium for frequency, harmonic or direct/modal transient increments."),
-    json("contact_perturbation", "Contact perturbation policies").help("Map every contact to stick or closed_tangent_free: closed planar linear solid pair, fixed main, frequency/NLGEOM and unchanged supports. stick requires a strict friction-cone interior; closed_tangent_free requires zero shear and strict interior overlap. Empty keeps the reported legacy policy."),
+    json("contact_perturbation", "Contact perturbation policies").help("Map every contact to stick, closed_tangent_free or open: planar linear solid pair, fixed main, frequency/NLGEOM and unchanged supports. stick requires a strict friction-cone interior; closed_tangent_free requires zero shear and strict interior overlap; open requires strict separation with zero contact force and history. Empty keeps the reported legacy policy."),
     flag("linear_base", "Linear base stiffness")
         .help("Keep a linear static base dependency without initial-stress stiffness; no pretension.")
         .def("false"),
@@ -1342,7 +1342,7 @@ pub const STEP_EDIT: &[Field] = &[
     STEP_BCS,
     STEP_LOADS,
     reference("base_state", "Equilibrium base", C::Step).help("Earlier equilibrium step; null in a command clears the base."),
-    json("contact_perturbation", "Contact perturbation policies").help("Map every contact name to stick or closed_tangent_free; same scope as create. An empty object restores the reported legacy policy."),
+    json("contact_perturbation", "Contact perturbation policies").help("Map every contact name to stick, closed_tangent_free or open; same scope as create. An empty object restores the reported legacy policy."),
     flag("linear_base", "Linear base stiffness")
         .help("Keep a linear static base dependency without initial-stress stiffness; clear when removing the base."),
     flag("perturbation_follower_pressure", "Modal pressure stiffness").help("Frequency with a linear static base: conservative zero-offset MITC8 pressure tangent; unchanged direct supports. Default false keeps dead loads."),

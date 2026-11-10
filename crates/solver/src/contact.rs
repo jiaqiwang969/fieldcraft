@@ -1276,6 +1276,103 @@ impl Interface {
         Ok(margin)
     }
 
+    /// Certify a strictly open branch of unilateral contact (g > 0, p = 0).
+    /// Its contact force is identically zero in a neighbourhood, hence both normal/
+    /// tangential stiffness and the traction-weighted geometry vanish. A missing
+    /// search pair alone proves nothing: certify separation from the current plane.
+    /// The first domain uses linear planar faces inside one fixed convex main face.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn qualify_open(
+        &self,
+        mesh: &Mesh,
+        u: &[f64],
+        state: &State,
+        committed: &Committed,
+        base: &crate::constraints::Reduction,
+        warnings: &mut Vec<String>,
+    ) -> Result<()> {
+        let refuse = |reason: &str| Error::NotSupported(format!("contact_perturbation.{reason}: contact `{}`", self.name));
+        if self.extent.is_some() || self.secondary.iter().chain(&self.main).any(|f| !matches!(f.nodes.len(), 3 | 4)) {
+            return Err(refuse("open_requires_linear_solid_faces"));
+        }
+        let [main] = self.main.as_slice() else { return Err(refuse("open_requires_single_main_face")) };
+        if main.dofs.iter().flatten().flatten().any(|d| base.has_free_motion(*d)) {
+            return Err(refuse("open_requires_fixed_main"));
+        }
+        if self.offset.iter().any(|x| *x != 0.0) {
+            return Err(refuse("open_adjusted_gap_unqualified"));
+        }
+        let xm = Self::corners(mesh, u, main);
+        let normal = face_area_vector(&xm).and_then(unit).ok_or_else(|| refuse("open_requires_planar_pair"))?;
+        let origin = xm.first().copied().ok_or_else(|| refuse("base_evidence_missing"))?;
+        if xm.iter().any(|x| {
+            let d = dot(normal, std::array::from_fn(|k| x[k] - origin[k]));
+            !d.is_finite() || d.abs() > ROUND_OFF * main.thickness
+        }) {
+            return Err(refuse("open_requires_planar_pair"));
+        }
+        let margin = self.interior_patch(mesh, u, normal)?;
+        let mut minimum = f64::INFINITY;
+        let mut min_relative = f64::INFINITY;
+        for face in &self.secondary {
+            let xs = Self::corners(mesh, u, face);
+            let n = face_area_vector(&xs).and_then(unit).ok_or_else(|| refuse("open_requires_planar_pair"))?;
+            if norm(std::array::from_fn(|k| n[k] + normal[k])) > ROUND_OFF {
+                return Err(refuse("open_requires_planar_pair"));
+            }
+            let first = xs.first().copied().ok_or_else(|| refuse("base_evidence_missing"))?;
+            for x in xs {
+                let flat = dot(n, std::array::from_fn(|k| x[k] - first[k]));
+                if !flat.is_finite() || flat.abs() > ROUND_OFF * face.thickness {
+                    return Err(refuse("open_requires_planar_pair"));
+                }
+                let gap = dot(normal, std::array::from_fn(|k| x[k] - origin[k]));
+                let relative = gap / face.thickness;
+                if !relative.is_finite() || relative <= GAP_TOLERANCE {
+                    return Err(refuse("normal_switch_or_not_open"));
+                }
+                minimum = minimum.min(gap);
+                min_relative = min_relative.min(relative);
+            }
+        }
+        if self.nodes.is_empty() || !minimum.is_finite() {
+            return Err(refuse("base_evidence_missing"));
+        }
+        let mut unpaired = 0;
+        for i in 0..self.nodes.len() {
+            let (Some(&pressure), Some(gap), Some(&force), Some(&lambda), Some(&thickness)) =
+                (state.pressure.get(i), state.gap.get(i), state.nodal_force.get(i), committed.multipliers.get(i), self.thickness.get(i))
+            else {
+                return Err(refuse("base_evidence_missing"));
+            };
+            if pressure != 0.0 || norm(force) != 0.0 {
+                return Err(refuse("open_contact_force_nonzero"));
+            }
+            if lambda != 0.0 {
+                return Err(refuse("open_history_unqualified"));
+            }
+            match gap {
+                Some(g) if !g.is_finite() || g / thickness <= GAP_TOLERANCE => return Err(refuse("normal_switch_or_not_open")),
+                None => unpaired += 1,
+                _ => {}
+            }
+            if self.friction.is_some() {
+                let (Some(&traction), Some(&slipping), Some(&history)) = (state.traction.get(i), state.slipping.get(i), committed.traction.get(i))
+                else {
+                    return Err(refuse("base_evidence_missing"));
+                };
+                if norm(traction) != 0.0 || norm(history) != 0.0 || slipping {
+                    return Err(refuse("open_history_unqualified"));
+                }
+            }
+        }
+        warnings.push(format!(
+            "contact_perturbation v3: contact `{}` policy=open state=strictly_separated nodes={} rows=0 min_gap={minimum:.12e} m min_gap_over_thickness={min_relative:.12e} guard={GAP_TOLERANCE:.12e} clipping_margin={margin:.12e} m unpaired_nodes={unpaired}; zero base contact force and history; current planar separation certified; normal/tangential increments free; zero contact stiffness and geometry; structural terminal tangent and reference mass retained; infinitesimal fixed-state policy",
+            self.name, self.nodes.len()
+        ));
+        Ok(())
+    }
+
     /// Keep the hard normal gradient and its pressure-weighted geometric Hessian;
     /// release tangential increments only at zero base shear. This is not actual
     /// Coulomb sliding. Both derivatives come from equilibrium's mortar integral.

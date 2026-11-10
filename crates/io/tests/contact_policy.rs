@@ -64,7 +64,7 @@ fn names_values_coverage_and_pair_scope_are_checked() {
     let r = Run::default();
     for (declaration, reason) in [
         (json!({"Interface":"slide"}), "UnsupportedContactPolicy"),
-        (json!({"Interface":"open"}), "UnsupportedContactPolicy"),
+        (json!({"Interface":"coulomb_sliding"}), "UnsupportedContactPolicy"),
         (json!({"interface":"stick"}), "UnknownPolicyContact"),
     ] {
         assert!(PolicyRequest::freeze(&m, &g, &r, "Modes", &declaration).unwrap_err().to_string().contains(reason));
@@ -168,4 +168,33 @@ fn mixed_native_selection_does_not_report_stick_for_every_contact() {
         PolicyRequest::freeze(&m, &Geometry::default(), &Run::default(), "Modes", &json!({"Interface":"stick","Second":"closed_tangent_free"}))
             .unwrap();
     request.require_applied(&m, &Geometry::default(), &Run::default()).unwrap();
+}
+
+#[test]
+fn open_declaration_is_frozen_but_does_not_certify_separation() {
+    use fieldcraft_model::ContactPerturbation;
+    let mut m = fixture();
+    let g = Geometry::default();
+    let r = Run::default();
+    let declared = PolicyRequest::freeze(&m, &g, &r, "Modes", &json!({"Interface":"open"})).unwrap();
+    assert!(declared.require_applied(&m, &g, &r).unwrap_err().to_string().contains("NativeContactPolicyNotApplied"));
+    let mut step = m.step("Modes").unwrap().clone();
+    step.contact_perturbation.insert("Interface".into(), ContactPerturbation::Open);
+    m.replace_step(step).unwrap();
+    assert!(declared.validate(&m, &g, &r).is_err(), "application changed the frozen model revision");
+    let request = PolicyRequest::freeze(&m, &g, &r, "Modes", &json!({"Interface":"open"})).unwrap();
+    request.require_applied(&m, &g, &r).unwrap();
+    let info = report(&m).unwrap();
+    assert_eq!(info["steps"]["Modes"]["selection"], "explicit_open");
+    assert_eq!(info["steps"]["Modes"]["runtime_qualification"], "unverified");
+    assert_eq!(info["policy_specification"], "fieldcraft-native-contact-perturbation/3");
+    let bytes = fieldcraft_io::write(&m, &g, &[], &Default::default(), &Default::default()).unwrap();
+    let reopened = fieldcraft_io::read(&bytes).unwrap();
+    let recovered =
+        PolicyRequest::decode(&serde_json::to_vec(&request).unwrap(), &request.digest().unwrap(), &reopened.model, &reopened.geometry, &reopened.run)
+            .unwrap();
+    recovered.require_applied(&reopened.model, &reopened.geometry, &reopened.run).unwrap();
+    assert_eq!(report(&reopened.model).unwrap(), info);
+    // This fixture is geometrically touching. IO certifies identity and application only.
+    assert_eq!(m.node(1).unwrap().xyz[2], m.node(5).unwrap().xyz[2]);
 }

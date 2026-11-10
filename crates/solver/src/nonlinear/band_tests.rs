@@ -445,3 +445,65 @@ fn tangent_free_refuses_shear_history_and_switches() {
         }
     });
 }
+
+#[test]
+fn open_qualification_requires_zero_force_history_and_geometric_separation() {
+    let mut model = interior_blocks(true);
+    for label in 9..=16 {
+        let mut x = model.node(label).unwrap().xyz;
+        x[2] += 0.02;
+        model.set_node(label, x).unwrap();
+    }
+    model
+        .replace_boundary_condition(
+            "top",
+            BoundaryCondition::Displacement { target: Target::Set("top".into()), values: [None, None, Some(0.), None, None, None] },
+        )
+        .unwrap();
+    with_run(&model, |run| {
+        let (base, _) = succeeded(solve_increment(run, &[0.; 4], 0., 1., None));
+        let u = run.problem.red.expand_scaled(&base.q, 1.);
+        let interface = &run.problem.contacts[0];
+        let state = &base.evaluation.contact[0];
+        let history = &run.contact[0];
+        let qualify =
+            |s: &contact::State, h: &contact::Committed| interface.qualify_open(run.problem.mesh, &u, s, h, run.problem.red, &mut Vec::new());
+        qualify(state, history).unwrap();
+        // Search absence is acceptable only because the current geometry certifies
+        // separation; it must not bypass zero-force/history evidence.
+        let mut absent = state.clone();
+        absent.gap.fill(None);
+        qualify(&absent, history).unwrap();
+        let mut force = absent.clone();
+        force.nodal_force[0][2] = 1e-12;
+        let mut pressure = absent.clone();
+        pressure.pressure[0] = 1e-12;
+        let mut shear = absent.clone();
+        shear.traction[0][0] = 1e-12;
+        let mut slip = absent.clone();
+        slip.slipping[0] = true;
+        let mut missing = absent.clone();
+        missing.pressure.clear();
+        for (s, reason) in [
+            (force, "open_contact_force_nonzero"),
+            (pressure, "open_contact_force_nonzero"),
+            (shear, "open_history_unqualified"),
+            (slip, "open_history_unqualified"),
+            (missing, "base_evidence_missing"),
+        ] {
+            let error = qualify(&s, history).unwrap_err().to_string();
+            eprintln!("OPEN_STATE_REFUSAL {reason}: {error}");
+            assert!(error.contains(reason), "{error}");
+        }
+        for tangential in [false, true] {
+            let mut held = history.clone();
+            if tangential {
+                held.traction[0][0] = 1e-12;
+            } else {
+                held.multipliers[0] = 1e-12;
+            }
+            let error = qualify(&absent, &held).unwrap_err().to_string();
+            assert!(error.contains("open_history_unqualified"), "{error}");
+        }
+    });
+}
