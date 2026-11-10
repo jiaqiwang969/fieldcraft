@@ -31,6 +31,8 @@ The command publishes atomically, then installs the result in the session. It re
 construction failed, `ExternalPublishedNotInstalled` returns the actual published identifier.
 The session remains unchanged and the published file remains available for diagnosis.
 `results.external.remove` removes the session entry and retains those published files.
+Omitting `name` is a required-field error. A provided name with no matching session entry
+returns the state refusal `no external result`; the session and published files stay unchanged.
 
 ## Input contracts
 
@@ -82,6 +84,28 @@ backend qualification. A policy-dependent run still needs a qualification provid
 policy alone does not satisfy that gate. Unknown effective stiffness/clamping is retained and
 is rejected when `require_effective` requests those observations. IPC disabled is distinct
 from missing observations. Finite tangential stiffness does not establish a hard stick constraint.
+
+## Refusal diagnostics
+
+The following prefixes describe the failing check; they do not upgrade any evidence state.
+Context and admission checks are owned by the engine, while type-13 record integrity and
+binding checks remain owned by IO. The context and archive schemas are unchanged.
+
+| Diagnostic | Meaning |
+| --- | --- |
+| `ExternalArchivePayloadMismatch` | The envelope bytes do not match their stored payload digest when revalidating a published package. Type-13 IO may reject damaged bytes earlier with its own digest error. |
+| `ExternalArchivePublicationMismatch` | The payload or result identifier differs from the frozen publication receipt, including a substituted envelope whose outer digests were recomputed. This is not a binary field checksum failure. |
+| `ExternalArchiveContext` | The frozen receive context has an unsupported version or invalid shape, including a fabricated verified runtime qualification. |
+| `ExternalArchiveSource` | Required retained source bytes or their source identities are inconsistent. |
+| `ExternalArchiveAdmission: changed on replay` | Recomputed admission differs from the retained original admission. |
+| `ExternalArchiveNameConflict` | The requested archive key conflicts with an existing result or native step. |
+| `NativeContactPolicyNotApplied` | `begin` required a natively applied policy, but the provider could not verify that application. |
+| `RuntimeQualificationUnverified` | Admission blocker: policy-dependent results lack independent runtime qualification, even if declaration and native application are verified. Publication remains refused. |
+
+Stale results are reported by `stale: true` and `binding_error` in summaries; opening or
+saving mismatched results reports the underlying identity error. Binary field corruption
+continues to report `binary field checksum mismatch`. Missing application and unknown
+qualification are separate checks; changing a diagnostic does not relax either one.
 
 ## Native lifecycle API
 

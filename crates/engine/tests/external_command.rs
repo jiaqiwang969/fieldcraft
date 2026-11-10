@@ -1,7 +1,7 @@
 //! Formal command/type-13 protocol fixtures. No test here is a real libuipc solve.
 mod external_support;
 use external_support::Fixture;
-use fieldcraft_engine::Session;
+use fieldcraft_engine::{EngineError, Session, schema::ProblemKind};
 use serde_json::json;
 
 #[test]
@@ -90,4 +90,68 @@ fn formal_model_mismatch_and_file_roots_refuse_without_installing_or_publishing(
     assert!(s.execute("results.external.receive", &f.params()).is_err());
     assert!(!f.root.join("store").exists());
     assert_eq!(s.external_results_summary(), json!([]));
+}
+
+#[test]
+fn remove_distinguishes_required_name_from_missing_result_and_retains_published_files() {
+    let f = Fixture::new("formal-remove");
+    let mut s = Session::default();
+    s.model = f.model.model.clone();
+    let missing = s.execute("results.external.remove", &json!({})).unwrap_err();
+    assert!(matches!(missing, EngineError::Param(p) if p.path == "name" && p.kind == ProblemKind::Required));
+    s.execute("results.external.receive", &f.params()).unwrap();
+    s.execute("file.save_as", &json!({"path":f.root.join("saved.fieldcraft")})).unwrap();
+    let before = s.external_results_summary();
+    let absent = s.execute("results.external.remove", &json!({"name":"Fresh"})).unwrap_err();
+    assert!(matches!(absent, EngineError::Params(ref message) if message == "no external result `Fresh`"));
+    assert_eq!(s.external_results_summary(), before);
+    assert!(!s.is_dirty());
+    let files: Vec<_> = std::fs::read_dir(f.root.join("store")).unwrap().map(|p| p.unwrap().path()).collect();
+    let contents: Vec<_> = files.iter().map(|p| std::fs::read(p).unwrap()).collect();
+    assert_eq!(files.len(), 1);
+    let removed = s.execute("results.external.remove", &json!({"name":"external-fixture"})).unwrap();
+    assert_eq!(removed, json!({"removed":"external-fixture","published_files_deleted":false,"project_saved":false}));
+    assert_eq!(s.external_results_summary(), json!([]));
+    assert!(s.is_dirty());
+    assert_eq!(std::fs::read_dir(f.root.join("store")).unwrap().count(), 1);
+    assert_eq!(files.iter().map(|p| std::fs::read(p).unwrap()).collect::<Vec<_>>(), contents);
+}
+
+#[test]
+fn replaced_envelope_names_publication_mismatch_and_does_not_replace_session() {
+    let f = Fixture::new("formal-swapped-envelope");
+    let mut s = Session::default();
+    s.model = f.model.model.clone();
+    s.execute("results.external.receive", &f.params()).unwrap();
+    let mut record = s.external_result("external-fixture").unwrap().clone();
+    // All IO-level digests remain self-consistent, but the frozen publication is unchanged.
+    record.envelope_json.push(b' ');
+    record.payload_sha256 = fieldcraft_io::sha256_hex(&record.envelope_json);
+    record.result_id = format!("fieldcraft-result/{}", record.payload_sha256);
+    record.record_sha256 = record.record_digest().unwrap();
+    let definition = record.definition().unwrap();
+    let bytes = fieldcraft_io::write_with(
+        &f.model.model,
+        &f.model.geometry,
+        &[],
+        &fieldcraft_io::JournalHeader::default(),
+        &fieldcraft_io::View::default(),
+        &fieldcraft_io::Extras {
+            results: vec![(
+                "external-fixture",
+                fieldcraft_io::results::StoredRef { definition, result: fieldcraft_io::results::SolvedRef::External(&record) },
+            )],
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(fieldcraft_io::read(&bytes).unwrap().results.len(), 1);
+    let path = f.root.join("replaced-envelope.fieldcraft");
+    std::fs::write(&path, bytes).unwrap();
+    let before = s.external_results_summary();
+    let error = s.execute("file.open", &json!({"path":path})).unwrap_err().to_string();
+    assert!(error.contains("ExternalArchivePublicationMismatch:"), "{error}");
+    assert!(!error.contains("binary field checksum"), "{error}");
+    assert_eq!(s.model, f.model.model);
+    assert_eq!(s.external_results_summary(), before);
 }

@@ -450,9 +450,9 @@ impl<I: IdentityVerifier> ExternalReceiver<I> {
                 solve = SolveOutcome::Unknown;
             }
         }
-        // Declaration bytes and numerical convergence cannot prove policy application.
+        // Runtime qualification remains unverified even when the provider verifies application.
         let policy = envelope.policy_request_digest.as_ref().map(|_| {
-            blockers.push("NativeContactPolicyNotApplied: declaration/application/qualification are separate".into());
+            blockers.push("RuntimeQualificationUnverified: policy-dependent results require independently verified runtime qualification".into());
             if solve == SolveOutcome::Succeeded {
                 solve = SolveOutcome::Unknown;
             }

@@ -112,6 +112,10 @@ pub enum ContractError {
     NativeContactPolicyNotApplied,
     #[error("binary field checksum mismatch")]
     ChecksumMismatch,
+    #[error("ExternalArchivePayloadMismatch: stored envelope bytes do not match the payload digest")]
+    ArchivePayloadMismatch,
+    #[error("ExternalArchivePublicationMismatch: frozen publication receipt does not match the stored result ID or payload digest")]
+    ArchivePublicationMismatch,
     #[error("not supported yet: {0}")]
     Unsupported(&'static str),
     #[error("worker operation failed: {0}")]
