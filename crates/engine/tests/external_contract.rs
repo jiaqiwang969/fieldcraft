@@ -1677,8 +1677,12 @@ mod identity_transactions {
         assert_eq!(policy.declaration, EvidenceCheck::Verified);
         assert_eq!(policy.application, EvidenceCheck::Verified);
         assert_eq!(policy.runtime_qualification, EvidenceCheck::Unverified);
-        // The legacy blocker text conflates application and qualification. The typed
-        // admission above identifies the missing qualification, not an unapplied policy.
+        // The refusal names the missing runtime qualification even though the
+        // declaration and native application above are independently verified.
+        assert_eq!(
+            admission.blockers,
+            ["RuntimeQualificationUnverified: policy-dependent results require independently verified runtime qualification"]
+        );
         let error = tx.commit(&e).unwrap_err();
         assert_eq!(error, ContractError::Invalid("result store requires a complete solver success"));
         let stored_files = std::fs::read_dir(root.join("store")).unwrap().count();
