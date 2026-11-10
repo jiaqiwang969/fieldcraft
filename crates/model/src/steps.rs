@@ -1268,6 +1268,9 @@ impl OutputVariable {
 #[serde(rename_all = "snake_case")]
 pub enum ContactPerturbation {
     Stick,
+    /// A qualified closed pair: hard normal motion, no incremental tangential stiffness.
+    /// This is an explicit release policy, not a Coulomb sliding tangent.
+    ClosedTangentFree,
 }
 
 /// An analysis step.

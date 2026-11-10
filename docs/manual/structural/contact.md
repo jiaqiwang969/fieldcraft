@@ -505,7 +505,8 @@ new policy. Setting an empty map explicitly restores that legacy behaviour.
 switching, sliding or a cone boundary, missing friction evidence, incomplete overlap,
 an unqualified gap, a moving main surface, nonplanar/quadratic faces or interface
 geometry not eliminated. General contact, other perturbation procedures, moving
-interfaces, tangentially free and open policies are outside this first domain.
+interfaces and open policies are outside this first domain. The separately qualified
+tangentially free selection is described below.
 This does not implement a nonsymmetric Coulomb sliding tangent. Abaqus export refuses
 the explicit policy until a keyword mapping is independently verified; native
 `.fieldcraft` persistence supports it.
@@ -580,3 +581,45 @@ finite contact penalty from hard incremental bonding.
 - J. O. Hallquist, G. L. Goudreau, D. J. Benson. *Sliding interfaces with contact-impact in large-scale Lagrangian computations.* CMAME 51:107–137, 1985.
 - T. J. R. Hughes, R. L. Taylor, J. L. Sackman, A. Curnier, W. Kanoknukulchai. *A finite element method for a class of contact-impact problems.* CMAME 8(3):249–276, 1976.
 - H. Hertz. J. reine angew. Math. 92:156–171, 1882; K. L. Johnson. *Contact Mechanics*, Cambridge 1985.
+
+## Closed contact with free tangential increments
+
+Use `"contact_perturbation":{"Interface":"closed_tangent_free"}` in a frequency
+step with an NLGEOM base and unchanged supports. The main surface must be fixed
+and consist of one convex planar linear solid face. The secondary patch must be
+planar, fully closed and strictly inside that main face: its clipping branch must
+be smooth. The same pressure and gap guards as above apply; coverage compares
+complete and overlapping nodal areas in the current configuration. With friction,
+the state must be known, nonslipping and strictly inside the Coulomb cone, with zero
+shear within the equilibrium force guard. Frictionless contact is also supported.
+Nonzero base shear is refused as `shear_release_undefined`: its force holding and
+transport have not been defined. Sliding, switching, missing history and clipping
+edges are refused. A nonlinear base that does not converge cannot qualify.
+
+Only the actual terminal normal rows `J=d(weighted_gap)/dx` are imposed. The normal
+geometric stiffness `-sum(p*Hessian(weighted_gap))` comes from the same automatic
+differentiation as equilibrium. The augmented-Lagrange penalty outer product is
+excluded: it would double-enforce the hard normal constraint. No tangential material
+stiffness or friction damping is added. Verified fixed-main rows and columns have
+zero projection; remaining secondary entries fit the structural pattern shared
+with reference mass. The same actual reduction applies to K and M. The contact
+Hessian is symmetric. A significant nonsymmetric follower-load contribution is
+refused for this policy.
+
+The selection explicitly releases tangential increments, including when the base
+has friction. It is not a Coulomb sliding tangent. The
+[friction manual](https://docs.software.vt.edu/abaqusv2025/English/SIMACAEITNRefMap/simaitn-c-friction.htm)
+describes how actual sliding couples normal and shear forces and can produce
+nonsymmetric equations. Neither a friction coefficient nor zero incremental
+shear stiffness certifies a sliding history. Commercial keyword mapping remains
+unverified and deck writers refuse the selection.
+
+The native checks use two compressed blocks, a wider fixed main face and real lateral
+springs. For the frictionless base, two uniform shear modes are identified by their
+components and compared with a two-coordinate closed-form model. The same specimen
+with friction retains nonzero base shear and is refused; a separately converged,
+restrained base checks zero-shear frictional qualification, not a full modal chain.
+State refusals, native persistence, thread independence and a fixed-pressure
+finite-difference check of a nonzero geometric action are included. This local linearisation does
+not certify that arbitrary finite amplitudes remain on the same contact branch.
+The `contact_perturbation v2` diagnostic is text, not a stable structured schema.

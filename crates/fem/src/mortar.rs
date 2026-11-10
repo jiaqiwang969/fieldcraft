@@ -219,17 +219,19 @@ fn shape_at<T: Real>(p: &[Flat<T>], y: Flat<T>) -> Option<[T; 4]> {
             let k2 = cross2(b, d);
             let k1 = cross2(b, c) - cross2(h, d);
             let k0 = -cross2(h, c);
+            let disc = k1 * k1 - k2 * k0 * 4.0;
+            let root = if disc.val() > 0.0 { disc.sqrt() } else { T::cst(0.0) };
+            let q = if k1.val() >= 0.0 { -(k1 + root) * 0.5 } else { (root - k1) * 0.5 };
             let u = if k2.val().abs() <= NEGLIGIBLE * k1.val().abs() {
-                if !(k1.val().abs() > 0.0) {
+                if !(q.val().abs() > 0.0) {
                     return None;
                 }
-                -k0 / k1
+                // The finite quadratic root tends to -k0/k1. Keep k2 in the expression:
+                // its nominal value may vanish while its geometry derivatives do not.
+                k0 / q
             } else {
                 // The roots of k2 u² + k1 u + k0, computed without cancellation; the one in [0, 1]
                 // (the nearer when round-off puts both outside).
-                let disc = k1 * k1 - k2 * k0 * 4.0;
-                let root = if disc.val() > 0.0 { disc.sqrt() } else { T::cst(0.0) };
-                let q = if k1.val() >= 0.0 { -(k1 + root) * 0.5 } else { (root - k1) * 0.5 };
                 let mut candidates = [None, None];
                 if q.val().abs() > 0.0 {
                     candidates[0] = Some(q / k2);
@@ -692,6 +694,33 @@ pub fn integrate_edges<T: Real>(secondary: &[Point<T>], main: &[Point<T>], exten
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn parallelogram_limit_retains_bilinear_inverse_derivatives() {
+        use crate::dual::{Hyper, Real};
+        let c = Hyper::cst;
+        let delta = Hyper::var(0.0, 0);
+        // x=u, y=v*(1+delta*u), so at fixed physical (0.3,0.4):
+        // u=0.3, v=0.4/(1+0.3*delta). The nominal quad is a square,
+        // but its inverse derivatives must retain the quadratic coefficient.
+        let points = [[c(0.0), c(0.0)], [c(1.0), c(0.0)], [c(1.0), c(1.0) + delta], [c(0.0), c(1.0)]];
+        let actual = shape_at(&points, [c(0.3), c(0.4)]).unwrap();
+        let u = c(0.3);
+        let v = c(0.4) / (c(1.0) + delta * 0.3);
+        let expected = [(c(1.0) - u) * (c(1.0) - v), u * (c(1.0) - v), u * v, (c(1.0) - u) * v];
+        for (i, (a, b)) in actual.iter().zip(expected).enumerate() {
+            eprintln!(
+                "MORTAR_LIMIT shape={i} gradient={:.12e} expected={:.12e} hessian={:.12e} expected={:.12e}",
+                a.g[0],
+                b.g[0],
+                a.hessian(0, 0),
+                b.hessian(0, 0)
+            );
+            assert!((a.val() - b.val()).abs() < 1e-14);
+            assert!((a.g[0] - b.g[0]).abs() < 1e-12);
+            assert!((a.hessian(0, 0) - b.hessian(0, 0)).abs() < 1e-12);
+        }
+    }
+
     use super::*;
     use crate::dual::{Dual, Hyper, VARS};
 

@@ -334,3 +334,114 @@ fn explicit_stick_refuses_contact_switches_and_unqualified_gaps() {
         assert!(qualify(&edge).unwrap_err().to_string().contains("stick_requires_full_overlap"));
     });
 }
+
+fn interior_blocks(friction: bool) -> Model {
+    let mut model = blocks();
+    for label in 1..=8 {
+        let mut x = model.node(label).unwrap().xyz;
+        x[0] = 1.5 * x[0] - 0.25;
+        x[1] = 1.5 * x[1] - 0.25;
+        model.set_node(label, x).unwrap();
+    }
+    let mut step = model.step("Step").unwrap().clone();
+    let Procedure::NonlinearStatic(settings) = &mut step.procedure else { panic!("step") };
+    settings.nonlinear_geometry = true;
+    model.replace_step(step).unwrap();
+    if friction {
+        let mut c = model.contact("Interface").unwrap().clone();
+        c.friction = fieldcraft_model::Friction::coulomb(0.3);
+        model.replace_contact("Interface", c).unwrap();
+    }
+    model
+}
+
+#[test]
+fn tangent_free_normal_geometry_is_the_fixed_pressure_force_derivative() {
+    with_run(&interior_blocks(false), |run| {
+        let (base, _) = succeeded(solve_increment(run, &[0.; 4], 0., 1., None));
+        let u = run.problem.red.expand_scaled(&base.q, 1.);
+        let mesh = run.problem.mesh;
+        let interface = &run.problem.contacts[0];
+        let state = &base.evaluation.contact[0];
+        let (rows, blocks) = interface.tangent_free_rows(mesh, &u, state, run.problem.red, 1e-8, &mut Vec::new()).unwrap();
+        assert_eq!(rows.len(), 4);
+        let graph = run.problem.graph.with_blocks(blocks.iter().map(|(nodes, _)| nodes.as_slice()));
+        let mut kg = graph.zero_matrix(&mesh.layout);
+        for (nodes, data) in &blocks {
+            add_block(&mut kg, &mesh.layout, nodes, mesh.translation_kinds(), data).unwrap();
+        }
+        let mut direction = vec![0.; mesh.dofs()];
+        for (i, &label) in mesh.labels.iter().enumerate().filter(|(_, n)| **n >= 9) {
+            let x = mesh.xyz[i];
+            for (kind, value) in [(fieldcraft_fem::DofKind::Ux, 0.2 * (x[0] - 0.5)), (fieldcraft_fem::DofKind::Uz, 0.1 * (x[1] - 0.5))] {
+                direction[mesh.dof(i, kind).unwrap()] = value;
+            }
+            assert!(label >= 9);
+        }
+        let mut expected = vec![0.; mesh.dofs()];
+        kg.mul(&direction, &mut expected);
+        assert!(norm_inf(&expected) > 1e-3, "exercise a nonzero geometric contact action");
+        let fixed_pressure_force = |x: &[f64]| {
+            let mut committed = run.contact[0].clone();
+            let mut force = vec![0.; mesh.dofs()];
+            let trial = interface.evaluate(mesh, x, &u, &committed, 0., false, &mut force, &mut Vec::new()).unwrap();
+            // Remove the AL penalty derivative by keeping the actual pressures fixed,
+            // not by subtracting another implementation of its tangent matrix.
+            for ((lambda, p), target) in committed.multipliers.iter_mut().zip(&trial.pressure).zip(&state.pressure) {
+                *lambda += target - p;
+            }
+            force.fill(0.);
+            let held = interface.evaluate(mesh, x, &u, &committed, 0., false, &mut force, &mut Vec::new()).unwrap();
+            assert!(held.pressure.iter().zip(&state.pressure).all(|(a, b)| (a - b).abs() < 1e-10));
+            force
+        };
+        for h in [1e-6, 5e-7] {
+            let plus: Vec<_> = u.iter().zip(&direction).map(|(a, b)| a + h * b).collect();
+            let minus: Vec<_> = u.iter().zip(&direction).map(|(a, b)| a - h * b).collect();
+            let fp = fixed_pressure_force(&plus);
+            let fm = fixed_pressure_force(&minus);
+            let error = fp.iter().zip(&fm).zip(&expected).map(|((p, m), v)| ((p - m) / (2. * h) - v).abs()).fold(0., f64::max) / norm_inf(&expected);
+            eprintln!("TANGENT_FREE_GEOMETRY h={h:.3e} action={:.12e} relative_error={error:.3e}", norm_inf(&expected));
+            assert!(error < 1e-6, "normal geometric tangent {error}");
+        }
+    });
+}
+
+#[test]
+fn tangent_free_refuses_shear_history_and_switches() {
+    with_run(&interior_blocks(true), |run| {
+        let (base, _) = succeeded(solve_increment(run, &[0.; 4], 0., 1., None));
+        let u = run.problem.red.expand_scaled(&base.q, 1.);
+        let interface = &run.problem.contacts[0];
+        let state = &base.evaluation.contact[0];
+        let qualify = |s: &contact::State| interface.tangent_free_rows(run.problem.mesh, &u, s, run.problem.red, 1e-8, &mut Vec::new());
+        assert_eq!(qualify(state).unwrap().0.len(), 4);
+        let mut shear = state.clone();
+        shear.traction[0] = [0.05 * shear.pressure[0], 0., 0.];
+        let mut slip = state.clone();
+        slip.slipping[0] = true;
+        let mut critical = state.clone();
+        critical.traction[0] = [0.3 * critical.pressure[0], 0., 0.];
+        let mut zero = state.clone();
+        zero.pressure[0] = 0.;
+        let mut gap = state.clone();
+        gap.gap[0] = Some(-2. * contact::GAP_TOLERANCE);
+        let mut overlap = state.clone();
+        overlap.support[0] *= 0.9;
+        let mut missing = state.clone();
+        missing.slipping.clear();
+        for (state, reason) in [
+            (shear, "shear_release_undefined"),
+            (slip, "friction_switch_or_sliding"),
+            (critical, "friction_switch_or_sliding"),
+            (zero, "normal_switch"),
+            (gap, "base_equilibrium_unqualified"),
+            (overlap, "closed_tangent_free_requires_full_overlap"),
+            (missing, "base_evidence_missing"),
+        ] {
+            let error = qualify(&state).unwrap_err().to_string();
+            eprintln!("TANGENT_FREE_STATE_REFUSAL {reason}: {error}");
+            assert!(error.contains(reason), "{error}");
+        }
+    });
+}
