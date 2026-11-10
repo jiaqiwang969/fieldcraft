@@ -440,3 +440,63 @@ fn fbar_off_chain_reference() {
     }
     chain_evidence("off-all-results", &evidence);
 }
+
+#[test]
+fn fbar_stvk_continuous_pretension_and_modes() {
+    for force in [0., 0.1, 1000.] {
+        let mut m = chain(force, true);
+        let mut section = m.section("Solid").unwrap().clone();
+        section.formulation.f_bar = true;
+        m.replace_section("Solid", section).unwrap();
+        if force == 0.1 {
+            for name in ["Preload", "Locked"] {
+                let mut step = m.step(name).unwrap().clone();
+                if let Procedure::NonlinearStatic(n) = &mut step.procedure {
+                    n.initial_increment = 1.;
+                    n.max_increment = 1.;
+                }
+                m.replace_step(step).unwrap();
+            }
+        }
+        let pre = equilibrium(&m, "Preload", true);
+        let locked = equilibrium(&m, "Locked", true);
+        let q = locked.pretension[0].adjustment;
+        assert_eq!(q.to_bits(), pre.pretension[0].adjustment.to_bits());
+        let stretch = 1. + q / 2.;
+        let p = 0.5e6 * stretch * (stretch * stretch - 1.);
+        let k = 1e6 * (3. * stretch * stretch - 1.);
+        let modes = solve_frequency(&m, Some("Modes"), &FrequencyOptions::default(), &Limits::default()).unwrap();
+        let error = (modes.modes[0].eigenvalue / (k / (2. / 3.)) - 1.).abs();
+        assert!((p - force).abs() < 1e-6 && (locked.pretension[0].section_force - force).abs() < 1e-6 && error < 1e-9);
+        if force <= 0.1 {
+            let mut linear = chain(force, false);
+            let mut section = linear.section("Solid").unwrap().clone();
+            section.formulation.b_bar = true;
+            linear.replace_section("Solid", section).unwrap();
+            let reference = solve_static(&linear, Some("Preload"), &Limits::default()).unwrap();
+            assert!((q - reference.pretension[0].adjustment).abs() < 1e-12);
+        }
+        if force == 0. {
+            let mut zero = m.step("Preload").unwrap().clone();
+            zero.name = "Unloaded".into();
+            zero.pretension.clear();
+            m.add_step(zero, Some("Preload")).unwrap();
+            let mut before = m.step("Modes").unwrap().clone();
+            before.name = "Before".into();
+            before.base_state = Some("Unloaded".into());
+            m.add_step(before, Some("Preload")).unwrap();
+            let z = equilibrium(&m, "Unloaded", true);
+            assert!(z.displacement.iter().flatten().all(|v| *v == 0.));
+            let before = solve_frequency(&m, Some("Before"), &FrequencyOptions::default(), &Limits::default()).unwrap();
+            assert!((before.modes[0].eigenvalue / modes.modes[0].eigenvalue - 1.).abs() < 1e-12);
+        }
+        println!(
+            "StVK Fbar continuous force={force:e} stretch={stretch:e} stiffness={k:e} force_residual_N={:e} eigen_relative={error:e}",
+            p - force
+        );
+        chain_evidence(
+            &format!("stvk-continuous-{force}"),
+            &serde_json::json!({"model":m,"preload":pre,"locked":locked,"modes":modes,"reference":{"force":force,"stretch":stretch,"stiffness":k,"mass":2./3.,"force_residual_N":p-force,"eigen_relative":error}}),
+        );
+    }
+}

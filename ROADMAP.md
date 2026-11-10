@@ -351,3 +351,5 @@ and effective stress recovery. Large benchmark convergence remains pending.
 F-bar finite-strain pretension and locked-base frequency/harmonic/direct-modal transient
 assembly use the converged consistent tangent. Two-cube axial theory and native archive
 checks cover explicit paired cuts; continuous-face transient preparation remains unsupported.
+
+- Reference-J F-bar also retains isotropic St Venant–Kirchhoff elasticity in finite-strain static and preloaded perturbation paths, with a coupled potential Hessian and effective stress recovery; unsupported laws remain refused.
