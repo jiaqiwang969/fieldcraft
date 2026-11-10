@@ -16,7 +16,7 @@ use crate::constraints::{Budget, Reduction, coupling_rows, symmetry_rows};
 use crate::eigen::{Operator, Wanted, lanczos};
 use crate::ldlt::{Kind, Symmetric};
 use crate::ordering::fill_reducing_order;
-use crate::sparse::{Csr, NodeGraph, add_block, add_diagonal, add_scalar};
+use crate::sparse::{AssemblyMatrix, AssemblyShape, Csr, NodeGraph, add_block, add_diagonal, add_round, add_scalar};
 use crate::system::{
     InitialState, Mesh, StructuralKernel, add_thermal_loads, inelastic_warnings, loads, prescribed, structural_body_forces, temperature_loads,
     translation_block,
@@ -187,11 +187,12 @@ pub(crate) const GRAIN: usize = 16;
 
 /// Assemble the stiffness (and the mass when `mass` is set) on the mesh's node graph.
 pub(crate) fn assemble(mesh: &Mesh, graph: &NodeGraph, mass: Option<MassKind>) -> Result<Assembled> {
+    let _timing = crate::timing::Span::new("assembly");
     let layout = &mesh.layout;
     let mut k = graph.zero_matrix(layout);
     let mut m = mass.map(|_| graph.zero_matrix(layout));
-    // Element matrices are computed in parallel, a round at a time, and added in label order
-    // (the sums are those of a sequential loop).
+    // Element matrices are computed in bounded rounds. Disjoint node-row owners scatter
+    // each round in element-label order, preserving the scalar sums exactly.
     for round in parallel::blocks(mesh.elements.len(), ROUND) {
         let elements = mesh.elements.get(round).unwrap_or_default();
         let matrices = parallel::map_grained(elements.len(), GRAIN, |i| -> Result<_> {
@@ -207,15 +208,30 @@ pub(crate) fn assemble(mesh: &Mesh, graph: &NodeGraph, mass: Option<MassKind>) -
             };
             Ok((kernel.dofs().node, stiffness, element_mass))
         });
-        for (e, computed) in elements.iter().zip(matrices) {
-            let (kinds, stiffness, element_mass) = computed?;
-            add_block(&mut k, layout, &e.nodes, kinds, &stiffness)?;
-            if let (Some(mm), Some((kind, data))) = (m.as_mut(), element_mass) {
-                match kind {
-                    MassKind::Consistent => add_scalar(mm, layout, &e.nodes, kinds, &data)?,
-                    MassKind::Lumped => add_diagonal(mm, layout, &e.nodes, kinds, &data)?,
-                }
-            }
+        let matrices: Vec<_> = matrices.into_iter().collect::<Result<_>>()?;
+        let stiffness: Vec<_> = elements
+            .iter()
+            .zip(&matrices)
+            .map(|(e, (kinds, data, _))| AssemblyMatrix { nodes: &e.nodes, kinds: *kinds, data, shape: AssemblyShape::Block })
+            .collect();
+        add_round(&mut k, layout, &stiffness)?;
+        if let Some(mm) = m.as_mut() {
+            let mass: Vec<_> = elements
+                .iter()
+                .zip(&matrices)
+                .filter_map(|(e, (kinds, _, mass))| {
+                    mass.as_ref().map(|(kind, data)| AssemblyMatrix {
+                        nodes: &e.nodes,
+                        kinds: *kinds,
+                        data,
+                        shape: match kind {
+                            MassKind::Consistent => AssemblyShape::Scalar,
+                            MassKind::Lumped => AssemblyShape::Diagonal,
+                        },
+                    })
+                })
+                .collect();
+            add_round(mm, layout, &mass)?;
         }
     }
     let kinds = mesh.translation_kinds();
@@ -338,7 +354,9 @@ pub(crate) fn pattern(mesh: &Mesh) -> (NodeGraph, Vec<usize>) {
 // Buckling, nonlinear and other callers retain the validated legacy choice.
 fn pattern_with_order(mesh: &Mesh, experiment: bool) -> (NodeGraph, Vec<usize>) {
     let order_fn = if experiment { crate::ordering::linear_order } else { fill_reducing_order };
+    let graph_timing = crate::timing::Span::new("ordering_node_graph");
     let graph = NodeGraph::new(mesh.block_count(), mesh.blocks());
+    drop(graph_timing);
     // The order covers the mesh nodes; reference point equations follow them.
     let n = mesh.labels.len();
     let order = if graph.adjacency.len() == n {
@@ -1099,7 +1117,10 @@ fn frequency_once(
         .unwrap_or(TOLERANCE);
     let mut pairs = lanczos(&op, shift, wanted, BLOCK, max_basis, tolerance)?;
     // The residual correction needs the stiffness, so it stays alive through the Lanczos run.
-    refine_frequency_pairs(&kff, &mff, &chol, &mut pairs, &mut warnings)?;
+    {
+        let _timing = crate::timing::Span::new("frequency_residual_correction");
+        refine_frequency_pairs(&kff, &mff, &chol, &mut pairs, &mut warnings)?;
+    }
     let residual_k = diagnostics.then_some(kff);
     if std::env::var("FIELDCRAFT_MODAL_ORTHOGONALITY").is_ok_and(|v| v == "1") {
         use std::io::Write;

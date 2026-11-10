@@ -55,8 +55,16 @@ Internal constants (`crates/solver/src/cholesky.rs`, `ldlt.rs`, `ordering.rs`):
 Matrices are stored in compressed rows with both triangles (`sparse::Csr`). The pattern is built
 once from the element connectivity on the node graph: a node's row holds every node it shares an
 element with, and each node pair is a dense block of their unknowns (a node's unknowns are
-contiguous in the `DofLayout`), so stiffness and mass share it. Sums run in a fixed order
-(elements by label, then the element's own node order).
+contiguous in the `DofLayout`), so stiffness and mass share it. Solid element assembly uses
+fixed 256-node row owners: each CSR entry has one writer and retains element-label and local
+node order, with no floating-point partial sums. Truss, structural-element and foundation
+contributions retain their existing ordered assembly paths.
+
+Symbolic column reaches run independently after the ordered elimination-tree construction.
+At most eight fixed column ranges own their scratch arrays; integer counts are merged in range
+order. Tree construction and dependent supernode-row propagation remain ordered. The symbolic
+workspace estimate includes the extra scratch arrays. Neither partitioning depends on threads;
+ordering selection, factor caps and the whole-model pretension fallback are unchanged.
 
 ### Ordering
 
@@ -533,10 +541,33 @@ ordering, stale-entry rules and fixed tie breaks. The diagnostic override
 `FIELDCRAFT_ORDERING_REFINEMENT=baseline` retains the original heap scan for
 same-program comparisons; it does not select a different permutation.
 
-`FIELDCRAFT_ORDERING_PROFILE=1` reports exclusive serial phase totals for
+`FIELDCRAFT_ORDERING_PROFILE=1` reports exclusive phase wall-time totals for
 canonical/induced graph construction, coarsening, initial growth, refinement,
 separator extraction, leaf ordering and uncoarsening. `recursion_other` is the
 remaining control/allocation/component work; `total` covers the complete
 multilevel ordering. Input file decoding and later symbolic factor counts are
 outside that total. FM query counts and impossible-query time are diagnostic
 subsets of refinement, not additional wall time to add to the phase sum.
+
+Multilevel graph storage uses CSR rows. Heavy-edge contraction accumulates each
+coarse row with vertex markers before sorting its unique neighbors; matching
+visits, aggregate lists, markers and accumulation buffers are reused between
+levels and recursive subgraphs. Fine-to-coarse maps and layer graphs remain
+owned until uncoarsening completes. Induced subgraphs share a resettable global
+to local index map. The canonical graph uses two-pass symmetric counting and
+filling, independent row sorting/deduplication and ordered compaction. Parallel
+row processing has one writer per row; recursive subgraphs are still serial.
+
+The contraction ratio is the number of coarse vertices divided by the number
+of fine vertices. A ratio of 0.9 or higher stops coarsening; graphs of at most
+128 vertices also stop, with at most 32 coarsening levels. Recursive leaves of
+at most 64 vertices use the quotient-graph AMD approximation. The diagnostic
+`FIELDCRAFT_ORDERING_STORAGE=baseline` retains the row-vector implementation.
+
+The CSR heavy-edge matcher visits a fixed integer Fisher–Yates permutation
+(SplitMix64, seed `0x243f6a8885a308d3`), with the minimum original vertex id
+breaking equal edge-weight ties. This is independent of thread count and input
+adjacency order. `FIELDCRAFT_ORDERING_VISITS=degree` retains degree/id visits
+with CSR storage; the storage baseline always retains the original degree/id
+visits. Neither diagnostic broadens the analysis types eligible for multilevel
+ordering; models with pretension sections retain legacy ordering.

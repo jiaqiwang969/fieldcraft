@@ -275,6 +275,28 @@ pub fn solve_harmonic(model: &Model, name: Option<&str>, limits: &Limits) -> Res
 
 /// Solve using the same mass choice for inertia, material damping and modal reduction.
 pub fn solve_harmonic_with_mass(model: &Model, name: Option<&str>, mass: MassKind, limits: &Limits) -> Result<HarmonicResult> {
+    solve_harmonic_impl(model, name, mass, limits, None)
+}
+
+/// Reuse one exactly matched modal basis across calls, while retaining per-call assembly,
+/// limits, response recovery and physical residual checks. Prestressed models never reuse it.
+pub fn solve_harmonic_with_mass_cached(
+    model: &Model,
+    name: Option<&str>,
+    mass: MassKind,
+    limits: &Limits,
+    cache: &mut super::ModalCache,
+) -> Result<HarmonicResult> {
+    solve_harmonic_impl(model, name, mass, limits, Some(cache))
+}
+
+fn solve_harmonic_impl(
+    model: &Model,
+    name: Option<&str>,
+    mass: MassKind,
+    limits: &Limits,
+    mut cache: Option<&mut super::ModalCache>,
+) -> Result<HarmonicResult> {
     fieldcraft_model::progress::check()?;
     if model.pretensions().values().any(|p| p.face.is_some()) {
         let resolved = model.resolve()?;
@@ -333,6 +355,7 @@ pub fn solve_harmonic_with_mass(model: &Model, name: Option<&str>, mass: MassKin
     warnings.extend(fieldcraft_model::initial::left_out(model, step));
     let (graph, order) = analysis::pattern(&mesh);
     let setup = Setup { model, resolved: &resolved, mesh: &mesh, step };
+    let assembly_timing = crate::timing::Span::new("harmonic_assembly_reduction");
     let assembled = analysis::assemble(&mesh, &graph, Some(mass))?;
     let terminal = crate::prestress::stiffness(&setup, &graph, assembled.k, limits, &mut warnings)?;
     let red = analysis::reduction_with_frozen(
@@ -371,22 +394,90 @@ pub fn solve_harmonic_with_mass(model: &Model, name: Option<&str>, mass: MassKin
     let operator_diagonal_bounds = Some([bounds(&kr), bounds(&mr)]);
     let matrices = Matrices { stiffness: &kr, mass: &mr, viscous: cr.as_ref(), loss: gr.as_ref() };
     let reduced_force = Vector { real: red.restrict(&force.real), imaginary: red.restrict(&force.imaginary) };
+    drop(assembly_timing);
+    let basis_timing = crate::timing::Span::new("harmonic_basis");
     let modal = match h.method {
         Method::Direct => None,
         Method::Modal { modes, residual_vectors, .. } => {
             if residual_vectors > 0 && full.is_some() {
                 return Err(Error::NotSupported("harmonic residual vectors with nonzero prescribed motion".into()));
             }
-            Some(Modal::with_residual_vectors(&matrices, modes as usize, &reduced_force, residual_vectors as usize, limits)?)
+            let reusable = model.pretensions().is_empty() && step.base_state.is_none() && full.is_none();
+            Some(if let Some(cache) = cache.as_mut().filter(|_| reusable) {
+                let context = super::cache::BasisContext {
+                    mass,
+                    sections: model.sections().iter().map(|(n, s)| (n.clone(), s.formulation)).collect(),
+                    nodes: mesh.labels.clone(),
+                    order: order.clone(),
+                    constraints: red.cache_identity(),
+                    scalar_projection: std::env::var("FIELDCRAFT_PROJECTION").is_ok_and(|v| v == "scalar"),
+                    cached_dense: std::env::var("FIELDCRAFT_DENSE_UPDATE").is_ok_and(|v| v == "cached"),
+                };
+                cache.get(&matrices, modes as usize, &reduced_force, residual_vectors as usize, limits, &context)?
+            } else {
+                Modal::with_residual_vectors(&matrices, modes as usize, &reduced_force, residual_vectors as usize, limits)?
+            })
         }
     };
+    drop(basis_timing);
     let mut frames = Vec::with_capacity(frequencies.len());
     let mut stats = Stats { dofs: mesh.dofs(), equations: red.neq(), factor_entries: 0, lanczos_vectors: 0 };
     if let Some(m) = &modal {
         stats.factor_entries = m.factor_entries;
         stats.lanczos_vectors = m.lanczos_vectors;
     }
-    for frequency in frequencies {
+    let response_timing = crate::timing::Span::new("harmonic_response_recovery");
+    let batch = modal.is_some() && full.is_none() && model.pretensions().is_empty() && step.base_state.is_none() && frequencies.len() > 1;
+    let prepared = if let Some(modal) = modal.as_ref().filter(|_| batch) {
+        let _timing = crate::timing::Span::new("harmonic_modal_coordinates");
+        let Method::Modal { damping_ratios, .. } = &h.method else {
+            return Err(Error::Internal("harmonic modal method".into()));
+        };
+        let ratios = if damping_ratios.len() > 1 { damping_ratios.get(..modal.eigenvalues().len()).unwrap_or_default() } else { damping_ratios };
+        let mut projected = Vector::zeros(modal.basis_vectors().len());
+        for (j, phi) in modal.basis_vectors().iter().enumerate() {
+            projected.real[j] = super::dot(phi, &reduced_force.real);
+            projected.imaginary[j] = super::dot(phi, &reduced_force.imaginary);
+        }
+        frequencies
+            .iter()
+            .map(|&frequency| {
+                fieldcraft_model::progress::check()?;
+                modal
+                    .prepare_coordinates(2.0 * std::f64::consts::PI * frequency, h.damping, ratios, &reduced_force, limits, Some(&projected))
+                    .map_err(|e| at_frequency(e, frequency))
+            })
+            .collect::<Result<Vec<_>>>()?
+    } else {
+        Vec::new()
+    };
+    let mut recovered = std::collections::VecDeque::new();
+    // At most four frequency columns and 256 MiB of temporary Phi Q buffers.
+    let panel = (256 * 1024 * 1024usize / red.neq().saturating_mul(64).max(1)).clamp(1, 4);
+    let mut stress_frames = if step.output.contains(&OutputVariable::Stress) && !prepared.is_empty() {
+        let _timing = crate::timing::Span::new("harmonic_modal_stress");
+        let modal = modal.as_ref().ok_or_else(|| Error::Internal("harmonic stress basis".into()))?;
+        let mut fields = vec![(vec![[0.0; 6]; mesh.labels.len()], vec![[0.0; 6]; mesh.labels.len()]); frequencies.len()];
+        // Stream one modal stress field at a time; do not retain a modes*nodes tensor.
+        for (j, phi) in modal.basis_vectors().iter().enumerate() {
+            fieldcraft_model::progress::check()?;
+            let u = red.expand(phi, false);
+            let (translation, _, _) = analysis::split(&u, &mesh);
+            let stress = stresses(&mesh, &u, &translation)?;
+            fieldcraft_parallel::for_each_mut(&mut fields, |f, (real, imaginary)| {
+                for ((r, i), values) in real.iter_mut().zip(imaginary).zip(&stress) {
+                    for k in 0..6 {
+                        r[k] += values[k] * prepared[f].q.real[j];
+                        i[k] += values[k] * prepared[f].q.imaginary[j];
+                    }
+                }
+            });
+        }
+        fields.into_iter().collect::<std::collections::VecDeque<_>>()
+    } else {
+        std::collections::VecDeque::new()
+    };
+    for (frequency_index, frequency) in frequencies.into_iter().enumerate() {
         fieldcraft_model::progress::check()?;
         let omega = 2.0 * std::f64::consts::PI * frequency;
         let f = if let Some((k, m, c, g)) = &full {
@@ -400,7 +491,16 @@ pub fn solve_harmonic_with_mass(model: &Model, name: Option<&str>, mass: MassKin
                 return Err(Error::Internal("harmonic modal method".into()));
             };
             let ratios = if damping_ratios.len() > 1 { damping_ratios.get(..modal.eigenvalues().len()).unwrap_or_default() } else { damping_ratios };
-            let (out, loss) = modal.solve_with_operator(omega, h.damping, ratios, &f, limits).map_err(|e| at_frequency(e, frequency))?;
+            let (out, loss) = if prepared.is_empty() {
+                modal.solve_with_operator(omega, h.damping, ratios, &f, limits)
+            } else {
+                if recovered.is_empty() {
+                    recovered = modal.recover_batch(&prepared[frequency_index..(frequency_index + panel).min(prepared.len())]);
+                }
+                let (u, d) = recovered.pop_front().ok_or_else(|| Error::Internal("harmonic response panel".into()))?;
+                modal.finish_response(h.damping, &f, limits, &prepared[frequency_index], u, d)
+            }
+            .map_err(|e| at_frequency(e, frequency))?;
             let power = modal
                 .eigenvalues()
                 .iter()
@@ -434,8 +534,14 @@ pub fn solve_harmonic_with_mass(model: &Model, name: Option<&str>, mass: MassKin
         let ui = red.expand(&q.imaginary, false);
         let (real, rotation_real, points_real) = analysis::split(&ur, &mesh);
         let (imaginary, rotation_imaginary, points_imaginary) = analysis::split(&ui, &mesh);
-        let stress_real = step.output.contains(&OutputVariable::Stress).then(|| stresses(&mesh, &ur, &real)).transpose()?;
-        let stress_imaginary = step.output.contains(&OutputVariable::Stress).then(|| stresses(&mesh, &ui, &imaginary)).transpose()?;
+        let (stress_real, stress_imaginary) = if let Some((real, imaginary)) = stress_frames.pop_front() {
+            (Some(real), Some(imaginary))
+        } else {
+            (
+                step.output.contains(&OutputVariable::Stress).then(|| stresses(&mesh, &ur, &real)).transpose()?,
+                step.output.contains(&OutputVariable::Stress).then(|| stresses(&mesh, &ui, &imaginary)).transpose()?,
+            )
+        };
         frames.push(Frame {
             frequency,
             real,
@@ -453,6 +559,7 @@ pub fn solve_harmonic_with_mass(model: &Model, name: Option<&str>, mass: MassKin
             dissipated_power,
         });
     }
+    drop(response_timing);
     let natural_frequencies =
         modal.as_ref().map(|m| m.eigenvalues().iter().map(|l| l.max(0.0).sqrt() / (2.0 * std::f64::consts::PI)).collect()).unwrap_or_default();
     Ok(HarmonicResult {
