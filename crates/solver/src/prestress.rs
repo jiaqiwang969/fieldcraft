@@ -30,6 +30,28 @@ pub(crate) struct Terminal {
     pub constraints: Vec<FrozenRow>,
 }
 
+pub(crate) fn stored_stiffness(
+    setup: &Setup<'_>,
+    matrix_size: usize,
+    result: &crate::StaticResult,
+    limits: &Limits,
+    warnings: &mut Vec<String>,
+) -> Result<Terminal> {
+    let terminal = crate::nonlinear::stored::terminal(setup.model, result, limits)?;
+    if terminal.stiffness.n != matrix_size {
+        return Err(Error::Invalid(format!(
+            "stored_equilibrium.displacement_layout: terminal matrix {} vs perturbation {}",
+            terminal.stiffness.n, matrix_size
+        )));
+    }
+    warnings.extend(result.warnings.iter().cloned());
+    warnings.push(format!(
+        "linear perturbation about `{}`: converged consistent tangent, including stress and symmetric follower-load stiffness",
+        result.step
+    ));
+    Ok(terminal)
+}
+
 pub(crate) fn stiffness(setup: &Setup<'_>, graph: &NodeGraph, k: Csr, limits: &Limits, warnings: &mut Vec<String>) -> Result<Terminal> {
     let Some(base) = setup.model.perturbation_base(setup.step)? else { return Ok(Terminal { stiffness: k, constraints: Vec::new() }) };
     if setup.step.perturbation_follower_pressure && !matches!(base.procedure, Procedure::Static {}) {

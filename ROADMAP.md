@@ -357,3 +357,5 @@ checks cover explicit paired cuts; continuous-face transient preparation remains
 - Reference-J F-bar also retains isotropic St Venant–Kirchhoff elasticity in finite-strain static and preloaded perturbation paths, with a coupled potential Hessian and effective stress recovery; unsupported laws remain refused.
 
 Native frozen contact perturbations now include planar quadratic solid faces and moving main surfaces for hard terminal-mortar stick and strictly open zero-contact response. Quadratic open faces need straight midpoint edges for whole-face separation; moving-main tangential release and shear transport remain refused. Analytic quadratic-bar, reduced-force difference, bitwise empty-policy and persistence regressions cover the new scope; commercial mapping remains pending.
+
+Opt-in saved elastic NLGEOM base reuse for frequency and harmonic commands: input-current native results, full-load and equilibrium checks, exact constraint reconstruction for private pretension cuts, existing terminal tangent and reference mass. No Newton increments on reuse; contact/material/element histories and non-monotone paths remain refused. Default recomputation is unchanged.

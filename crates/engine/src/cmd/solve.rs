@@ -46,7 +46,7 @@ pub const STATIC: CommandSpec = CommandSpec {
 pub const HARMONIC: CommandSpec = CommandSpec {
     id: "solve.harmonic",
     label: "Solve Harmonic Step",
-    params: r#"{"step": "Sweep", "mass": "consistent|lumped", "max_factor_entries": 400000000, "threads": 6} — steady-state complex response with Re(U exp(iωt)), mass chosen as consistent (default) or lumped and the step's frequencies, direct or modal method and additive damping. Stores each frequency's displacement and optional stress phasors. Reports full-equation residuals, projected residuals for modal response, and input/dissipated power; a small projected residual alone does not certify a truncated modal solution. Limits and threads as for solve.static, except an explicit max_factor_entries can reach 4000000000 real 8-byte slots (two per complex entry; 32 GB of factor values alone). The default remains 400000000. Use solve.probe to read frequency curves."#,
+    params: r#"{"step": "Sweep", "mass": "consistent|lumped", "max_factor_entries": 400000000, "threads": 6} — steady-state complex response with Re(U exp(iωt)), mass chosen as consistent (default) or lumped and the step's frequencies, direct or modal method and additive damping. Stores each frequency's displacement and optional stress phasors. Reports full-equation residuals, projected residuals for modal response, and input/dissipated power; a small projected residual alone does not certify a truncated modal solution. Limits and threads as for solve.static, except an explicit max_factor_entries can reach 4000000000 real 8-byte slots (two per complex entry; 32 GB of factor values alone). The default remains 400000000. Use solve.probe to read frequency curves.; optional reuse_base=true requires a current stored, converged NLGEOM elastic solid base without contact or material/element history, rebuilds its tangent without Newton increments and refuses stale inputs; default false recomputes. max_newton_iterations caps the recomputed base"#,
     form: Some(super::forms::SOLVE_HARMONIC),
     kind: CommandKind::Model,
     requires: &[Requirement::Analysable, Requirement::Step],
@@ -115,7 +115,7 @@ pub const HEAT: CommandSpec = CommandSpec {
 pub const FREQUENCY: CommandSpec = CommandSpec {
     id: "solve.frequency",
     label: "Solve Frequency Step",
-    params: r#"{"step": "Modes", "mass": "consistent|lumped", "shift": 0.0, "max_dofs": 6000000, "max_factor_entries": 400000000, "max_iterations": 3000, "threads": 8} — natural frequencies and mode shapes of a frequency step (its modes and range); `max_iterations` caps basis vectors, not block iterations. Returns actual block iterations/cap status and per-mode ||K phi - lambda M phi||/||K phi|| on the actual reduced unshifted pencil; a zero denominator is null with a reason, near-rigid ratios are flagged. Diagnostics are in this reply, not persisted in legacy results.bin; numeric results stay in the session; `max_factor_entries` and `threads` as for solve.static"#,
+    params: r#"{"step": "Modes", "mass": "consistent|lumped", "shift": 0.0, "max_dofs": 6000000, "max_factor_entries": 400000000, "max_iterations": 3000, "threads": 8} — natural frequencies and mode shapes of a frequency step (its modes and range); `max_iterations` caps basis vectors, not block iterations. Returns actual block iterations/cap status and per-mode ||K phi - lambda M phi||/||K phi|| on the actual reduced unshifted pencil; a zero denominator is null with a reason, near-rigid ratios are flagged. Diagnostics are in this reply, not persisted in legacy results.bin; numeric results stay in the session; `max_factor_entries` and `threads` as for solve.static; optional reuse_base=true requires a current stored, converged NLGEOM elastic solid base without contact or material/element history, rebuilds its tangent without Newton increments and refuses stale inputs; default false recomputes. max_newton_iterations caps the recomputed base"#,
     form: Some(super::forms::SOLVE_FREQUENCY),
     kind: CommandKind::Model,
     requires: &[Requirement::Analysable, Requirement::ElementMaterial, Requirement::ElementSection, Requirement::Step],
@@ -498,17 +498,54 @@ fn run_dynamics(s: &mut Session, p: &Value, spectrum: bool) -> Result<Value> {
     Ok(reply)
 }
 
+fn stored_equilibrium<'a>(s: &'a Session, name: Option<&str>, harmonic: bool) -> Result<fieldcraft_solver::equilibrium::StoredEquilibrium<'a>> {
+    use fieldcraft_model::Procedure;
+    let wanted: fn(&Procedure) -> bool =
+        if harmonic { |p| matches!(p, Procedure::Harmonic(_)) } else { |p| matches!(p, Procedure::Frequency { .. }) };
+    let step = s.model.select_step(name, wanted, "perturbation")?;
+    let base = step.base_state.as_deref().ok_or_else(|| EngineError::invalid("reuse_base", "stored_equilibrium.base_required"))?;
+    let current = s.result(base).ok_or_else(|| {
+        EngineError::invalid("reuse_base", "stored_equilibrium.current_result_required: solve the base or reopen an input-matched result")
+    })?;
+    let fingerprint = fieldcraft_io::results::definition_hash(&s.model, base, &s.sources);
+    if fingerprint.is_none() || s.result_inputs.get(base) != fingerprint.as_ref() {
+        return Err(EngineError::invalid("reuse_base", "stored_equilibrium.input_changed"));
+    }
+    let StepResult::Implicit(ImplicitResult::Static(result)) = current.as_ref() else {
+        return Err(EngineError::invalid("reuse_base", "stored_equilibrium.nonlinear_static_required"));
+    };
+    Ok(fieldcraft_solver::equilibrium::StoredEquilibrium::bind(&s.model, result)?)
+}
+
+fn reuse_receipt(s: &Session, step: &str, reply: &mut Value) {
+    if let Some(base) = s.model.step(step).and_then(|s| s.base_state.as_deref()) {
+        reply["equilibrium_reuse"] = json!({"base":base,"definition_hash":s.result_inputs.get(base),"newton_iterations":0,
+            "operation":"existing elastic terminal tangent evaluated at stored displacement; no equilibrium increments"});
+    }
+}
+
 fn run_harmonic(s: &mut Session, p: &Value) -> Result<Value> {
     let limits = limits_with_factor_ceiling(p, HARMONIC_FACTOR_ENTRY_CEILING)?;
     let step = opt::<String>(p, "step")?;
     let mass = opt::<MassKind>(p, "mass")?.unwrap_or_default();
-    let r = with_threads(threads(s, p)?, || {
-        fieldcraft_solver::harmonic::solve_harmonic_with_mass_cached(&s.model, step.as_deref(), mass, &limits, &mut s.harmonic_cache)
-    })?;
-    let summary = json!({"step": r.step, "mass": r.mass, "section_mass_policies": if mass == MassKind::Lumped { json!(s.model.sections().iter().map(|(n,s)|(n,s.formulation.lumped_mass)).collect::<std::collections::BTreeMap<_,_>>()) } else { json!({}) }, "operator_diagonal_bounds": r.operator_diagonal_bounds, "stats": r.stats, "natural_frequencies": r.natural_frequencies, "residual_vectors": r.residual_vectors,
+    let reuse = opt::<bool>(p, "reuse_base")?.unwrap_or(false);
+    let r = if reuse {
+        let equilibrium = stored_equilibrium(s, step.as_deref(), true)?;
+        with_threads(threads(s, p)?, || {
+            fieldcraft_solver::harmonic::solve_harmonic_from_equilibrium(&s.model, step.as_deref(), mass, &limits, &equilibrium)
+        })?
+    } else {
+        with_threads(threads(s, p)?, || {
+            fieldcraft_solver::harmonic::solve_harmonic_with_mass_cached(&s.model, step.as_deref(), mass, &limits, &mut s.harmonic_cache)
+        })?
+    };
+    let mut summary = json!({"step": r.step, "mass": r.mass, "section_mass_policies": if mass == MassKind::Lumped { json!(s.model.sections().iter().map(|(n,s)|(n,s.formulation.lumped_mass)).collect::<std::collections::BTreeMap<_,_>>()) } else { json!({}) }, "operator_diagonal_bounds": r.operator_diagonal_bounds, "stats": r.stats, "natural_frequencies": r.natural_frequencies, "residual_vectors": r.residual_vectors,
         "frequencies": r.frames.iter().map(|f| json!({"frequency": f.frequency, "relative_residual": f.relative_residual,
             "residual_norm_si": f.residual_norm_si, "projected_residual": f.projected_residual, "input_power": f.input_power, "dissipated_power": f.dissipated_power})).collect::<Vec<_>>(),
         "warnings": r.warnings});
+    if reuse {
+        reuse_receipt(s, &r.step, &mut summary);
+    }
     s.store_result(StepResult::Implicit(ImplicitResult::Harmonic(r)));
     Ok(summary)
 }
@@ -612,13 +649,21 @@ fn run_frequency(s: &mut Session, p: &Value) -> Result<Value> {
     let mass = opt::<MassKind>(p, "mass")?.unwrap_or_default();
     let shift = opt::<f64>(p, "shift")?;
     let model = &s.model;
-    let (mut r, convergence) = with_threads(threads(s, p)?, || {
-        fieldcraft_solver::solve_frequency_report(model, step.as_deref(), &FrequencyOptions { mass, shift }, &limits)
-    })?;
+    let reuse = opt::<bool>(p, "reuse_base")?.unwrap_or(false);
+    let (mut r, convergence) = if reuse {
+        let equilibrium = stored_equilibrium(s, step.as_deref(), false)?;
+        with_threads(threads(s, p)?, || {
+            fieldcraft_solver::solve_frequency_from_equilibrium(model, step.as_deref(), &FrequencyOptions { mass, shift }, &limits, &equilibrium)
+        })?
+    } else {
+        with_threads(threads(s, p)?, || {
+            fieldcraft_solver::solve_frequency_report(model, step.as_deref(), &FrequencyOptions { mass, shift }, &limits)
+        })?
+    };
     r.mass_kind = Some(mass);
     r.section_mass_policy =
         Some("rod/beam reference section mass uses declared section area and material density; no inferred cross-section policy".into());
-    let summary = json!({
+    let mut summary = json!({
         "step": r.step,
         "mass":mass,
         "section_mass_policies": if mass==MassKind::Lumped { json!(model.sections().iter().map(|(n,s)|(n,s.formulation.lumped_mass)).collect::<std::collections::BTreeMap<_,_>>()) } else { json!({}) },
@@ -636,6 +681,9 @@ fn run_frequency(s: &mut Session, p: &Value) -> Result<Value> {
         })).collect::<Vec<_>>(),
         "warnings": r.warnings,
     });
+    if reuse {
+        reuse_receipt(s, &r.step, &mut summary);
+    }
     s.store_result(StepResult::Implicit(ImplicitResult::Frequency(r)));
     Ok(summary)
 }
