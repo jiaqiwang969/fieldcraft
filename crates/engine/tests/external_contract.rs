@@ -169,6 +169,7 @@ fn envelope() -> ResultEnvelope {
         evidence_kind: EvidenceKind::ProtocolFixture,
         source_scene: source(),
         contact_controls_sha256: None,
+        contact_control_record_sha256: None,
         policy_request_digest: None,
         goal: RunGoal { last_frame: 3, end_time_s: 3.0 },
         entities: EntityMap { nodes: vec![1], elements: vec![], objects: vec![] },
@@ -407,6 +408,7 @@ fn all_forward_fields_accept_real_binary_layout_but_remain_fixture_evidence() {
 
 mod identity_transactions {
     use super::*;
+    use fieldcraft_engine::external::control::{ControlAvailability, ControlEvidenceReceipt, ControlEvidenceScope, NativeIpcStatus};
     use fieldcraft_engine::external::transaction::{ContactControlPayload, PolicyRequestPayload, ReceiveProfile, ReceiverHost, SnapshotProvider};
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -418,6 +420,7 @@ mod identity_transactions {
             source_scene: e.source_scene.clone(),
             required_fields: e.required_fields.clone(),
             contact_controls: None,
+            control_evidence: None,
             require_effective: false,
             policy_request: None,
             require_policy_applied: false,
@@ -457,6 +460,152 @@ mod identity_transactions {
             ReceiverHost::new(FixtureModel { binding: e.binding, map: e.entities }, key(), FixtureProvider { validations: validations.clone() })
                 .unwrap();
         (host, validations)
+    }
+
+    const ROUTE20_BINDINGS_SHA: &str = "ec9fb5ee22c95b3462d5989812738dda0f20247cdb372b842579d1ce0bfa8257";
+    const ROUTE20_CASE20_CONTROL_SHA: &str = "cca161d81e4b86b91d36240296702b5213165ecaba2a8efab6b94ff4492b20c1";
+    const ROUTE20_CASE21_CONTROL_SHA: &str = "d081e0912a253aa9f3390520c66a1193fb70147d5326a70867d0498ea5509a3d";
+    const ROUTE20_CASE20_SOURCE_SHA: &str = "a167490fc17d788c3b26792f967c5e4efb66fe1d1032ff0b030ce0eac21bec23";
+
+    fn route20_key(run_id: &str, epoch: u64) -> RunKey {
+        RunKey { run_id: run_id.into(), epoch, worker_generation: "route20-worker".into() }
+    }
+
+    fn route20_evidence(run: &RunKey, kind: ControlEvidenceScope) -> ControlEvidenceReceipt {
+        let known = matches!(kind, ControlEvidenceScope::Initialization) && run.run_id == "fresh-00";
+        let (effective, clamped) = if known {
+            (
+                Observed::Known {
+                    value: 152606501887.99008,
+                    source: SourceRef {
+                        sha256: ROUTE20_CASE20_SOURCE_SHA.into(),
+                        locator: "line:5; contact model 1,2; World initialization".into(),
+                        observer: "route20-control-receipt".into(),
+                        kind: EvidenceKind::Solver,
+                    },
+                },
+                Observed::Known {
+                    value: true,
+                    source: SourceRef {
+                        sha256: ROUTE20_CASE20_SOURCE_SHA.into(),
+                        locator: "line:5; contact model 1,2; World initialization".into(),
+                        observer: "route20-control-receipt".into(),
+                        kind: EvidenceKind::Solver,
+                    },
+                },
+            )
+        } else {
+            (
+                Observed::Unknown {
+                    reason: "No direct effective-kappa observation in this run; configured resistance is not an observation.".into(),
+                },
+                Observed::Unknown { reason: "No positive clipping receipt; absence of a warning does not prove false.".into() },
+            )
+        };
+        let (record, control, locator, pids, native_ipc, epoch) = match kind {
+            ControlEvidenceScope::Initialization if known => (
+                "bindings.json#/records/0",
+                Some(ROUTE20_CASE20_CONTROL_SHA),
+                "case20/接触控制收据/case20-fresh-00.json",
+                vec![2051436],
+                NativeIpcStatus::Unknown,
+                Some(run.epoch),
+            ),
+            ControlEvidenceScope::Initialization => (
+                "bindings.json#/records/10",
+                Some(ROUTE20_CASE21_CONTROL_SHA),
+                "case21/接触控制收据/case21-control-00-resident0.json",
+                vec![2053690, 2054729, 2055031],
+                NativeIpcStatus::Unknown,
+                Some(run.epoch),
+            ),
+            ControlEvidenceScope::NativeIpcDisabled => {
+                ("bindings.json#/records/80", None, "bindings.json#/records/80", vec![], NativeIpcStatus::Disabled, None)
+            }
+            ControlEvidenceScope::AdvanceFrames => unreachable!("route-20 fixture helper uses initialization or IPC-disabled only"),
+        };
+        ControlEvidenceReceipt {
+            run_label: run.run_id.clone(),
+            epoch,
+            observed_compute_pids: pids,
+            scope: kind,
+            native_ipc,
+            observed_frame: None,
+            observed_time_s: None,
+            record_sha256: ROUTE20_BINDINGS_SHA.into(),
+            record_locator: record.into(),
+            control_sha256: control.map(str::to_owned),
+            control_locator: locator.into(),
+            kappa_effective_pa: effective,
+            kappa_clamped: clamped,
+        }
+    }
+
+    fn route20_envelope(run: &RunKey) -> ResultEnvelope {
+        let mut e = envelope();
+        e.run = run.clone();
+        for frame in &mut e.frames {
+            frame.facts.run = run.clone();
+        }
+        e
+    }
+
+    struct Route20Provider {
+        identity: FixtureProvider,
+        expected_controls: &'static [u8],
+    }
+    impl SnapshotProvider for Route20Provider {
+        type Model = FixtureModel;
+        fn freeze(&self, current: &Self::Model, entities: &EntityMap) -> Result<ModelBinding, ContractError> {
+            self.identity.freeze(current, entities)
+        }
+        fn validate(&self, current: &Self::Model, frozen: &ModelBinding, entities: &EntityMap) -> Result<(), ContractError> {
+            self.identity.validate(current, frozen, entities)
+        }
+        fn validate_controls(&self, _: &Self::Model, run: &RunKey, bytes: &[u8], require_effective: bool) -> Result<(), ContractError> {
+            if run.run_id == "fresh-00" {
+                if bytes != self.expected_controls || require_effective {
+                    return Err(ContractError::Invalid("route20 initialization is not per-frame evidence"));
+                }
+            } else if bytes != self.expected_controls {
+                return Err(ContractError::Invalid("route20 control source mismatch"));
+            }
+            let value: serde_json::Value = serde_json::from_slice(bytes).map_err(|_| ContractError::Invalid("route20 control JSON"))?;
+            if value.get("scheme").and_then(serde_json::Value::as_str) != Some("fieldcraft-contact-controls/1") {
+                return Err(ContractError::Invalid("route20 control scheme"));
+            }
+            Ok(())
+        }
+    }
+
+    fn route20_host(run: RunKey, controls: &'static [u8]) -> ReceiverHost<Route20Provider> {
+        let e = route20_envelope(&run);
+        ReceiverHost::new(
+            FixtureModel { binding: e.binding, map: e.entities },
+            run,
+            Route20Provider { identity: FixtureProvider { validations: Arc::new(AtomicUsize::new(0)) }, expected_controls: controls },
+        )
+        .unwrap()
+    }
+
+    fn route20_profile(
+        e: &ResultEnvelope,
+        evidence: ControlEvidenceReceipt,
+        controls: Option<&'static [u8]>,
+        require_effective: bool,
+    ) -> ReceiveProfile {
+        let payload = controls.map(|bytes| ContactControlPayload { bytes: bytes.to_vec(), sha256: fieldcraft_io::sha256_hex(bytes) });
+        ReceiveProfile {
+            goal: e.goal,
+            evidence_kind: e.evidence_kind,
+            source_scene: e.source_scene.clone(),
+            required_fields: e.required_fields.clone(),
+            contact_controls: payload,
+            control_evidence: Some(evidence),
+            require_effective,
+            policy_request: None,
+            require_policy_applied: false,
+        }
     }
 
     #[test]
@@ -707,5 +856,99 @@ mod identity_transactions {
         let mut wire = serde_json::to_value(e).unwrap();
         wire.as_object_mut().unwrap().insert("runtime_qualification".into(), serde_json::json!("closed_stick"));
         assert!(serde_json::from_value::<ResultEnvelope>(wire).is_err());
+    }
+
+    #[test]
+    fn route20_initialization_known_is_consumed_at_its_observation_point_only() {
+        const CONTROLS: &[u8] = include_bytes!("fixtures/route20-case20-fresh-00-controls.json");
+        let run = route20_key("fresh-00", 0);
+        let mut e = route20_envelope(&run);
+        e.contact_controls_sha256 = Some(ROUTE20_CASE20_CONTROL_SHA.into());
+        e.contact_control_record_sha256 = Some(ROUTE20_BINDINGS_SHA.into());
+        let evidence = route20_evidence(&run, ControlEvidenceScope::Initialization);
+        let host = route20_host(run.clone(), CONTROLS);
+        let p = route20_profile(&e, evidence, Some(CONTROLS), false);
+        let tx = host.begin(&run, e.entities.clone(), p).unwrap();
+        let admission = tx.validate(&e).unwrap();
+        let control = admission.control.unwrap();
+        assert_eq!(control.availability, ControlAvailability::InitializationKnown);
+        assert_eq!(control.effective_check, EvidenceCheck::Verified);
+        assert_eq!(control.clamped_check, EvidenceCheck::Verified);
+        assert_eq!(control.observed_frame, None);
+        assert_eq!(control.observed_time_s, None);
+        match control.kappa_effective_pa {
+            Observed::Known { value, .. } => assert!((value - 152606501887.99008).abs() < f64::EPSILON),
+            Observed::Unknown { .. } => panic!("known route20 initialization was lost"),
+        }
+        assert_eq!(tx.commit(&e), Err(ContractError::StorageUnavailable));
+    }
+
+    #[test]
+    fn route20_initialization_known_is_rejected_when_per_frame_effective_is_required() {
+        const CONTROLS: &[u8] = include_bytes!("fixtures/route20-case20-fresh-00-controls.json");
+        let run = route20_key("fresh-00", 0);
+        let e = route20_envelope(&run);
+        let host = route20_host(run.clone(), CONTROLS);
+        let p = route20_profile(&e, route20_evidence(&run, ControlEvidenceScope::Initialization), Some(CONTROLS), true);
+        assert!(matches!(
+            host.begin(&run, e.entities.clone(), p),
+            Err(ContractError::Invalid("MissingPerFrameEffectiveKappa: initialization-only observation"))
+        ));
+    }
+
+    #[test]
+    fn route20_unknown_initialization_is_retained_diagnostically_and_rejected_quantitatively() {
+        const CONTROLS: &[u8] = include_bytes!("fixtures/route20-case21-control-00-unknown.json");
+        let run = route20_key("control-00-resident0", 1);
+        let mut e = route20_envelope(&run);
+        e.contact_controls_sha256 = Some(ROUTE20_CASE21_CONTROL_SHA.into());
+        e.contact_control_record_sha256 = Some(ROUTE20_BINDINGS_SHA.into());
+        let host = route20_host(run.clone(), CONTROLS);
+        let p = route20_profile(&e, route20_evidence(&run, ControlEvidenceScope::Initialization), Some(CONTROLS), false);
+        let tx = host.begin(&run, e.entities.clone(), p).unwrap();
+        assert_eq!(tx.validate(&e).unwrap().control.unwrap().availability, ControlAvailability::InitializationUnknown);
+
+        let host = route20_host(run.clone(), CONTROLS);
+        let p = route20_profile(&e, route20_evidence(&run, ControlEvidenceScope::Initialization), Some(CONTROLS), true);
+        assert!(matches!(
+            host.begin(&run, e.entities.clone(), p),
+            Err(ContractError::Invalid("MissingPerFrameEffectiveKappa: initialization-only observation"))
+        ));
+    }
+
+    #[test]
+    fn route20_ipc_disabled_is_separate_from_unknown_and_has_no_control_payload() {
+        let run = route20_key("repeat-00", 0);
+        let mut e = route20_envelope(&run);
+        e.contact_control_record_sha256 = Some(ROUTE20_BINDINGS_SHA.into());
+        let host = route20_host(run.clone(), b"");
+        let p = route20_profile(&e, route20_evidence(&run, ControlEvidenceScope::NativeIpcDisabled), None, false);
+        let tx = host.begin(&run, e.entities.clone(), p).unwrap();
+        let control = tx.validate(&e).unwrap().control.unwrap();
+        assert_eq!(control.availability, ControlAvailability::NativeIpcDisabled);
+        assert_eq!(control.native_ipc, NativeIpcStatus::Disabled);
+        assert!(control.control_sha256.is_none());
+        assert!(matches!(control.kappa_effective_pa, Observed::Unknown { .. }));
+
+        let host = route20_host(run.clone(), b"");
+        let p = route20_profile(&e, route20_evidence(&run, ControlEvidenceScope::NativeIpcDisabled), None, true);
+        assert!(matches!(
+            host.begin(&run, e.entities.clone(), p),
+            Err(ContractError::Unsupported("native IPC disabled; effective kappa unavailable"))
+        ));
+    }
+
+    #[test]
+    fn route20_record_and_control_digests_are_frozen_at_the_receiver_boundary() {
+        const CONTROLS: &[u8] = include_bytes!("fixtures/route20-case20-fresh-00-controls.json");
+        let run = route20_key("fresh-00", 0);
+        let mut e = route20_envelope(&run);
+        e.contact_controls_sha256 = Some(ROUTE20_CASE20_CONTROL_SHA.into());
+        e.contact_control_record_sha256 = Some(ROUTE20_BINDINGS_SHA.into());
+        let host = route20_host(run.clone(), CONTROLS);
+        let p = route20_profile(&e, route20_evidence(&run, ControlEvidenceScope::Initialization), Some(CONTROLS), false);
+        let tx = host.begin(&run, e.entities.clone(), p).unwrap();
+        e.contact_control_record_sha256 = Some("0".repeat(64));
+        assert_eq!(tx.validate(&e), Err(ContractError::Invalid("frozen contact control record changed")));
     }
 }

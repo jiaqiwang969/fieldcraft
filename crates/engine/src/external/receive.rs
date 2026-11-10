@@ -8,6 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
+use super::control::ControlAdmission;
 use super::run::{FrameFacts, RunGoal, RunLedger, SolveOutcome};
 use super::{ContractError, EvidenceKind, RunKey, SourceRef, digest_valid, token_valid};
 
@@ -225,6 +226,8 @@ pub struct ResultEnvelope {
     pub source_scene: SourceRef,
     /// Digest of the separately validated fieldcraft-contact-controls/1 receipt, if supplied.
     pub contact_controls_sha256: Option<String>,
+    /// Digest of the complete route-20 control binding record set, if supplied.
+    pub contact_control_record_sha256: Option<String>,
     /// Canonical PolicyRequest digest frozen by the receiver, distinct from the wire SHA.
     pub policy_request_digest: Option<String>,
     pub required_fields: Vec<Quantity>,
@@ -285,6 +288,7 @@ pub struct Admission {
     pub blockers: Vec<String>,
     pub sealed: bool,
     pub policy: Option<PolicyAdmission>,
+    pub control: Option<ControlAdmission>,
 }
 
 pub struct ExternalReceiver<I> {
@@ -473,6 +477,7 @@ impl<I: IdentityVerifier> ExternalReceiver<I> {
             blockers,
             sealed: envelope.terminal.is_some(),
             policy,
+            control: None,
         })
     }
 

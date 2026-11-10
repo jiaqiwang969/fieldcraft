@@ -83,6 +83,28 @@ This boundary does not infer effective kappa from requested kappa, penalty scale
 The parameter-capability report (`fieldcraft-parameter-capabilities/1`) and native archive
 validation remain IO responsibilities; no additional archive fields are written here.
 
+Route-20 evidence is consumed through `ControlEvidenceReceipt`, alongside (never in place of)
+the raw controls bytes. It binds the producer run label, epoch, observed compute PIDs, the
+complete `bindings.json` SHA/locator, and the controls-file SHA/locator. `scope=initialization`
+means exactly the recorded initialization observation point; it does not supply any value for
+an advanced frame, even when both `kappa_effective_pa` and `kappa_clamped` are Known. The
+receipt's `observed_frame` and `observed_time_s` are optional as a pair, so their absence is
+preserved as unknown rather than filled from a requested timestep. `scope=advance_frames` is
+the only scope that can satisfy `require_effective=true`, and it must carry both Known values
+with solver source references. `native_ipc=disabled` is a separate availability state: it has
+no controls file, no PID/epoch, and both native-kappa observations remain Unknown; it is not
+the same as an ordinary Unknown initialization receipt.
+
+The receiver rejects a wrong run label/epoch, missing or changed record digest, mismatched raw
+controls digest, copied source, or a quantitative request backed only by initialization,
+Unknown, or IPC-disabled evidence. Diagnostic admission retains the exact initialization
+value, Unknown reasons, or IPC-disabled state in `Admission.control`; it does not turn those
+states into a solve or a result identifier. The shared 0.0.29 five-case audit currently has
+10 initialization Known records, 70 initialization Unknown records and 10 IPC-disabled
+records, with all 80 non-IPC trajectories still lacking per-frame effective/clamp values.
+This is source/availability consumption only; no GPU run or production identity/storage
+provider is implied.
+
 An optional `PolicyRequestPayload` freezes a `fieldcraft-contact-policy-request/1` declaration
 separately from controls. It holds the wire bytes/SHA (at most 1 MiB) **and** the independently
 frozen `PolicyRequest::digest`; pretty JSON's wire SHA is not that canonical digest. The

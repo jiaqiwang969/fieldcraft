@@ -5,6 +5,7 @@
 //! independently checks a contiguous prefix. Persistent model identity and durable result
 //! registration are integration seams, not inferred from temporary run identifiers.
 
+pub mod control;
 pub mod receive;
 pub mod run;
 pub mod transaction;

@@ -6,6 +6,7 @@
 
 use std::sync::{Mutex, MutexGuard};
 
+use super::control::ControlEvidenceReceipt;
 use super::receive::{Admission, EntityMap, EvidenceCheck, ExternalReceiver, IdentityVerifier, ModelBinding, Quantity, ResultEnvelope};
 use super::run::RunGoal;
 use super::{ContractError, EvidenceKind, RunKey, SourceRef, digest_valid};
@@ -18,6 +19,9 @@ pub struct ReceiveProfile {
     pub source_scene: SourceRef,
     pub required_fields: Vec<Quantity>,
     pub contact_controls: Option<ContactControlPayload>,
+    /// Audited route-20 source/availability metadata.  This is separate from the raw
+    /// controls bytes and is required whenever quantitative admission consumes it.
+    pub control_evidence: Option<ControlEvidenceReceipt>,
     /// A receiver-owned quantitative policy; never weakened after a provider refusal.
     pub require_effective: bool,
     pub policy_request: Option<PolicyRequestPayload>,
@@ -118,19 +122,44 @@ impl<P: SnapshotProvider> ReceiverHost<P> {
     }
 
     fn validate_controls(&self, state: &HostState<P::Model>, profile: &ReceiveProfile) -> Result<(), ContractError> {
-        match &profile.contact_controls {
-            Some(control) => {
-                if control.bytes.len() > 65536 {
-                    return Err(ContractError::Invalid("contact controls byte cap"));
+        if let Some(evidence) = &profile.control_evidence {
+            evidence.validate_for_run(&state.run, profile.require_effective)?;
+            match (&profile.contact_controls, evidence.control_sha256.as_ref()) {
+                (Some(control), Some(evidence_sha)) => {
+                    if control.sha256 != *evidence_sha {
+                        return Err(ContractError::Invalid("frozen contact control evidence changed"));
+                    }
+                    self.validate_control_payload(state, profile, control)
                 }
-                if fieldcraft_io::sha256_hex(&control.bytes) != control.sha256 {
-                    return Err(ContractError::ChecksumMismatch);
-                }
-                self.provider.validate_controls(&state.model, &state.run, &control.bytes, profile.require_effective)
+                (None, None) if matches!(evidence.scope, super::control::ControlEvidenceScope::NativeIpcDisabled) => Ok(()),
+                (None, None) => Err(ContractError::Invalid("MissingContactControls: evidenced control file not supplied")),
+                (None, Some(_)) => Err(ContractError::Invalid("MissingContactControls: evidenced control file not supplied")),
+                (Some(_), None) => Err(ContractError::Invalid("contact control payload without source receipt")),
             }
-            None if profile.require_effective => Err(ContractError::Invalid("MissingContactControls: quantitative profile requires observations")),
-            None => Ok(()),
+        } else {
+            match &profile.contact_controls {
+                Some(control) => self.validate_control_payload(state, profile, control),
+                None if profile.require_effective => {
+                    Err(ContractError::Invalid("MissingContactControls: quantitative profile requires observations"))
+                }
+                None => Ok(()),
+            }
         }
+    }
+
+    fn validate_control_payload(
+        &self,
+        state: &HostState<P::Model>,
+        profile: &ReceiveProfile,
+        control: &ContactControlPayload,
+    ) -> Result<(), ContractError> {
+        if control.bytes.len() > 65536 {
+            return Err(ContractError::Invalid("contact controls byte cap"));
+        }
+        if fieldcraft_io::sha256_hex(&control.bytes) != control.sha256 {
+            return Err(ContractError::ChecksumMismatch);
+        }
+        self.provider.validate_controls(&state.model, &state.run, &control.bytes, profile.require_effective)
     }
 
     fn validate_policy(&self, state: &HostState<P::Model>, profile: &ReceiveProfile) -> Result<(), ContractError> {
@@ -201,6 +230,9 @@ impl<P: SnapshotProvider> ReceiveTransaction<'_, P> {
         if envelope.contact_controls_sha256.as_deref() != self.profile.contact_controls.as_ref().map(|p| p.sha256.as_str()) {
             return Err(ContractError::Invalid("frozen contact controls receipt changed"));
         }
+        if envelope.contact_control_record_sha256.as_deref() != self.profile.control_evidence.as_ref().map(|e| e.record_sha256.as_str()) {
+            return Err(ContractError::Invalid("frozen contact control record changed"));
+        }
         if envelope.entities != self.entities {
             return Err(ContractError::IdentityMismatch("EntityMapMismatch: frozen source order or object map changed".into()));
         }
@@ -216,6 +248,7 @@ impl<P: SnapshotProvider> ReceiveTransaction<'_, P> {
         if let Some(policy) = &mut admission.policy {
             policy.declaration = EvidenceCheck::Verified;
         }
+        admission.control = self.profile.control_evidence.as_ref().map(ControlEvidenceReceipt::admission);
         Ok(admission)
     }
 
