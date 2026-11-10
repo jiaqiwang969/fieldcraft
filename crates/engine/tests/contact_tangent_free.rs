@@ -31,6 +31,9 @@ fn specimen(friction: bool, compression: f64, shear: Option<f64>, interior: bool
 fn closed_tangent_free_modes_reference_and_persistence() {
     let friction = false;
     let mut s = specimen(friction, 0.01, None, true);
+    let info = s.execute("model.info", &json!({})).unwrap();
+    assert_eq!(info["contact_policy_capabilities"]["steps"]["Modes"]["selection"], "explicit_closed_tangent_free");
+    assert_eq!(info["contact_policy_capabilities"]["steps"]["Modes"]["runtime_qualification"], "unverified");
     let base_reply = s.execute("solve.nonlinear", &json!({"step":"Preload","threads":1})).unwrap();
     let mode_reply = s.execute("solve.frequency", &json!({"step":"Modes","threads":1})).unwrap();
     let StepResult::Implicit(Implicit::Static(base)) = s.result("Preload").unwrap().as_ref().clone() else { panic!("static") };
@@ -113,6 +116,7 @@ fn closed_tangent_free_modes_reference_and_persistence() {
     s.execute("file.save_as", &json!({"path":path})).unwrap();
     let mut reopened = Session::default();
     reopened.execute("file.open", &json!({"path":path})).unwrap();
+    assert_eq!(reopened.execute("model.info", &json!({})).unwrap()["contact_policy_capabilities"], info["contact_policy_capabilities"]);
     assert_eq!(s.model.step("Modes"), reopened.model.step("Modes"));
     assert_eq!(Some(&saved), reopened.result("Modes"));
     assert_eq!(s.result("Preload"), reopened.result("Preload"));

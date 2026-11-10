@@ -12,7 +12,7 @@ fn map(value: &Value) -> Result<BTreeMap<String, String>> {
     let policies: BTreeMap<String, String> =
         serde_json::from_value(value.clone()).map_err(|e| crate::Error::Invalid(format!("InvalidContactPolicyMap: {e}")))?;
     for (name, policy) in &policies {
-        if policy != "stick" {
+        if !matches!(policy.as_str(), "stick" | "closed_tangent_free") {
             return invalid(format!("UnsupportedContactPolicy: {name}={policy}"));
         }
     }
@@ -42,7 +42,7 @@ fn check_request(model: &Model, step_name: &str, policies: &BTreeMap<String, Str
         return Ok(());
     }
     for (name, value) in policies {
-        if value != "stick" {
+        if !matches!(value.as_str(), "stick" | "closed_tangent_free") {
             return invalid(format!("UnsupportedContactPolicy: {name}={value}"));
         }
         let Some(contact) = model.contact(name) else {
@@ -145,20 +145,40 @@ pub fn report(model: &Model) -> Result<Value> {
     let mut steps = BTreeMap::new();
     for step in model.steps() {
         let selected = stored(step)?;
-        steps.insert(step.name.clone(),json!({
-            "contact_perturbation":selected,
-            "selection":if !selected.is_empty(){"explicit_stick"}else if step.base_state.is_some() && !model.contacts().is_empty() && matches!(step.procedure,Procedure::Frequency {..}) {"legacy_bonded_when_closed"}else{"not_requested"},
-            "runtime_qualification":"unverified",
-        }));
+        let selection = if selected.is_empty() {
+            if step.base_state.is_some() && !model.contacts().is_empty() && matches!(step.procedure, Procedure::Frequency { .. }) {
+                "legacy_bonded_when_closed"
+            } else {
+                "not_requested"
+            }
+        } else if selected.values().all(|policy| policy == "stick") {
+            "explicit_stick"
+        } else if selected.values().all(|policy| policy == "closed_tangent_free") {
+            "explicit_closed_tangent_free"
+        } else {
+            "explicit_mixed"
+        };
+        steps.insert(
+            step.name.clone(),
+            json!({
+                "contact_perturbation":selected,
+                "selection":selection,
+                "runtime_qualification":"unverified",
+            }),
+        );
     }
     Ok(json!({
         "native_field":"Step.contact_perturbation",
         "native_field_available":native_field_available(),
-        "declaration_values":["stick"],
+        "declaration_values":["stick","closed_tangent_free"],
         "steps":steps,
-        "qualification_requires":["frequency_from_earlier_nlgeom_base","unchanged_support_names","all_contacts_are_explicit_pairs","closed_planar_linear_solid_faces","fixed_main_translations","full_reference_overlap","positive_pressure_above_guard","gap_over_thickness_within_solver_tolerance","positive_static_friction_and_strict_cone_margin","not_slipping","interface_motion_eliminated"],
+        "qualification_requires":["frequency_from_earlier_nlgeom_base","unchanged_support_names","all_contacts_are_explicit_pairs","closed_planar_linear_solid_faces","fixed_main_translations","positive_pressure_above_guard","gap_over_thickness_within_solver_tolerance","friction_history_and_strict_cone_margin_when_frictional","not_slipping"],
+        "qualification_by_policy":{
+            "stick":["full_reference_overlap","positive_static_friction","interface_motion_eliminated"],
+            "closed_tangent_free":["single_convex_main_face","strict_clipping_edge_margin","full_current_overlap","base_shear_below_guard","normal_gap_gradient_eliminated","pressure_weighted_gap_geometry_retained"]
+        },
         "state_evidence":"pending_original_runtime_receipt; do not parse diagnostic warnings as a stable protocol",
         "commercial_keyword_mapping":"pending; no verified mapping",
-        "other_policies":"slide/open unsupported",
+        "other_policies":"Coulomb sliding/open/finite tangential stiffness unsupported",
     }))
 }

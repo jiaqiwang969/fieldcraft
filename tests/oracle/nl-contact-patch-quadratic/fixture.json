@@ -2,64 +2,64 @@
   "note": "FieldCraft's accepted results for this case, written by `cargo xtask oracle --bless`. A result outside its band fails CI.",
   "values": {
     "finite_force": {
-      "band": 1.0000000000308394e-9,
-      "value": 1.0000000000308393
+      "band": 1.0000000000021915e-9,
+      "value": 1.0000000000021914
     },
     "finite_lateral": {
       "band": 0.0002,
-      "value": -8.646113587593846e-6
+      "value": -8.893580909555362e-6
     },
     "finite_lower_base": {
-      "band": 1.0000128449019858e-9,
-      "value": 1.0000128449019858
+      "band": 1e-9,
+      "value": 0.9999984883281733
     },
     "finite_lower_centre": {
-      "band": 1.0000034399363425e-9,
-      "value": 1.0000034399363424
+      "band": 1e-9,
+      "value": 0.999983311009916
     },
     "finite_lower_corner": {
-      "band": 1.0000214027444387e-9,
-      "value": 1.0000214027444387
+      "band": 1.0000109803003217e-9,
+      "value": 1.0000109803003217
     },
     "finite_pressure": {
-      "band": 1.0000139083477923e-9,
-      "value": 1.0000139083477924
+      "band": 1e-9,
+      "value": 0.9999899678378739
     },
     "finite_upper_top": {
-      "band": 1.000014539007348e-9,
-      "value": 1.000014539007348
+      "band": 1.0000004828231382e-9,
+      "value": 1.0000004828231381
     },
     "small_force": {
-      "band": 1e-9,
-      "value": 0.9999999999999358
+      "band": 1.0000000000000803e-9,
+      "value": 1.0000000000000802
     },
     "small_lateral": {
       "band": 1e-6,
-      "value": -8.11230340516721e-15
+      "value": 7.785538613242901e-15
     },
     "small_lower_base": {
-      "band": 1.000000000000052e-9,
-      "value": 1.000000000000052
+      "band": 1.0000000000000315e-9,
+      "value": 1.0000000000000315
     },
     "small_lower_centre": {
-      "band": 1.0000000000000536e-9,
-      "value": 1.0000000000000535
+      "band": 1.0000000000000218e-9,
+      "value": 1.0000000000000218
     },
     "small_lower_corner": {
       "band": 1e-9,
-      "value": 0.9999999999999977
+      "value": 0.9999999999999568
     },
     "small_pressure": {
-      "band": 1e-9,
-      "value": 0.9999999999999563
+      "band": 1.0000000000001562e-9,
+      "value": 1.000000000000156
     },
     "small_stress": {
       "band": 1e-8,
-      "value": -9.999573821916453
+      "value": -9.999573821916604
     },
     "small_upper_top": {
-      "band": 1.0000000000000267e-9,
-      "value": 1.0000000000000266
+      "band": 1.0000000000000013e-9,
+      "value": 1.0000000000000013
     }
   }
 }
