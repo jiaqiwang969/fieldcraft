@@ -224,6 +224,14 @@ impl RunLedger {
         Ok(())
     }
 
+    /// Preserve the first invalid/missing transport receipt without admitting a suffix.
+    pub(super) fn reject_transport(&mut self, reason: String) {
+        if self.barrier.is_none() {
+            self.barrier = Some(FailureBoundary { frame: self.last_qualified + 1, issue: FrameIssue::InvalidReceipt(reason), facts: None });
+            self.state = RunState::Unknown;
+        }
+    }
+
     /// Run completion requires an explicit terminal source, beyond any batch completion.
     pub fn finish(&mut self, key: &RunKey, source: SourceRef) -> Result<(), ContractError> {
         self.check_key(key)?;

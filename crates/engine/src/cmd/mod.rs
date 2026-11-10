@@ -10,6 +10,7 @@ mod defeature;
 pub(crate) mod define;
 pub mod diagnostics;
 mod edit;
+mod external_results;
 mod extrude;
 mod fatigue;
 mod fatigue_axial;
@@ -75,6 +76,9 @@ use fieldcraft_io::roots::Access;
 use crate::{CommandSpec, EngineError, Result, Session};
 
 pub static ALL: &[CommandSpec] = &[
+    external_results::RECEIVE,
+    external_results::LIST,
+    external_results::REMOVE,
     model::INFO,
     model::NODE_COORDS,
     pretension::CREATE,

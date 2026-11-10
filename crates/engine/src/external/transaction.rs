@@ -6,37 +6,47 @@
 
 use std::sync::{Arc, Mutex, MutexGuard};
 
+use serde::{Deserialize, Serialize};
+
+use fieldcraft_io::identity::digest_valid;
+
 use super::control::ControlEvidenceReceipt;
 use super::production::ResultStore;
 use super::receive::{Admission, EntityMap, EvidenceCheck, ExternalReceiver, IdentityVerifier, ModelBinding, Quantity, ResultEnvelope};
 use super::run::RunGoal;
-use super::{ContractError, EvidenceKind, RunKey, SourceRef, digest_valid};
+use super::{ContractError, EvidenceKind, RunKey, SourceRef};
 
 /// Receiver-owned expectations, frozen before accepting any producer envelope.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ReceiveProfile {
     pub goal: RunGoal,
     pub evidence_kind: EvidenceKind,
     pub source_scene: SourceRef,
     pub required_fields: Vec<Quantity>,
+    #[serde(deserialize_with = "super::context::required_option")]
     pub contact_controls: Option<ContactControlPayload>,
     /// Audited route-20 source/availability metadata.  This is separate from the raw
     /// controls bytes and is required whenever quantitative admission consumes it.
+    #[serde(deserialize_with = "super::context::required_option")]
     pub control_evidence: Option<ControlEvidenceReceipt>,
     /// A receiver-owned quantitative policy; never weakened after a provider refusal.
     pub require_effective: bool,
+    #[serde(deserialize_with = "super::context::required_option")]
     pub policy_request: Option<PolicyRequestPayload>,
     /// This foundation refuses application-dependent admission, even with a valid declaration.
     pub require_policy_applied: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ContactControlPayload {
     pub bytes: Vec<u8>,
     pub sha256: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PolicyRequestPayload {
     pub bytes: Vec<u8>,
     pub wire_sha256: String,

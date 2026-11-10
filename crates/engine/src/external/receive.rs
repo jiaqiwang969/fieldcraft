@@ -6,11 +6,12 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use fieldcraft_io::identity::digest_valid;
 use serde::{Deserialize, Serialize};
 
 use super::control::ControlAdmission;
 use super::run::{FrameFacts, RunGoal, RunLedger, SolveOutcome};
-use super::{ContractError, EvidenceKind, RunKey, SourceRef, digest_valid, token_valid};
+use super::{ContractError, EvidenceKind, RunKey, SourceRef, token_valid};
 
 const MAX_BYTES: usize = 64 * 1024 * 1024;
 const MAX_ENTITIES: usize = 100_000;
@@ -449,9 +450,9 @@ impl<I: IdentityVerifier> ExternalReceiver<I> {
                 solve = SolveOutcome::Unknown;
             }
         }
-        // Declaration bytes and numerical convergence cannot prove policy application.
+        // Runtime qualification remains unverified even when the provider verifies application.
         let policy = envelope.policy_request_digest.as_ref().map(|_| {
-            blockers.push("NativeContactPolicyNotApplied: declaration/application/qualification are separate".into());
+            blockers.push("RuntimeQualificationUnverified: policy-dependent results require independently verified runtime qualification".into());
             if solve == SolveOutcome::Succeeded {
                 solve = SolveOutcome::Unknown;
             }

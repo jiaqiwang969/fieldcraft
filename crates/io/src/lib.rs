@@ -38,6 +38,7 @@ pub mod capabilities;
 pub mod checkpoint;
 pub mod codec;
 pub mod contact_policy;
+pub mod external_results;
 pub mod fs;
 pub mod gmsh;
 pub mod identity;
@@ -571,6 +572,14 @@ pub fn write_with(
     }
     view.check()?;
     check_run(&extras.run)?;
+    for (_, stored) in &extras.results {
+        if let results::SolvedRef::External(value) = stored.result {
+            value.validate_binding(model, geometry, &extras.run)?;
+            if model.step(&value.archive_key).is_some() {
+                return invalid("ExternalArchiveDuplicateKey: native step");
+            }
+        }
+    }
     let mut model_json = serde_json::to_vec_pretty(&model.without_mesh()).map_err(|e| json_error(MODEL, e))?;
     model_json.push(b'\n');
     let mesh = mesh::encode(model)?;
@@ -819,6 +828,14 @@ pub fn read_versioned(bytes: &[u8]) -> Result<(ModelFile, u32)> {
     }
     if let Some(binding) = &manifest.identity {
         binding.validate(&model, &manifest.geometry, &manifest.run)?;
+    }
+    for stored in &results {
+        if let results::Solved::External(value) = &stored.result {
+            value.validate_binding(&model, &manifest.geometry, &manifest.run)?;
+            if model.step(&value.archive_key).is_some() {
+                return invalid("ExternalArchiveDuplicateKey: native step");
+            }
+        }
     }
     let journal_header = JournalHeader { units: journal.units, model_units: journal.model_units };
     let journal = read_journal(journal.commands)?;

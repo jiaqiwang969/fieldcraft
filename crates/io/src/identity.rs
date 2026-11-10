@@ -83,13 +83,13 @@ impl Snapshot {
 
 /// Source indices are dense and zero-based. Target labels must cover the entire frozen mesh.
 /// The source's ordered connectivity must agree after node mapping; interpolation is excluded.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct EntityMap {
     pub nodes: Vec<u32>,
     pub elements: Vec<MappedElement>,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MappedElement {
     pub target: u32,
@@ -124,7 +124,7 @@ impl EntityMap {
 }
 
 /// Frozen lease inputs. Runtime run/epoch/generation remain owned by the runtime manager.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Binding {
     pub snapshot: Snapshot,

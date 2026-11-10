@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use fieldcraft_io::identity::digest_valid;
 use serde::{Deserialize, Serialize};
 
 use super::receive::{Admission, EntityMap, ModelBinding, ReceiverSnapshot, ResultEnvelope};
@@ -152,6 +153,28 @@ struct StoredResult {
     admission: Admission,
 }
 
+/// Original JSON subvalues of an atomically published record. These bytes, rather than
+/// pretty input JSON or a new serialization, are the payload of a project archive.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PublishedResultBytes {
+    pub result_id: String,
+    pub payload_sha256: String,
+    pub envelope_json: Vec<u8>,
+    pub admission_json: Vec<u8>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawStoredResult<'a> {
+    schema: String,
+    result_id: String,
+    payload_sha256: String,
+    #[serde(borrow)]
+    envelope: &'a serde_json::value::RawValue,
+    #[serde(borrow)]
+    admission: &'a serde_json::value::RawValue,
+}
+
 impl FileResultStore {
     pub fn new(root: impl Into<PathBuf>) -> Result<Self, ContractError> {
         let store = Self { root: root.into() };
@@ -161,10 +184,34 @@ impl FileResultStore {
 
     fn path_for(&self, result_id: &str) -> Result<PathBuf, ContractError> {
         let digest = result_id.strip_prefix("fieldcraft-result/").ok_or(ContractError::Invalid("result identifier scheme"))?;
-        if digest.len() != 64 || !digest.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)) {
+        if !digest_valid(digest) {
             return Err(ContractError::Invalid("result identifier digest"));
         }
         Ok(self.root.join(format!("{digest}.json")))
+    }
+
+    /// Read without changing the original result id or the pre-commit admission snapshot.
+    /// Full model/profile admission must still be rechecked by a ReceiverHost.
+    pub fn read_published(&self, result_id: &str) -> Result<PublishedResultBytes, ContractError> {
+        let bytes = fieldcraft_io::fs::read_capped(&self.path_for(result_id)?, fieldcraft_io::MAX_FILE_BYTES).map_err(io_error)?;
+        let raw: RawStoredResult<'_> = serde_json::from_slice(&bytes).map_err(|e| ContractError::Provider(format!("decode stored result: {e}")))?;
+        if raw.schema != "fieldcraft-external-result/1" || raw.result_id != result_id {
+            return Err(ContractError::Invalid("stored result identity"));
+        }
+        let envelope_json = raw.envelope.get().as_bytes().to_vec();
+        if fieldcraft_io::sha256_hex(&envelope_json) != raw.payload_sha256
+            || result_id.strip_prefix("fieldcraft-result/") != Some(raw.payload_sha256.as_str())
+        {
+            return Err(ContractError::ChecksumMismatch);
+        }
+        let _: ResultEnvelope = serde_json::from_slice(&envelope_json).map_err(|e| ContractError::Provider(format!("decode envelope: {e}")))?;
+        let _: Admission = serde_json::from_str(raw.admission.get()).map_err(|e| ContractError::Provider(format!("decode admission: {e}")))?;
+        Ok(PublishedResultBytes {
+            result_id: raw.result_id,
+            payload_sha256: raw.payload_sha256,
+            envelope_json,
+            admission_json: raw.admission.get().as_bytes().to_vec(),
+        })
     }
 }
 

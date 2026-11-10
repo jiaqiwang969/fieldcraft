@@ -76,14 +76,16 @@ closed-form force/frequency checks and all three deck-writer refusals. This is n
 for per-frame backend kappa, nor an equivalence between finite tangential stiffness and hard
 stick. Runtime qualification in the capability report remains unverified.
 
-`closed_tangent_free` releases tangential increments at a qualified closed, zero-base-shear
-interface; it is not Coulomb sliding or finite tangential stiffness. Its qualification needs
-one convex main face, strict clipping-edge margin, full current overlap, guarded base shear,
-eliminated normal gap gradient and retained pressure-weighted gap geometry. The fixed-main and linear-face checks remain specific to this tangential-release
-policy; common equilibrium and identity checks still apply. `qualification_by_policy` separates these
-conditions from hard stick's full reference overlap, positive friction and eliminated
-relative mortar motion. Mixed maps report `explicit_mixed`; all runtime qualifications remain
-unverified by the declaration layer. Empty maps retain legacy selection.
+Common prerequisites are a frequency step referencing an earlier NLGEOM base, unchanged
+support names and explicit pairs. Planar linear solid faces and fixed main translations
+remain specific to `closed_tangent_free`; `stick` and `open` accept the quadratic faces and
+moving main surfaces described above.
+Positive pressure and closed-gap guards belong to the closed policies, not `open`.
+Each policy must be qualified against the same converged base state; declaration inspection
+alone does not establish equilibrium or any policy-specific geometric or force condition.
+Pure maps report `explicit_stick`, `explicit_closed_tangent_free` or `explicit_open`;
+mixed maps report `explicit_mixed`. Empty maps retain legacy selection. All declaration
+reports keep runtime qualification unverified.
 
 Consumers should import `fieldcraft_io::identity::SCHEME` for the existing snapshot scheme,
 `fieldcraft_io::contact_policy::REQUEST_SCHEME` for requests, and

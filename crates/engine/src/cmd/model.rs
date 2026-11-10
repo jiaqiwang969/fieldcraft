@@ -46,6 +46,7 @@ fn info(s: &mut Session, _: &Value) -> Result<Value> {
     let counts: serde_json::Map<String, Value> = s.model.element_counts().into_iter().map(|(k, n)| (k.name().to_string(), json!(n))).collect();
     let definitions: serde_json::Map<String, Value> = s.model.definition_counts().into_iter().map(|(k, n)| (k.to_string(), json!(n))).collect();
     Ok(json!({
+        "external_results": s.external_results_summary(),
         "nodes": s.model.nodes().len(),
         "elements": counts,
         "display_units": s.units().label(),
@@ -221,7 +222,47 @@ mod capability_tests {
 #[cfg(test)]
 mod contact_policy_tests {
     use crate::Session;
+    use fieldcraft_model::{BoundaryCondition, Contact, ContactSurfaces, ElementKind, Friction, Model, NonlinearStatic, Procedure, Step, Target};
     use serde_json::json;
+    fn policy_fixture() -> Model {
+        let mut m = Model::default();
+        for (i, xyz) in
+            [[0., 0., 0.], [0., 1., 0.], [1., 0., 0.], [0., 0., -1.], [0., 0., 0.], [1., 0., 0.], [0., 1., 0.], [0., 0., 1.]].into_iter().enumerate()
+        {
+            m.set_node(i as u32 + 1, xyz).unwrap();
+        }
+        m.set_element(10, ElementKind::Tet4, vec![1, 2, 3, 4]).unwrap();
+        m.set_element(20, ElementKind::Tet4, vec![5, 6, 7, 8]).unwrap();
+        for (name, element) in [("main", 10), ("secondary", 20)] {
+            m.add_set(name, serde_json::from_value(json!({"faces":[{"element":element,"face":1}]})).unwrap()).unwrap();
+        }
+        m.add_set("fixed", serde_json::from_value(json!({"nodes":[1,2,3,4]})).unwrap()).unwrap();
+        m.add_boundary_condition("Fixed", BoundaryCondition::Fixed { target: Target::Set("fixed".into()) }).unwrap();
+        let mut contact = Contact::new(ContactSurfaces::Pair { main: "main".into(), secondary: "secondary".into() });
+        contact.friction = Friction::coulomb(0.3);
+        m.add_contact("Interface", contact).unwrap();
+        let mut base = Step::new("Preload", Procedure::NonlinearStatic(NonlinearStatic::default()));
+        base.boundary_conditions.insert("Fixed".into());
+        m.add_step(base, None).unwrap();
+        let mut modes = Step::new("Modes", Procedure::Frequency { modes: 1, min_hz: None, max_hz: None });
+        modes.base_state = Some("Preload".into());
+        modes.boundary_conditions.insert("Fixed".into());
+        m.add_step(modes, None).unwrap();
+        m
+    }
+    #[test]
+    fn unsupported_policy_value_is_refused_with_valid_contact_and_frequency_base() {
+        let mut s = Session { model: policy_fixture(), ..Default::default() };
+        s.execute("model.step.edit", &json!({"name":"Modes","contact_perturbation":{"Interface":"open"}})).unwrap();
+        let before = s.model.clone();
+        let error =
+            s.execute("model.step.edit", &json!({"name":"Modes","contact_perturbation":{"Interface":"coulomb_sliding"}})).unwrap_err().to_string();
+        assert!(error.contains("coulomb_sliding"), "{error}");
+        assert!(error.contains("unknown variant") || error.contains("UnsupportedContactPolicy"), "{error}");
+        assert!(!error.contains("UnknownPolicyContact"), "{error}");
+        assert_eq!(s.model, before);
+        println!("UNSUPPORTED_POLICY_VALUE {error}");
+    }
     #[test]
     fn contact_policy_input_is_not_silently_lost() {
         let mut s = Session::default();
@@ -232,7 +273,7 @@ mod contact_policy_tests {
         println!("POLICY_REFUSED input={input} error={error}");
         s.execute("model.step.create", &json!({"name":"Legacy","procedure":{"type":"static"}})).unwrap();
         let before = s.model.clone();
-        for policy in [json!({"Missing":"stick"}), json!({"Missing":"slide"}), json!({"Missing":"open"}), json!(null)] {
+        for policy in [json!({"Missing":"stick"}), json!({"Missing":"slide"}), json!(null)] {
             assert!(s.execute("model.step.edit", &json!({"name":"Legacy","contact_perturbation":policy})).is_err());
             assert_eq!(s.model, before);
         }

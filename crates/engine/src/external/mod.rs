@@ -6,14 +6,21 @@
 //! identity and receiver-owned storage are explicit adapters, not values inferred from temporary
 //! run identifiers.
 
+pub mod archive;
+pub mod context;
 pub mod control;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod native;
+pub mod package;
 pub mod production;
 pub mod receive;
 pub mod run;
+mod session;
 pub mod transaction;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod worker;
 
+use fieldcraft_io::identity::digest_valid;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -85,10 +92,6 @@ pub(super) fn token_valid(s: &str) -> bool {
     !s.trim().is_empty() && s.len() <= 1024 && !s.chars().any(char::is_control)
 }
 
-pub(super) fn digest_valid(s: &str) -> bool {
-    s.len() == 64 && s.bytes().all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ContractError {
     #[error("invalid external result: {0}")]
@@ -109,6 +112,10 @@ pub enum ContractError {
     NativeContactPolicyNotApplied,
     #[error("binary field checksum mismatch")]
     ChecksumMismatch,
+    #[error("ExternalArchivePayloadMismatch: stored envelope bytes do not match the payload digest")]
+    ArchivePayloadMismatch,
+    #[error("ExternalArchivePublicationMismatch: frozen publication receipt does not match the stored result ID or payload digest")]
+    ArchivePublicationMismatch,
     #[error("not supported yet: {0}")]
     Unsupported(&'static str),
     #[error("worker operation failed: {0}")]
