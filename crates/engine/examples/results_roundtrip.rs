@@ -32,6 +32,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             Solved::Explicit(r) => ("explicit", serde_json::to_value(r)?, Value::Null),
             Solved::Nonlinear(r) => ("nonlinear_rod", serde_json::to_value(r)?, Value::Null),
             Solved::Fluid(r) => ("fluid", serde_json::to_value(r)?, Value::Null),
+            Solved::ExternalChunked(_) => return Err("chunked external archives require the streaming product file entry".into()),
             Solved::External(r) => ("external", serde_json::to_value(r)?, Value::Null),
         };
         fields.push(json!({"kind":kind,"definition":stored.definition,"payload":payload,"fatigue":fatigue}));

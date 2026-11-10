@@ -164,7 +164,7 @@ pub struct FieldSpec {
 }
 
 impl FieldSpec {
-    fn validate(&self) -> Result<(), ContractError> {
+    pub(super) fn validate(&self) -> Result<(), ContractError> {
         let (location, unit, components) = match self.quantity {
             Quantity::Position | Quantity::Displacement => (Location::Node, "m", 3),
             Quantity::Velocity => (Location::Node, "m/s", 3),
@@ -338,97 +338,193 @@ impl<I: IdentityVerifier> ExternalReceiver<I> {
                 return Err(ContractError::Invalid("terminal source"));
             }
         }
-        let mut ledger = RunLedger::new(envelope.run.clone(), envelope.goal, envelope.evidence_kind)?;
-        ledger.initialize(&envelope.run)?;
-        ledger.begin_advance(&envelope.run, envelope.goal.last_frame)?;
-        let mut bytes_total = 0usize;
-        let mut first_rejected_frame = None;
-        let mut blockers = Vec::new();
-        let mut previous_frame = 0;
+        let mut validation = StreamingAdmission::new(envelope)?;
+        let mut bytes_total = 0;
         for frame in &envelope.frames {
-            if frame.facts.run != envelope.run {
-                return Err(ContractError::StaleRun);
-            }
-            if frame.facts.frame <= previous_frame || frame.facts.frame > envelope.goal.last_frame {
-                return Err(ContractError::Invalid("frames must be ordered and unique within the run goal"));
-            }
-            previous_frame = frame.facts.frame;
-            if frame.fields.len() > FORWARD_FIELDS.len() + 1 {
-                return Err(ContractError::Invalid("field count"));
-            }
-            let mut seen = BTreeSet::new();
-            let mut missing_required = false;
-            for block in &frame.fields {
-                block.spec.validate()?;
-                if !seen.insert(block.spec.quantity) {
-                    return Err(ContractError::Invalid("duplicate field"));
+            validation.push_frame(frame, &mut bytes_total)?;
+        }
+        validation.finish(envelope.terminal.as_ref())
+    }
+
+    /// Start one ledger for a chunked trajectory. This does not publish or weaken the
+    /// legacy aggregate limit; the header carries no frames or terminal claim.
+    pub fn begin_stream<'a>(
+        &self,
+        expected_model: &ModelBinding,
+        active_run: &RunKey,
+        header: &'a ResultEnvelope,
+    ) -> Result<StreamingAdmission<'a>, ContractError> {
+        if !header.frames.is_empty() || header.terminal.is_some() {
+            return Err(ContractError::Invalid("ExternalChunkLayout: header contains frames or terminal"));
+        }
+        // Reuse the complete identity/profile/header rules. The empty prefix admission
+        // is deliberately discarded; it cannot authorize publication.
+        self.validate(expected_model, active_run, header)?;
+        StreamingAdmission::new(header)
+    }
+
+    /// No result identifier exists until a future receiver-owned atomic store is integrated.
+    pub fn commit(&self) -> Result<(), ContractError> {
+        Err(ContractError::StorageUnavailable)
+    }
+}
+
+/// Bounded semantic state shared by the legacy receiver and chunked transport.
+/// It retains only a ledger and first-failure diagnostics, never preceding field arrays.
+pub struct StreamingAdmission<'a> {
+    header: &'a ResultEnvelope,
+    required: BTreeSet<Quantity>,
+    ledger: RunLedger,
+    first_rejected_frame: Option<u64>,
+    blockers: Vec<String>,
+    previous_frame: u64,
+    chunks: usize,
+    poisoned: bool,
+}
+
+impl<'a> StreamingAdmission<'a> {
+    fn new(header: &'a ResultEnvelope) -> Result<Self, ContractError> {
+        let mut ledger = RunLedger::new(header.run.clone(), header.goal, header.evidence_kind)?;
+        ledger.initialize(&header.run)?;
+        ledger.begin_advance(&header.run, header.goal.last_frame)?;
+        Ok(Self {
+            header,
+            required: header.required_fields.iter().copied().collect(),
+            ledger,
+            first_rejected_frame: None,
+            blockers: Vec::new(),
+            previous_frame: 0,
+            chunks: 0,
+            poisoned: false,
+        })
+    }
+
+    /// The transport must enforce wire and allocation caps before calling this typed edge.
+    /// A chunk budget is fresh, but its ledger, time axis and first failure are not.
+    pub fn push_chunk(&mut self, frames: &[ResultFrame]) -> Result<(), ContractError> {
+        if self.poisoned {
+            return Err(ContractError::Invalid("ExternalChunkRejected: prior structural failure"));
+        }
+        let result = self.push_checked_chunk(frames);
+        self.poisoned = result.is_err();
+        result
+    }
+
+    fn push_checked_chunk(&mut self, frames: &[ResultFrame]) -> Result<(), ContractError> {
+        if frames.is_empty() || frames.len() > 256 || self.chunks >= 8192 {
+            return Err(ContractError::Invalid("ExternalChunkLimit: frame or chunk count"));
+        }
+        let mut bytes_total = 0;
+        for frame in frames {
+            for field in &frame.fields {
+                if let FieldData::Present { bytes, available, .. } = &field.data
+                    && bytes.len().checked_add(available.len()).is_none_or(|n| n > MAX_BYTES)
+                {
+                    return Err(ContractError::Invalid("ExternalFieldLimit: bytes and mask"));
                 }
-                let entities = match block.spec.location {
-                    Location::Node => envelope.entities.nodes.len(),
-                    Location::Object => envelope.entities.objects.len(),
-                    Location::Global => 1,
-                };
-                match &block.data {
-                    FieldData::Unavailable { reason } => {
-                        if !token_valid(reason) {
-                            return Err(ContractError::Invalid("unavailable reason"));
-                        }
-                        missing_required |= required.contains(&block.spec.quantity);
-                    }
-                    FieldData::Present { bytes, sha256, available, source } => {
-                        source.validate()?;
-                        if source.kind != envelope.evidence_kind {
-                            return Err(ContractError::Invalid("field evidence kind"));
-                        }
-                        // Include masks in the work budget even when every row is unavailable.
-                        bytes_total = bytes_total
-                            .checked_add(bytes.len())
-                            .and_then(|n| n.checked_add(available.len()))
-                            .ok_or(ContractError::Invalid("byte count"))?;
-                        if bytes_total > MAX_BYTES || available.len() != entities {
-                            return Err(ContractError::Invalid("binary or mask size"));
-                        }
-                        let values = available
-                            .iter()
-                            .filter(|v| **v)
-                            .count()
-                            .checked_mul(block.spec.components)
-                            .and_then(|n| n.checked_mul(8))
-                            .ok_or(ContractError::Invalid("array shape"))?;
-                        if bytes.len() != values {
-                            return Err(ContractError::Invalid("compact array length"));
-                        }
-                        if fieldcraft_io::sha256_hex(bytes) != *sha256 {
-                            return Err(ContractError::ChecksumMismatch);
-                        }
-                        for array in bytes.as_chunks::<8>().0 {
-                            if !f64::from_le_bytes(*array).is_finite() {
-                                return Err(ContractError::Invalid("nonfinite field value"));
-                            }
-                        }
-                        missing_required |= required.contains(&block.spec.quantity) && (entities == 0 || available.iter().any(|v| !*v));
-                    }
-                }
             }
-            // All six quantities must be explicitly present or unavailable; omission is never zero.
-            let missing_declaration = FORWARD_FIELDS.iter().any(|q| !seen.contains(q));
-            if first_rejected_frame.is_none() {
-                if missing_required || missing_declaration {
-                    first_rejected_frame = Some(ledger.last_qualified() + 1);
-                    blockers.push("missing field declaration or required data".into());
-                } else if let Err(e) = ledger.accept_frame(frame.facts.clone()) {
-                    first_rejected_frame = Some(ledger.last_qualified() + 1);
-                    blockers.push(e.to_string());
+            self.push_frame(frame, &mut bytes_total)?;
+        }
+        self.chunks += 1;
+        Ok(())
+    }
+
+    fn push_frame(&mut self, frame: &ResultFrame, bytes_total: &mut usize) -> Result<(), ContractError> {
+        if frame.facts.run != self.header.run {
+            return Err(ContractError::StaleRun);
+        }
+        if frame.facts.frame <= self.previous_frame || frame.facts.frame > self.header.goal.last_frame {
+            return Err(ContractError::Invalid("frames must be ordered and unique within the run goal"));
+        }
+        self.previous_frame = frame.facts.frame;
+        if frame.fields.len() > FORWARD_FIELDS.len() + 1 {
+            return Err(ContractError::Invalid("field count"));
+        }
+        let mut seen = BTreeSet::new();
+        let mut missing_required = false;
+        for block in &frame.fields {
+            block.spec.validate()?;
+            if !seen.insert(block.spec.quantity) {
+                return Err(ContractError::Invalid("duplicate field"));
+            }
+            let entities = match block.spec.location {
+                Location::Node => self.header.entities.nodes.len(),
+                Location::Object => self.header.entities.objects.len(),
+                Location::Global => 1,
+            };
+            match &block.data {
+                FieldData::Unavailable { reason } => {
+                    if !token_valid(reason) {
+                        return Err(ContractError::Invalid("unavailable reason"));
+                    }
+                    missing_required |= self.required.contains(&block.spec.quantity);
+                }
+                FieldData::Present { bytes, sha256, available, source } => {
+                    source.validate()?;
+                    if source.kind != self.header.evidence_kind {
+                        return Err(ContractError::Invalid("field evidence kind"));
+                    }
+                    // Include masks in the work budget even when every row is unavailable.
+                    *bytes_total = bytes_total
+                        .checked_add(bytes.len())
+                        .and_then(|n| n.checked_add(available.len()))
+                        .ok_or(ContractError::Invalid("byte count"))?;
+                    if *bytes_total > MAX_BYTES || available.len() != entities {
+                        return Err(ContractError::Invalid("binary or mask size"));
+                    }
+                    let values = available
+                        .iter()
+                        .filter(|v| **v)
+                        .count()
+                        .checked_mul(block.spec.components)
+                        .and_then(|n| n.checked_mul(8))
+                        .ok_or(ContractError::Invalid("array shape"))?;
+                    if bytes.len() != values {
+                        return Err(ContractError::Invalid("compact array length"));
+                    }
+                    if fieldcraft_io::sha256_hex(bytes) != *sha256 {
+                        return Err(ContractError::ChecksumMismatch);
+                    }
+                    for array in bytes.as_chunks::<8>().0 {
+                        if !f64::from_le_bytes(*array).is_finite() {
+                            return Err(ContractError::Invalid("nonfinite field value"));
+                        }
+                    }
+                    missing_required |= self.required.contains(&block.spec.quantity) && (entities == 0 || available.iter().any(|v| !*v));
                 }
             }
         }
-        let last = ledger.last_qualified();
-        let complete = last == envelope.goal.last_frame && first_rejected_frame.is_none();
-        let mut solve = ledger.solve_outcome();
-        if let Some(terminal) = &envelope.terminal {
+        // All six quantities must be explicitly present or unavailable; omission is never zero.
+        let missing_declaration = FORWARD_FIELDS.iter().any(|q| !seen.contains(q));
+        if self.first_rejected_frame.is_none() {
+            if missing_required || missing_declaration {
+                self.first_rejected_frame = Some(self.ledger.last_qualified() + 1);
+                self.blockers.push("missing field declaration or required data".into());
+            } else if let Err(e) = self.ledger.accept_frame(frame.facts.clone()) {
+                self.first_rejected_frame = Some(self.ledger.last_qualified() + 1);
+                self.blockers.push(e.to_string());
+            }
+        }
+        Ok(())
+    }
+
+    pub fn finish(mut self, terminal: Option<&TerminalClaim>) -> Result<Admission, ContractError> {
+        if self.poisoned {
+            return Err(ContractError::Invalid("ExternalChunkRejected: prior structural failure"));
+        }
+        if let Some(t) = terminal {
+            t.source.validate()?;
+            if t.source.kind != self.header.evidence_kind || t.outcome == SolveOutcome::Running {
+                return Err(ContractError::Invalid("terminal source"));
+            }
+        }
+        let last = self.ledger.last_qualified();
+        let complete = last == self.header.goal.last_frame && self.first_rejected_frame.is_none();
+        let mut solve = self.ledger.solve_outcome();
+        if let Some(terminal) = terminal {
             if complete && terminal.outcome == SolveOutcome::Succeeded {
-                ledger.finish(&envelope.run, terminal.source.clone())?;
-                solve = ledger.solve_outcome();
+                self.ledger.finish(&self.header.run, terminal.source.clone())?;
+                solve = self.ledger.solve_outcome();
             } else if !matches!(solve, SolveOutcome::Failed | SolveOutcome::Unknown) {
                 solve = match terminal.outcome {
                     SolveOutcome::Failed => SolveOutcome::Failed,
@@ -437,22 +533,23 @@ impl<I: IdentityVerifier> ExternalReceiver<I> {
                 };
             }
             if !complete && terminal.outcome == SolveOutcome::Succeeded {
-                blockers.push("success claim does not cover the requested trajectory".into());
+                self.blockers.push("success claim does not cover the requested trajectory".into());
             }
         }
-        if !complete && first_rejected_frame.is_none() {
-            first_rejected_frame = Some(last + 1);
-            blockers.push("incomplete trajectory".into());
+        if !complete && self.first_rejected_frame.is_none() {
+            self.first_rejected_frame = Some(last + 1);
+            self.blockers.push("incomplete trajectory".into());
         }
-        if envelope.evidence_kind == EvidenceKind::ProtocolFixture {
-            blockers.push("protocol fixture: not evidence of a real numerical solve".into());
+        if self.header.evidence_kind == EvidenceKind::ProtocolFixture {
+            self.blockers.push("protocol fixture: not evidence of a real numerical solve".into());
             if solve == SolveOutcome::Succeeded {
                 solve = SolveOutcome::Unknown;
             }
         }
         // Runtime qualification remains unverified even when the provider verifies application.
-        let policy = envelope.policy_request_digest.as_ref().map(|_| {
-            blockers.push("RuntimeQualificationUnverified: policy-dependent results require independently verified runtime qualification".into());
+        let policy = self.header.policy_request_digest.as_ref().map(|_| {
+            self.blockers
+                .push("RuntimeQualificationUnverified: policy-dependent results require independently verified runtime qualification".into());
             if solve == SolveOutcome::Succeeded {
                 solve = SolveOutcome::Unknown;
             }
@@ -469,21 +566,16 @@ impl<I: IdentityVerifier> ExternalReceiver<I> {
             } else if complete {
                 Coverage::Complete { last }
             } else {
-                Coverage::QualifiedPrefix { last, requested_last: envelope.goal.last_frame }
+                Coverage::QualifiedPrefix { last, requested_last: self.header.goal.last_frame }
             },
             solve,
-            evidence_kind: envelope.evidence_kind,
+            evidence_kind: self.header.evidence_kind,
             commit: CommitState::NotAttempted,
-            first_rejected_frame,
-            blockers,
-            sealed: envelope.terminal.is_some(),
+            first_rejected_frame: self.first_rejected_frame,
+            blockers: self.blockers,
+            sealed: terminal.is_some(),
             policy,
             control: None,
         })
-    }
-
-    /// No result identifier exists until a future receiver-owned atomic store is integrated.
-    pub fn commit(&self) -> Result<(), ContractError> {
-        Err(ContractError::StorageUnavailable)
     }
 }

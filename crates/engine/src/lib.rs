@@ -211,7 +211,9 @@ impl TryFrom<fieldcraft_io::results::Solved> for StepResult {
             Solved::Explicit(r) => StepResult::Explicit(r),
             Solved::Fluid(r) => StepResult::Fluid(r),
             Solved::Nonlinear(r) => StepResult::Nonlinear(r),
-            Solved::External(_) => return Err(EngineError::Params("external trajectory is not a native StepResult".into())),
+            Solved::External(_) | Solved::ExternalChunked(_) => {
+                return Err(EngineError::Params("external trajectory is not a native StepResult".into()));
+            }
         })
     }
 }
@@ -381,6 +383,7 @@ pub struct Session {
     results: BTreeMap<String, (u64, Arc<StepResult>)>,
     /// Original, identity-bound external trajectories. Each archive keeps its own run/profile.
     external_results: BTreeMap<String, Arc<fieldcraft_io::external_results::ArchivedTrajectory>>,
+    external_chunked_results: BTreeMap<String, Arc<fieldcraft_io::external_results::ArchivedChunkedTrajectory>>,
     /// The definition each solved step was solved from ([`fieldcraft_io::results::definition_hash`]): an edit
     /// that leaves it the same keeps the step's result current. Files keep it with the result.
     result_inputs: BTreeMap<String, [u8; 32]>,
@@ -488,7 +491,10 @@ impl Session {
         let id = spec.id;
         if id.starts_with("results.")
             && !id.starts_with("results.external.")
-            && params.get("step").and_then(Value::as_str).is_some_and(|name| self.external_results.contains_key(name))
+            && params
+                .get("step")
+                .and_then(Value::as_str)
+                .is_some_and(|name| self.external_results.contains_key(name) || self.external_chunked_results.contains_key(name))
         {
             return Err(EngineError::Params("external trajectories support receiving and storage; this native result query is unsupported".into()));
         }
@@ -866,6 +872,19 @@ impl Session {
             stored.push((
                 AsRef::<str>::as_ref(name),
                 fieldcraft_io::results::StoredRef { definition: record.definition()?, result: fieldcraft_io::results::SolvedRef::External(record) },
+            ));
+        }
+        for (name, record) in &self.external_chunked_results {
+            record.validate_binding(&self.model, &self.sources, &self.run)?;
+            if self.results.contains_key(name) || self.external_results.contains_key(name) || self.model.step(name).is_some() {
+                return Err(EngineError::Params("ExternalArchiveNameConflict".into()));
+            }
+            stored.push((
+                name.as_str(),
+                fieldcraft_io::results::StoredRef {
+                    definition: record.definition()?,
+                    result: fieldcraft_io::results::SolvedRef::ExternalChunked(record),
+                },
             ));
         }
         stored.sort_by_key(|(name, _)| *name);

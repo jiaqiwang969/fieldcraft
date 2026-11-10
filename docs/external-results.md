@@ -73,7 +73,7 @@ native contour, fatigue and other native step queries do not interpret external 
 Admission keeps transport verification, trajectory coverage, solve outcome and commit
 status separate. The stored admission records `commit: not_attempted` as originally
 evaluated; the context's publication receipt records `state: committed` after successful
-atomic publication. File saving is a further action. Publication requires complete
+atomic publication. File saving is a further action. Version-1 publication requires complete
 solver-evidence coverage, a successful terminal receipt and all required fields. A first
 failure, Newton/line-search limit, missing convergence observation, stale epoch, cancellation,
 nonzero exit or signal retains the original evidence and valid prefix but prevents publication.
@@ -89,7 +89,7 @@ from missing observations. Finite tangential stiffness does not establish a hard
 
 The following prefixes describe the failing check; they do not upgrade any evidence state.
 Context and admission checks are owned by the engine, while type-13 record integrity and
-binding checks remain owned by IO. The context and archive schemas are unchanged.
+binding checks remain owned by IO. Version-1 context and archive encodings are unchanged; the explicitly versioned chunked path below adds version 2.
 
 | Diagnostic | Meaning |
 | --- | --- |
@@ -124,3 +124,49 @@ only after a real child wait; `shutdown` and `terminate` retain actual exit code
 observer. Scope cleanup reaps the child; explicit cleanup receipts are required for a resource
 release claim. Backend runtime and simulated time are separate values. Protocol fixtures test
 rejection mechanics and must never be reported as a physical solve.
+
+## Chunked native packages (version 2)
+
+Use the same command and form. The independently frozen profile file is
+`{"schema":"fieldcraft-external-receive-request/2","expected":<version-1 request>,"acceptance":"complete_only"}`.
+An explicitly authorized diagnostic retention request can instead select
+`"preserve_qualified_prefix"`. It admits a sealed, nonempty failed/cancelled solver prefix,
+while preserving `solve: failed`/`cancelled`, the first rejected frame and the original goal.
+It refuses unknown diagnostics, empty prefixes, missing originals, invalid identities and
+policy qualification failures. Version 1 retains its complete-success and aggregate limits.
+
+The manifest has schema `fieldcraft-external-package/2`, `header`, ordered `chunks`, sorted
+`sources` and one nullable `terminal`. Header and manifest are each capped at 16 MiB. A header
+uses `fieldcraft-external-header/2` and the version-1 envelope metadata without `frames` or
+`terminal`. Each chunk has `index`, `first_frame`, `last_frame`, `metadata` and `binary` file
+specifications (`locator`, `role`, `bytes`, `sha256`). Chunk metadata has schema
+`fieldcraft-external-chunk/2`, `index` and `frames` with the original facts/specifications;
+Present data carries `offset`, `bytes`, `sha256`, `mask` and `source`. Compact little-endian
+f64 ranges are consecutive with no holes or trailing bytes. Every file and field is checked.
+
+A chunk has at most 256 frames, 1 MiB of metadata and 64 MiB of binary data; the admission
+work budget also caps each chunk's data plus masks at 64 MiB. A logical field plus mask is
+at most 64 MiB and cannot be split to bypass that limit. The run has one ledger across all
+chunks (up to one million frames and 8192 chunks). There are at most 4096 original sources,
+each at most 256 MiB, and an 8 GiB package cap. Large raw originals can be transported as
+byte-preserving source shards with an embedded reassembly manifest; field source references
+name the actual retained shard. All original bytes and the whole-original digest remain
+recoverable. An individual field is never reinterpreted as several smaller fields.
+
+Publication stages a single disk spool through a 64 KiB copy buffer, validates identity,
+source provenance and frame admission, and publishes under the model/run lock. The Session
+owns type-13 `ArchivedChunkedTrajectory` handles. Native `file.open` and large-result saves
+stream the project; no whole trajectory or ZIP byte vector is built. Saving over the same
+path preserves the reader's open source handle and the old file backup. A host without a
+native streaming filesystem refuses this path explicitly.
+
+A partial project's qualified data end at `admission.coverage.last`. A failed frame and its
+raw fields may remain as diagnostic originals: `observed_frames` is not the qualified frame
+count. Stored admission remains `commit: not_attempted`; a successful atomic publication is
+recorded separately as `committed`. Saving, reopening and byte-identical resaving do not turn
+failure into numerical success or upgrade unknown runtime qualification or per-frame controls.
+
+The receiving executable's identity is streamed independently through a 64 KiB SHA256
+buffer without a file-size cap. This exception applies only to the running executable;
+foreign-file, chunk and field limits remain in force. A missing embedded source commit stays
+unknown even when the measured executable digest is available.

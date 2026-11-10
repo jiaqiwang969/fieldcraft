@@ -250,6 +250,23 @@ impl Session {
         };
         Ok(fieldcraft_io::write_with(&self.model, &geometry, &self.journal, &self.journal_header, &self.view, &extras)?)
     }
+    #[cfg(not(target_arch = "wasm32"))]
+    fn write_file_to<W: std::io::Write + std::io::Seek>(&self, writer: W, base: Option<&Path>, keep: Keep) -> Result<W> {
+        let stored = |s: &SourceFile| s.with_path(stored_path(s.path(), base));
+        let geometry = Geometry {
+            design: self.sources.design.as_ref().map(stored).transpose()?,
+            meshes: self.sources.meshes.iter().map(stored).collect::<fieldcraft_io::Result<_>>()?,
+        };
+        let copies = if keep.geometry { self.geometry_copies()? } else { Vec::new() };
+        let extras = fieldcraft_io::Extras {
+            deck_source: self.deck_source.as_deref(),
+            results: if keep.results { self.stored_results()? } else { Vec::new() },
+            embed: copies.iter().map(|(sha, b)| (sha.clone(), b.as_slice())).collect(),
+            // The settings of steps the model still has.
+            run: self.run.iter().filter(|(step, _)| self.model.step(step).is_some()).map(|(k, v)| (k.clone(), *v)).collect(),
+        };
+        Ok(fieldcraft_io::write_with_to(writer, &self.model, &geometry, &self.journal, &self.journal_header, &self.view, &extras)?)
+    }
 
     /// The bytes of every geometry file the model is built on, by content hash, to embed: the
     /// copy the model was opened with, else the file read again (it must still be what was
@@ -365,6 +382,10 @@ impl Session {
                     session.keep_external(record)?;
                     continue;
                 }
+                fieldcraft_io::results::Solved::ExternalChunked(record) => {
+                    session.keep_external_chunked(record)?;
+                    continue;
+                }
                 native => StepResult::try_from(native)?,
             };
             let step = result.step().to_string();
@@ -416,6 +437,9 @@ fn summary(s: &Session, warnings: &[String]) -> Value {
 /// content is an autosave of it). Nothing is written.
 fn load(s: &mut Session, bytes: &[u8], path: Option<String>, saved: bool) -> Result<Value> {
     let (file, format) = fieldcraft_io::read_versioned(bytes)?;
+    load_model_file(s, file, format, path, saved)
+}
+fn load_model_file(s: &mut Session, file: ModelFile, format: u32, path: Option<String>, saved: bool) -> Result<Value> {
     let (mut opened, warnings, names) = Session::from_file(file, path.as_deref().and_then(|p| Path::new(p).parent()), &s.file_access)?;
     // The format of the file at `path`: the one just read, or (an autosave) the one on disk,
     // read only where the session may read. Only an older one is "migrated from"; a save over a
@@ -461,8 +485,17 @@ fn load(s: &mut Session, bytes: &[u8], path: Option<String>, saved: bool) -> Res
 
 fn open(s: &mut Session, p: &Value) -> Result<Value> {
     let path = absolute(&file_param(s, p, "path", Access::Read)?);
-    let bytes = read_file(&path, fieldcraft_io::MAX_FILE_BYTES)?;
-    load(s, &bytes, Some(path.clone()), true).map_err(|e| EngineError::Params(format!("{path}: {e}")))
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let format = fieldcraft_io::fs::format_of_file(Path::new(&path)).unwrap_or(fieldcraft_io::FORMAT_VERSION);
+        let file = fieldcraft_io::read_path_streamed(Path::new(&path))?;
+        load_model_file(s, file, format, Some(path.clone()), true).map_err(|e| EngineError::Params(format!("{path}: {e}")))
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        let bytes = read_file(&path, fieldcraft_io::MAX_FILE_BYTES)?;
+        load(s, &bytes, Some(path.clone()), true).map_err(|e| EngineError::Params(format!("{path}: {e}")))
+    }
 }
 
 /// What a save of `s` keeps, from its parameters: `results` (by default every step's latest
@@ -489,8 +522,8 @@ fn contents(s: &Session, keep: Keep) -> Vec<String> {
         out.push(format!("the original Abaqus input source ({} files)", source.files.len()));
     }
     let steps: Vec<&str> = s.result_steps().map(|(n, _)| n).collect();
-    if keep.results && !s.external_results.is_empty() {
-        out.push(format!("{} external trajectories (kind 13)", s.external_results.len()));
+    if keep.results && (!s.external_results.is_empty() || !s.external_chunked_results.is_empty()) {
+        out.push(format!("{} external trajectories (kind 13)", s.external_results.len() + s.external_chunked_results.len()));
     }
     if keep.results && !steps.is_empty() {
         let count = if steps.len() == 1 { "1 step".to_string() } else { format!("{} steps", steps.len()) };
@@ -514,12 +547,24 @@ fn save_to(s: &mut Session, path: &str, keep: Keep) -> Result<Value> {
     if std::fs::metadata(&target).is_ok_and(|m| !m.is_file()) {
         return Err(EngineError::Params(format!("`{target}` exists and is not a regular file")));
     }
-    let bytes = s.file_bytes_with(Path::new(&target).parent(), keep)?;
-    let kept = fieldcraft_io::fs::save_model(Path::new(&target), &bytes)?;
+    let (bytes, kept) = if keep.results && !s.external_chunked_results.is_empty() {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            crate::external::atomic_file::save_model(Path::new(&target), |file| s.write_file_to(file, Path::new(&target).parent(), keep))?
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            return Err(EngineError::Params("chunked archives require a native streaming filesystem".into()));
+        }
+    } else {
+        let data = s.file_bytes_with(Path::new(&target).parent(), keep)?;
+        let kept = fieldcraft_io::fs::save_model(Path::new(&target), &data)?;
+        (data.len() as u64, kept)
+    };
     let holds = contents(s, keep);
     s.mark_saved(target.clone());
     s.pack_geometry = keep.geometry;
-    let mut reply = json!({"path": target, "bytes": bytes.len(), "contents": holds});
+    let mut reply = json!({"path": target, "bytes": bytes, "contents": holds});
     if let Some(kept) = kept {
         let name = |p: &Path| p.file_name().map_or_else(|| p.display().to_string(), |n| n.to_string_lossy().into_owned());
         reply["backup"] = json!(kept.to_string_lossy());
@@ -1291,7 +1336,8 @@ mod tests {
         let damaged = with_part_edited(&std::fs::read(&path).unwrap(), "results.bin", |b| b.truncate(b.len() - 3));
         std::fs::write(&other, damaged).unwrap();
         let before = v.model.clone();
-        assert!(v.execute("file.open", &json!({"path": other})).unwrap_err().to_string().contains("results.bin"));
+        let error = v.execute("file.open", &json!({"path": other})).unwrap_err().to_string();
+        assert!(error.contains("results.bin"), "{error}");
         assert_eq!(v.model, before);
         let _ = std::fs::remove_dir_all(&d);
     }
