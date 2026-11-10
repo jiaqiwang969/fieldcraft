@@ -847,6 +847,10 @@ impl LegacyStatic {
 
 /// Stream the results part; external metadata is decoded directly and blobs remain out of line.
 pub(crate) fn decode_stream(reader: &mut dyn std::io::Read, size: u64) -> Result<Decoded> {
+    decode_stream_inner(reader, size).map_err(|e| Error::Invalid(format!("{PART}: {e}")))
+}
+
+fn decode_stream_inner(reader: &mut dyn std::io::Read, size: u64) -> Result<Decoded> {
     use std::io::Read;
     fn exact<const N: usize>(r: &mut dyn Read) -> Result<[u8; N]> {
         let mut b = [0; N];
@@ -936,4 +940,41 @@ pub(crate) fn decode_stream(reader: &mut dyn std::io::Read, size: u64) -> Result
         return invalid("results trailing bytes");
     };
     Ok(Decoded::Results(out))
+}
+
+#[cfg(test)]
+mod streaming_diagnostics_tests {
+    use super::*;
+    use std::io::Cursor;
+
+    fn error(bytes: &[u8]) -> String {
+        match decode_stream(&mut Cursor::new(bytes), bytes.len() as u64) {
+            Err(e) => e.to_string(),
+            Ok(_) => panic!("damaged results must be rejected"),
+        }
+    }
+
+    #[test]
+    fn truncated_payload_keeps_part_and_reason() {
+        let mut bytes = MAGIC.to_vec();
+        bytes.extend_from_slice(&1u32.to_le_bytes());
+        bytes.extend_from_slice(&1u64.to_le_bytes());
+        bytes.push(b's');
+        bytes.extend_from_slice(&[0; 32]);
+        bytes.push(0);
+        bytes.extend_from_slice(&3u64.to_le_bytes());
+        let message = error(&bytes);
+        assert!(message.contains(PART), "{message}");
+        assert!(message.contains("results payload length"), "{message}");
+    }
+
+    #[test]
+    fn short_header_and_step_limit_keep_part_context() {
+        assert!(error(b"MCR").contains(PART));
+        let mut bytes = MAGIC.to_vec();
+        bytes.extend_from_slice(&u32::MAX.to_le_bytes());
+        let message = error(&bytes);
+        assert!(message.contains(PART), "{message}");
+        assert!(message.contains("results step limit"), "{message}");
+    }
 }
