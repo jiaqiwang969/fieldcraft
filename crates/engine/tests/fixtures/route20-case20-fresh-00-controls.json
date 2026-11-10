@@ -1,0 +1,17 @@
+{
+  "scheme": "fieldcraft-contact-controls/1",
+  "d_hat_m": 2.5e-05,
+  "kappa_requested_pa": 100000000000.0,
+  "kappa_effective_pa": {
+    "status": "known",
+    "value": 152606501887.99008,
+    "source_sha256": "a167490fc17d788c3b26792f967c5e4efb66fe1d1032ff0b030ce0eac21bec23",
+    "locator": "line:5; contact model 1,2; World initialization"
+  },
+  "kappa_clamped": {
+    "status": "known",
+    "value": true,
+    "source_sha256": "a167490fc17d788c3b26792f967c5e4efb66fe1d1032ff0b030ce0eac21bec23",
+    "locator": "line:5; contact model 1,2; World initialization"
+  }
+}
