@@ -1,0 +1,13 @@
+{
+  "scheme": "fieldcraft-contact-controls/1",
+  "d_hat_m": 0.0001,
+  "kappa_requested_pa": 200000000000.0,
+  "kappa_effective_pa": {
+    "status": "unknown",
+    "reason": "No direct effective-kappa observation in this run; configured resistance is not an observation."
+  },
+  "kappa_clamped": {
+    "status": "unknown",
+    "reason": "No positive clipping receipt; absence of a warning does not prove false."
+  }
+}

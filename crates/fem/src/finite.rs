@@ -569,6 +569,26 @@ impl Solid<'_> {
                 return Err(Error::NotSupported("f_bar requires finite strain without temperature or material history".into()));
             }
             let evaluation = self.fbar_reference(m, u, tangent)?;
+            if matches!(m, MaterialModel::StVenantKirchhoff(_)) {
+                let points = self.kinematics(u, kin, None)?;
+                let volume: f64 = points.iter().map(|p| p.weight).sum();
+                let responses = evaluation.mapped_gradients.iter().map(|f| m.response(f, None, &[], &mut [])).collect::<Result<Vec<_>>>()?;
+                let mean_trace = points.iter().zip(&responses).map(|(p, r)| p.weight * r.stress[..3].iter().sum::<f64>()).sum::<f64>() / volume;
+                let out = points
+                    .into_iter()
+                    .zip(responses)
+                    .map(|(p, mut r)| {
+                        // Stress conjugate to the physical gradient: projected deviatoric
+                        // Kirchhoff stress plus the nonlocal mean volumetric contribution.
+                        let trace = r.stress[..3].iter().sum::<f64>();
+                        for v in r.stress.iter_mut().take(3) {
+                            *v += (p.j / evaluation.mean_j * mean_trace - trace) / 3.0;
+                        }
+                        (p, r)
+                    })
+                    .collect();
+                return Ok((evaluation.response, out));
+            }
             let pressure = m.volumetric(evaluation.mean_j, false).ok_or_else(|| Error::Invalid("f_bar volumetric response".into()))?.0;
             let points = self.kinematics(u, kin, None)?;
             let mut out = Vec::with_capacity(points.len());

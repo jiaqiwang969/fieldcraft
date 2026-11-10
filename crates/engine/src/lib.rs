@@ -18,6 +18,7 @@ pub mod catalogue;
 pub mod cmd;
 mod command_timing;
 pub mod crash;
+pub mod external;
 pub mod flow;
 pub mod logfile;
 pub mod machine;

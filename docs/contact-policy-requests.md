@@ -50,3 +50,13 @@ qualification metadata. The small declaration mesh is not a solved contact bench
 `cmd::model::contact_policy_tests` exercises the existing production command refusal and
 reports actual availability. Numeric qualification requires the solver implementation and
 its independent validation; neither this report nor a saved proposal supplies it.
+
+The native command and solver regression in `engine/tests/contact_perturbation.rs` also
+checks an installed declaration before solving, reloads its independently frozen digest
+against the actual saved model/geometry/run, and requires the policy to remain applied.
+Clearing the policy invalidates results and makes the old request fail snapshot validation
+(`ModelRevisionMismatch`). A newly frozen nonempty proposal against that cleared model
+instead fails `NativeContactPolicyNotApplied`. The solved fixed-main benchmark retains its
+closed-form force/frequency checks and all three deck-writer refusals. This is not a receipt
+for per-frame backend kappa, nor an equivalence between finite tangential stiffness and hard
+stick. Runtime qualification in the capability report remains unverified.

@@ -773,11 +773,11 @@ impl Mesh {
                 if !matches!(elastic, Elastic::Isotropic { .. })
                     || section.orientation.is_some()
                     || material.plastic.is_some()
-                    || !matches!(material.hyperelastic, Some(fieldcraft_model::Hyperelastic::NeoHookean {}))
+                    || !matches!(material.hyperelastic, None | Some(fieldcraft_model::Hyperelastic::NeoHookean {}))
                     || material.thermal.as_ref().is_some_and(|t| t.expansion.is_some())
                 {
                     return Err(Error::NotSupported(format!(
-                        "section `{name}`: f_bar requires isotropic neo-Hookean without orientation, plasticity or expansion"
+                        "section `{name}`: f_bar requires isotropic St Venant–Kirchhoff or neo-Hookean without orientation, plasticity or expansion"
                     )));
                 }
                 if model.steps().iter().any(|s| match &s.procedure {
