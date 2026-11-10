@@ -38,6 +38,7 @@ pub mod checkpoint;
 pub mod codec;
 pub mod fs;
 pub mod gmsh;
+pub mod identity;
 pub mod memory;
 pub mod mesh;
 pub mod migrate;
@@ -455,6 +456,8 @@ pub struct ModelFile {
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Manifest {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    identity: Option<identity::Snapshot>,
     format: String,
     generator: String,
     #[serde(default)]
@@ -611,6 +614,7 @@ pub fn write_with(
         source.embedded = Some(name);
     }
     let manifest = Manifest {
+        identity: Some(identity::snapshot(model, &geometry, &extras.run)?),
         format: FORMAT.into(),
         generator: format!("FieldCraft {}", env!("CARGO_PKG_VERSION")),
         geometry,
@@ -805,6 +809,9 @@ pub fn read_versioned(bytes: &[u8]) -> Result<(ModelFile, u32)> {
     }
     mesh::decode_into(&mut model, &mesh_bin)?;
     drop(mesh_bin);
+    if let Some(binding) = &manifest.identity {
+        binding.validate(&model, &manifest.geometry, &manifest.run)?;
+    }
     let journal_header = JournalHeader { units: journal.units, model_units: journal.model_units };
     let journal = read_journal(journal.commands)?;
     Ok((
