@@ -167,3 +167,34 @@ source-artifact authentication remain outside this layer.
 `crates/engine/tests/external_contract.rs` uses original protocol fixtures and real bounded OS
 child processes. Its fabricated arrays and convergence facts are **not numerical validation**.
 The subprocess tests exercise exit codes, signals and reaping without loading a GPU backend.
+
+## Retained interface fixtures
+
+The `production_identity_lock_commits_and_reopens_a_real_file_store` test can retain a complete
+package by setting `FIELDCRAFT_FIXTURE_EXPORT` to a **new** directory (its parent must exist).
+The package includes the original `.fieldcraft` model/geometry/run, entity map, frozen request,
+input envelope with binary arrays, binding, admission, exact stored result, source-marker bytes
+and the CPU test executable. All three artifact roles identify that same executable by its
+actual bytes. The model archive does not contain the external result; the separate `store/`
+record is the library store's artifact. No project result kind is allocated by this example.
+
+These are **protocol fixtures invoking real identity and persistence APIs**, never libuipc
+solve evidence. The fixture injects `Solver`/`Succeeded` wire claims to exercise the existing
+store gate. `package.json` separately declares `evidence_class=protocol_fixture`,
+`runtime_qualification=unverified`, and `numerical_solve_verified=false`. Do not infer numerical
+convergence from the injected labels, constant arrays, exit zero or successful file reopening.
+A real trajectory with authenticated frame observations must traverse the receiver before any
+numerical-evidence claim can be upgraded.
+
+Run a separate reader process with:
+
+```sh
+cargo run --offline -p fieldcraft-engine --example external_fixture_reopen -- /path/to/package
+```
+
+It hashes the retained files and program, independently reads the original model, recomputes
+its IO identity and the frozen mapping, checks the request and original envelope, calls
+`FileResultStore::reopen`, then recomputes and compares the admission. This is readback, not a
+second commit. On reopen the stored envelope digest must also equal the identifier suffix;
+rehashing a changed payload under the old identifier is rejected. Hashes provide content
+identity, not signatures or protection against replacing the entire trusted package index.

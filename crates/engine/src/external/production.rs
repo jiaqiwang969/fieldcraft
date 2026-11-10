@@ -207,7 +207,8 @@ impl ResultStore for FileResultStore {
             return Err(ContractError::Invalid("stored result identity"));
         }
         let payload = serde_json::to_vec(&stored.envelope).map_err(|e| ContractError::Provider(format!("serialize reopened result: {e}")))?;
-        if fieldcraft_io::sha256_hex(&payload) != stored.payload_sha256 {
+        let digest = fieldcraft_io::sha256_hex(&payload);
+        if digest != stored.payload_sha256 || result_id.strip_prefix("fieldcraft-result/") != Some(digest.as_str()) {
             return Err(ContractError::ChecksumMismatch);
         }
         Ok(stored.envelope)

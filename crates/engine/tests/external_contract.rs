@@ -1034,14 +1034,61 @@ mod identity_transactions {
     }
 
     #[test]
+    fn production_store_reopen_rejects_payload_rehash_under_original_id() {
+        let run = key();
+        let (context, entities) = production_context();
+        let binding = IoSnapshotProvider.freeze(&context, &entities).unwrap();
+        let e = production_envelope(&run, binding, entities.clone());
+        let root = std::env::temp_dir().join(format!("fieldcraft-result-rehash-{}", std::process::id()));
+        let store = Arc::new(FileResultStore::new(&root).unwrap());
+        let host = ReceiverHost::with_store(context, run.clone(), IoSnapshotProvider, store.clone()).unwrap();
+        let id = host.begin(&run, entities, profile(&e)).unwrap().commit(&e).unwrap();
+        let path = root.join(format!("{}.json", id.strip_prefix("fieldcraft-result/").unwrap()));
+        let mut stored: serde_json::Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        let mut changed = e;
+        changed.source_scene.locator = "tampered scene locator".into();
+        stored["envelope"] = serde_json::to_value(&changed).unwrap();
+        stored["payload_sha256"] = serde_json::json!(fieldcraft_io::sha256_hex(&serde_json::to_vec(&changed).unwrap()));
+        std::fs::write(path, serde_json::to_vec(&stored).unwrap()).unwrap();
+        let observed = store.reopen(&id);
+        std::fs::remove_dir_all(root).unwrap();
+        assert_eq!(observed, Err(ContractError::ChecksumMismatch));
+    }
+
+    #[test]
     fn production_identity_lock_commits_and_reopens_a_real_file_store() {
         let run = RunKey { run_id: "production-run".into(), epoch: 1, worker_generation: "production-worker".into() };
-        let (context, entities) = production_context();
+        let (mut context, entities) = production_context();
+        // Explicit opt-in export for independent consumption. Never overwrite an older package.
+        // Solver labels below exercise the store gate; every value is a protocol fixture.
+        let export = std::env::var_os("FIELDCRAFT_FIXTURE_EXPORT").map(std::path::PathBuf::from);
+        if let Some(dir) = &export {
+            std::fs::create_dir(dir).unwrap();
+            std::fs::create_dir(dir.join("programs")).unwrap();
+            let program = std::fs::read(std::env::current_exe().unwrap()).unwrap();
+            std::fs::write(dir.join("programs/interface-fixture"), &program).unwrap();
+            let digest = fieldcraft_io::identity::artifact_digest(&program);
+            context.artifacts = ["producer", "adapter", "receiver"].into_iter().map(|role| (role.into(), digest.clone())).collect();
+            let model_bytes = fieldcraft_io::write_with(
+                &context.model,
+                &context.geometry,
+                &[],
+                &fieldcraft_io::JournalHeader::default(),
+                &fieldcraft_io::View::default(),
+                &fieldcraft_io::Extras { run: context.run.clone(), ..Default::default() },
+            )
+            .unwrap();
+            std::fs::write(dir.join("input.fieldcraft"), model_bytes).unwrap();
+            std::fs::write(dir.join("fixture-source.txt"), b"protocol fixture").unwrap();
+        }
         let provider = IoSnapshotProvider;
         let binding = provider.freeze(&context, &entities).unwrap();
         let e = production_envelope(&run, binding, entities.clone());
         let frozen_profile = profile(&e);
-        let root = std::env::temp_dir().join(format!("fieldcraft-engine-result-store-{}", std::process::id()));
+        let root = export
+            .as_ref()
+            .map(|dir| dir.join("store"))
+            .unwrap_or_else(|| std::env::temp_dir().join(format!("fieldcraft-engine-result-store-{}", std::process::id())));
         let store = Arc::new(FileResultStore::new(&root).unwrap());
         let host = ReceiverHost::with_store(context, run.clone(), provider, store.clone()).unwrap();
         let tx = host.begin(&run, entities.clone(), frozen_profile.clone()).unwrap();
@@ -1052,6 +1099,50 @@ mod identity_transactions {
         assert!(result_id.starts_with("fieldcraft-result/"));
         let reopened = store.reopen(&result_id).unwrap();
         assert_eq!(reopened, e);
+        if let Some(dir) = &export {
+            let values = [
+                ("input-envelope.json", serde_json::to_value(&e).unwrap()),
+                ("entities.json", serde_json::to_value(&entities).unwrap()),
+                ("binding.json", serde_json::to_value(&e.binding).unwrap()),
+                ("admission.json", serde_json::to_value(&preview).unwrap()),
+                (
+                    "request-profile.json",
+                    serde_json::json!({
+                        "run": run, "goal": e.goal, "evidence_kind": e.evidence_kind,
+                        "source_scene": e.source_scene, "required_fields": e.required_fields,
+                        "contact_controls": null, "control_evidence": null, "require_effective": false,
+                        "policy_request": null, "require_policy_applied": false,
+                    }),
+                ),
+            ];
+            for (name, value) in values {
+                std::fs::write(dir.join(name), serde_json::to_vec_pretty(&value).unwrap()).unwrap();
+            }
+            let stored_path = format!("store/{}.json", result_id.strip_prefix("fieldcraft-result/").unwrap());
+            let files: std::collections::BTreeMap<_, _> = [
+                "input.fieldcraft",
+                "fixture-source.txt",
+                "programs/interface-fixture",
+                "input-envelope.json",
+                "entities.json",
+                "binding.json",
+                "admission.json",
+                "request-profile.json",
+                &stored_path,
+            ]
+            .into_iter()
+            .map(|name| (name, fieldcraft_io::sha256_hex(&std::fs::read(dir.join(name)).unwrap())))
+            .collect();
+            let manifest = serde_json::json!({
+                "schema": "fieldcraft-external-fixture-package/1", "result_id": result_id, "files": files,
+                "evidence_class": "protocol_fixture", "runtime_qualification": "unverified",
+                "numerical_solve_verified": false, "libuipc_called": false,
+                "wire_labels": "Solver/Succeeded are injected fixture claims used only to exercise the storage gate",
+                "artifact_roles": "producer, adapter and receiver are the same retained CPU test executable",
+                "source_locator": "fixture/frame is the synthetic factory in external_contract.rs, not a numerical observation",
+            });
+            std::fs::write(dir.join("package.json"), serde_json::to_vec_pretty(&manifest).unwrap()).unwrap();
+        }
         let tx = host.begin(&run, entities.clone(), frozen_profile).unwrap();
         assert_eq!(tx.validate(&reopened).unwrap().coverage, Coverage::Complete { last: 3 });
         drop(tx);
@@ -1074,7 +1165,9 @@ mod identity_transactions {
         let mismatch = tx.commit(&forged);
         println!("production_identity_rejection={}", serde_json::json!({"error": format!("{mismatch:?}")}));
         assert!(matches!(mismatch, Err(ContractError::IdentityMismatch(_))));
-        std::fs::remove_dir_all(root).unwrap();
+        if export.is_none() {
+            std::fs::remove_dir_all(root).unwrap();
+        }
     }
 
     #[test]
