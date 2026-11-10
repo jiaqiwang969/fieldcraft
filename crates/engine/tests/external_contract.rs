@@ -1076,6 +1076,33 @@ mod identity_transactions {
     }
 
     #[test]
+    fn production_store_reopen_rejects_malformed_identifiers_before_reading() {
+        let root = std::env::temp_dir().join(format!("fieldcraft-result-path-{}", std::process::id()));
+        let store = FileResultStore::new(&root).unwrap();
+        for digest in [
+            String::new(),
+            "0".repeat(63),
+            "0".repeat(65),
+            "A".repeat(64),
+            "g".repeat(64),
+            format!("{}\n", "0".repeat(63)),
+            format!("{}\0", "0".repeat(63)),
+            format!("../{}", "0".repeat(61)),
+            format!("sha256:{}", "0".repeat(64)),
+            "é".repeat(32),
+        ] {
+            assert_eq!(store.reopen(&format!("fieldcraft-result/{digest}")), Err(ContractError::Invalid("result identifier digest")));
+        }
+        assert_eq!(store.reopen(&"0".repeat(64)), Err(ContractError::Invalid("result identifier scheme")));
+        // Valid shapes reach storage; missing bytes are not reported as malformed identities.
+        for digest in ["0".repeat(64), "0123456789abcdef".repeat(4)] {
+            assert!(matches!(store.reopen(&format!("fieldcraft-result/{digest}")), Err(ContractError::Provider(_))));
+        }
+        assert_eq!(std::fs::read_dir(&root).unwrap().count(), 0);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn production_store_reopen_rejects_payload_rehash_under_original_id() {
         let run = key();
         let (context, entities) = production_context();
