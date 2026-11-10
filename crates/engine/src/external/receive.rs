@@ -37,7 +37,7 @@ pub struct ModelBinding {
 
 impl ModelBinding {
     pub fn validate_shape(&self) -> Result<(), ContractError> {
-        if self.snapshot.scheme != "fieldcraft-receiver-snapshot/1" {
+        if self.snapshot.scheme != fieldcraft_io::identity::SCHEME {
             return Err(ContractError::Unsupported("receiver identity scheme"));
         }
         if self.backend_version != "0.0.29" {
