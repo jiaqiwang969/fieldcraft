@@ -178,3 +178,48 @@ fields and unknown observations remain in their original payload bytes. A
 self-consistent digest is not authentication of a source; producer artifacts
 must be checked against independent expectations at admission. Old producers
 need not equal the current reader. No result layout other than kind 13 changes.
+
+### External trajectory schema 2 (kind 13)
+
+The kind remains 13 in MCRSLT07. Schema 1 and kinds 0–12 retain their wire
+bytes. Schema 2 is explicit, never selected by input size. The codec payload
+starts with `fieldcraft-external-trajectory/2`, followed by archive key, binding,
+entity map, result ID, manifest SHA256, original manifest/admission/context JSON
+bytes, ordered blob descriptors, and record SHA256. The record digest is SHA256
+of the compact JSON tuple of those fields except the digest itself. Source handles
+and filesystem paths are not serialized in the record digest. The result ID is
+`fieldcraft-result/<sha256 of original manifest bytes>`.
+
+`external_results::ArchivedChunkedTrajectory` owns an `Arc<dyn BlobSource>`;
+its read-only accessors expose metadata, never a complete trajectory buffer.
+Blob descriptors contain consecutive indices, roles, byte counts and SHA256.
+Stored ZIP members are named `external-<sha256>.bin`, sorted by name, with fixed
+ZIP timestamps and permissions. Identical content is deduplicated. Every member
+must be declared and referenced; missing, duplicate, extra, compressed, truncated,
+oversized or changed blob content is rejected. Blob streams check exact length,
+EOF and digest, including when saving again after a source changes.
+
+Use `write_with_to` with a seekable **atomic temporary destination**, flush/sync,
+then rename. Do not truncate a source project in place. `read_path_streamed` owns
+the opened file handle; renaming or replacing its path does not redirect its blob
+reads. It validates the parts and model binding before returning. Results metadata
+is streamed through the codec; blob copying and hashing use 64 KiB buffers and
+one active blob stream per traversal. The legacy byte-vector writer/reader remain
+for small projects; chunked records require the streaming project APIs.
+
+Manifest/context JSON are limited to 16 MiB each, admission JSON to 1 MiB, blob
+sources to 256 MiB each, and the project to 8 GiB. Ordered descriptors are bounded
+to 20,481. Transport field/chunk shape, 64 MiB logical field protection, frames,
+terminal state, qualification, and replay of admission are receiver responsibilities;
+IO preserves unavailable and partial/failed state bytes without asserting success.
+The IO evidence runner is not a formal receiver and cannot authorize publication.
+Frozen older readers reject new ZIP members through their existing diagnostics;
+new readers reject unknown type-13 schemas with `ExternalArchiveSchemaUnsupported`.
+
+To keep the IO working set bounded across multiple external records, schema-2
+encoded metadata totals at most 40 MiB per project (leaving room within the 64 MiB
+IO budget for decoded containers and buffers). Oversized metadata is rejected
+before stream decoding. Entity mappings admit at most 100,000 nodes/elements and
+64 connectivity entries per element; blob descriptor counts are checked before
+sequence allocation. Individual JSON limits still apply. This is a storage
+resource limit, not a change to receiver admission or physical applicability.

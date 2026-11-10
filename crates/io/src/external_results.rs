@@ -130,3 +130,7 @@ impl ArchivedTrajectory {
         self.binding.validate(model, geometry, run, &self.entity_map, self.binding.artifacts.clone(), &self.binding.backend_version)
     }
 }
+
+pub use crate::external_chunked::{
+    ArchivedChunkedTrajectory, ArchivedChunkedTrajectoryParts, BlobDescriptor, BlobSource, CHUNKED_SCHEMA, COPY_BUFFER_BYTES,
+};
