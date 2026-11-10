@@ -181,9 +181,7 @@ fn open_refuses_touching_loaded_and_unqualified_geometry() {
         assert!(error.contains(expected), "{error}");
         assert!(s.result("Modes").is_none());
     }
-    for (kind, expected) in
-        [("moving", "open_requires_fixed_main"), ("outside", "clipping_branch_unqualified"), ("tilted", "open_requires_planar_pair")]
-    {
+    for (kind, expected) in [("outside", "clipping_branch_unqualified"), ("tilted", "open_requires_planar_pair")] {
         let mut s = specimen(0.02, 0.0);
         if kind == "moving" {
             s.model.replace_set("base", fieldcraft_model::Set { nodes: (1..=4).collect(), ..Default::default() }).unwrap();

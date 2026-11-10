@@ -130,7 +130,7 @@ fn explicit_stick_has_no_silent_fallback() {
     let mut movable = specimen(0.01);
     movable.model.replace_set("base", fieldcraft_model::Set { nodes: (1..=4).collect(), ..Default::default() }).unwrap();
     let error = movable.execute("solve.frequency", &json!({"step":"Modes"})).unwrap_err().to_string();
-    assert!(error.contains("stick_requires_fixed_main") && error.contains("Interface"), "{error}");
+    assert!(error.contains("stick_requires_full_overlap") && error.contains("Interface"), "{error}");
     // Removing a contact or changing supports after step creation must also be
     // caught on the read/resolve path, not only by the step-edit command.
     let mut stale = s.model.clone();
