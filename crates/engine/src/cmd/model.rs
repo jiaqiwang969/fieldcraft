@@ -46,6 +46,7 @@ fn info(s: &mut Session, _: &Value) -> Result<Value> {
     let counts: serde_json::Map<String, Value> = s.model.element_counts().into_iter().map(|(k, n)| (k.name().to_string(), json!(n))).collect();
     let definitions: serde_json::Map<String, Value> = s.model.definition_counts().into_iter().map(|(k, n)| (k.to_string(), json!(n))).collect();
     Ok(json!({
+        "external_results": s.external_results_summary(),
         "nodes": s.model.nodes().len(),
         "elements": counts,
         "display_units": s.units().label(),

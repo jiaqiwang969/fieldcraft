@@ -809,6 +809,12 @@ mod identity_transactions {
         }
         let id = host.begin(&run, entities, profile(&e)).unwrap().commit(&e).unwrap();
         assert_eq!(store.reopen(&id).unwrap(), e);
+        let raw = store.read_published(&id).unwrap();
+        assert_eq!(raw.envelope_json, serde_json::to_vec(&e).unwrap());
+        assert_eq!(fieldcraft_io::sha256_hex(&raw.envelope_json), raw.payload_sha256);
+        assert_eq!(raw.result_id, id);
+        let read_admission: Admission = serde_json::from_slice(&raw.admission_json).unwrap();
+        assert_eq!(read_admission.solve, SolveOutcome::Succeeded);
         println!(
             "production_binding_shape_positive={}",
             serde_json::json!({

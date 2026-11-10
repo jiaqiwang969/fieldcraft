@@ -18,7 +18,7 @@ use serde_json::{Value, json};
 use fieldcraft_io::roots::{Access, Roots};
 
 use super::{file_param, opt, req};
-use crate::{CommandKind, CommandSpec, EngineError, Result, Session, next_revision};
+use crate::{CommandKind, CommandSpec, EngineError, Result, Session, StepResult, next_revision};
 
 pub const NEW: CommandSpec = CommandSpec {
     id: "file.new",
@@ -243,7 +243,7 @@ impl Session {
         let copies = if keep.geometry { self.geometry_copies()? } else { Vec::new() };
         let extras = fieldcraft_io::Extras {
             deck_source: self.deck_source.as_deref(),
-            results: if keep.results { self.stored_results() } else { Vec::new() },
+            results: if keep.results { self.stored_results()? } else { Vec::new() },
             embed: copies.iter().map(|(sha, b)| (sha.clone(), b.as_slice())).collect(),
             // The settings of steps the model still has.
             run: self.run.iter().filter(|(step, _)| self.model.step(step).is_some()).map(|(k, v)| (k.clone(), *v)).collect(),
@@ -286,7 +286,7 @@ impl Session {
     /// geometry come back as warnings. The session's own file access is unconfined.
     /// The model's names are brought to the design's ([`super::names::reconcile`]): what was
     /// renamed and what is still stale come back in the report, and as warnings.
-    pub(crate) fn from_file(file: ModelFile, base: Option<&Path>, roots: &Roots) -> (Session, Vec<String>, super::names::Report) {
+    pub(crate) fn from_file(file: ModelFile, base: Option<&Path>, roots: &Roots) -> Result<(Session, Vec<String>, super::names::Report)> {
         // What migrating an older file changed in what it means comes first.
         let mut warnings = file.notes.clone();
         // The geometry is in millimetres: it is cut and stitched by the model expressed in them.
@@ -360,14 +360,22 @@ impl Session {
         // The results come back current when the model is still the one they were solved from.
         warnings.extend(file.results_note);
         for stored in file.results {
-            let step = stored.result.step().to_string();
-            if !session.keep_stored_result(stored.result.into(), stored.definition) {
+            let result = match stored.result {
+                fieldcraft_io::results::Solved::External(record) => {
+                    session.keep_external(record)?;
+                    continue;
+                }
+                native => StepResult::try_from(native)?,
+            };
+            let step = result.step().to_string();
+            if !session.keep_stored_result(result, stored.definition) {
                 warnings.push(format!(
                     "the results of step `{step}` were solved from another definition than the model's: they are kept, shown as stale; solve again to bring them up to date"
                 ));
             }
         }
-        (session, warnings, names)
+        session.saved_results = session.results_stored;
+        Ok((session, warnings, names))
     }
 
     /// Replace this session with `opened`, keeping its undo memory limit, its work caps and its
@@ -396,6 +404,7 @@ fn summary(s: &Session, warnings: &[String]) -> Value {
         "journal": s.journal.len(),
         "design": s.design.as_ref().map(|d| d.name.clone()),
         "surfaces": s.surfaces.len(),
+        "external_results": s.external_results_summary(),
         "results": s.result_steps().map(|(step, current)| json!({"step": step, "stale": !current})).collect::<Vec<_>>(),
         "migrated_from": s.migrated_from,
         "warnings": warnings,
@@ -407,7 +416,7 @@ fn summary(s: &Session, warnings: &[String]) -> Value {
 /// content is an autosave of it). Nothing is written.
 fn load(s: &mut Session, bytes: &[u8], path: Option<String>, saved: bool) -> Result<Value> {
     let (file, format) = fieldcraft_io::read_versioned(bytes)?;
-    let (mut opened, warnings, names) = Session::from_file(file, path.as_deref().and_then(|p| Path::new(p).parent()), &s.file_access);
+    let (mut opened, warnings, names) = Session::from_file(file, path.as_deref().and_then(|p| Path::new(p).parent()), &s.file_access)?;
     // The format of the file at `path`: the one just read, or (an autosave) the one on disk,
     // read only where the session may read. Only an older one is "migrated from"; a save over a
     // later one keeps a copy all the same (fs::save_model decides from the file itself).
@@ -480,6 +489,9 @@ fn contents(s: &Session, keep: Keep) -> Vec<String> {
         out.push(format!("the original Abaqus input source ({} files)", source.files.len()));
     }
     let steps: Vec<&str> = s.result_steps().map(|(n, _)| n).collect();
+    if keep.results && !s.external_results.is_empty() {
+        out.push(format!("{} external trajectories (kind 13)", s.external_results.len()));
+    }
     if keep.results && !steps.is_empty() {
         let count = if steps.len() == 1 { "1 step".to_string() } else { format!("{} steps", steps.len()) };
         out.push(format!("the results of {count} ({})", steps.join(", ")));

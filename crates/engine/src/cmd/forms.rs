@@ -2873,6 +2873,14 @@ pub const SOLVE_PROBE: &[Field] = &[
 
 // ---- Results ----
 
+pub const EXTERNAL_RECEIVE: &[Field] = &[
+    path("path", "Trajectory package", false).req().help("Package manifest and retained source files; no code is executed."),
+    path("profile", "Expected run profile", false).req().help("Independently frozen run, required quantities and producer identities."),
+    text("name", "Result name").req().help("A unique name, separate from native analysis steps."),
+    path("store", "Published result directory", true).req().help("Atomic receiving store; save the model separately to embed the trajectory."),
+];
+pub const EXTERNAL_REMOVE: &[Field] = &[text("name", "Result name").req().help("Remove this session's external result; published files remain.")];
+
 pub const DEFORMED: &[Field] = &[
     SOLVED,
     flag("show", "Show").help("Show the deformed shape.").def("true"),
