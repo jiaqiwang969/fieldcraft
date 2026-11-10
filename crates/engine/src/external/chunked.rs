@@ -20,7 +20,7 @@ pub struct ChunkFile {
     pub bytes: u64,
 }
 impl ChunkFile {
-    fn validate(&self, cap: u64) -> Result<(), ContractError> {
+    pub(super) fn validate(&self, cap: u64) -> Result<(), ContractError> {
         if self.bytes > cap {
             return Err(ContractError::Invalid("ExternalChunkLimit: file bytes"));
         }
@@ -65,7 +65,7 @@ pub enum PackedData {
     Unavailable { reason: String },
 }
 
-fn read_exact_file(spec: &ChunkFile, reader: &mut dyn Read) -> Result<Vec<u8>, ContractError> {
+pub(super) fn read_exact_file(spec: &ChunkFile, reader: &mut dyn Read) -> Result<Vec<u8>, ContractError> {
     let n = usize::try_from(spec.bytes).map_err(|_| ContractError::Invalid("ExternalChunkLimit: platform size"))?;
     let mut data = vec![0; n];
     reader.read_exact(&mut data).map_err(|e| ContractError::Provider(format!("ExternalChunkRead: {e}")))?;

@@ -13,7 +13,7 @@ use std::time::Instant;
 pub const RECEIVE: CommandSpec = CommandSpec {
     id: "results.external.receive",
     label: "Receive External Results",
-    params: r#"{"path":"incoming/package.json","profile":"expected.json","name":"impact","store":"accepted-results"} — verify an external trajectory against the current model and an independently frozen receive profile; publish atomically and install a type 13 result. Does not launch a solver or save the project; use file.save next. Partial/failed/cancelled/unknown runs and missing required evidence are refused."#,
+    params: r#"{"path":"incoming/package.json","profile":"expected.json","name":"impact","store":"accepted-results"} — verify an external trajectory against the current model and an independently frozen receive profile; publish atomically and install a type 13 result. Does not launch a solver or save the project; use file.save next. Version 1 requires complete solver success. Version 2 can explicitly preserve a sealed failed/cancelled qualified prefix while retaining its failure; unknown diagnostics and missing required evidence are refused."#,
     form: Some(super::forms::EXTERNAL_RECEIVE),
     kind: CommandKind::Session,
     requires: &[],
@@ -37,7 +37,7 @@ pub const REMOVE: CommandSpec = CommandSpec {
     requires: &[],
     run: |s, p| {
         let name: String = super::req(p, "name")?;
-        if s.external_results.remove(&name).is_none() {
+        if s.external_results.remove(&name).is_none() && s.external_chunked_results.remove(&name).is_none() {
             return Err(EngineError::Params(format!("no external result `{}`", name.chars().take(80).collect::<String>())));
         }
         s.results_stored = s.results_stored.wrapping_add(1);
@@ -53,7 +53,16 @@ fn receive(s: &mut Session, p: &Value) -> Result<Value> {
     s.check_external_name(&name)?;
     let expected_path = super::file_param(s, p, "profile", Access::Read)?;
     // Freeze independent expectations before parsing any producer candidate.
-    let expected = ExpectedReceive::decode(&fieldcraft_io::fs::read_capped(Path::new(&expected_path), MAX_BYTES)?).map_err(error)?;
+    let expected_bytes = fieldcraft_io::fs::read_capped(Path::new(&expected_path), MAX_BYTES)?;
+    #[derive(serde::Deserialize)]
+    struct Schema {
+        schema: String,
+    }
+    let schema: Schema = serde_json::from_slice(&expected_bytes).map_err(error)?;
+    if schema.schema == crate::external::chunked_archive::REQUEST_SCHEMA {
+        return receive_chunked(s, p, name, &expected_bytes, total);
+    }
+    let expected = ExpectedReceive::decode(&expected_bytes).map_err(error)?;
     let path = super::file_param(s, p, "path", Access::Read)?;
     let path = std::path::absolute(path).map_err(error)?;
     let base = path.parent().ok_or_else(|| error("external package has no directory"))?;
@@ -96,6 +105,51 @@ fn receive(s: &mut Session, p: &Value) -> Result<Value> {
     s.results_stored = s.results_stored.wrapping_add(1);
     Ok(json!({"archive_key":name,"result_id":id,"admission":admission,"publication":publication,"session_installed":true,"project_saved":false,
         "runtime_qualification":"unverified","timings_seconds":{"parse_and_check":parse_seconds,"publish_and_archive":publication_seconds,"total":total.elapsed().as_secs_f64()}}))
+}
+fn receive_chunked(s: &mut Session, p: &Value, name: String, expected_bytes: &[u8], total: Instant) -> Result<Value> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = (s, p, name, expected_bytes, total);
+        Err(error("chunked archives require a native streaming filesystem"))
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        use crate::external::chunked_archive as large;
+        let request = large::Request::decode(expected_bytes).map_err(error)?;
+        let path = super::file_param(s, p, "path", Access::Read)?;
+        let path = std::path::absolute(path).map_err(error)?;
+        let base = path.parent().ok_or_else(|| error("external package has no directory"))?;
+        let base = std::fs::canonicalize(base).map_err(error)?;
+        let manifest = fieldcraft_io::fs::read_capped(&path, large::METADATA_CAP)?;
+        let store = super::file_param(s, p, "store", Access::Write)?;
+        s.checked_path(&store, Access::Read)?;
+        let model = IoModelContext::new(s.model.clone(), s.sources.clone(), s.run.clone(), request.expected.artifacts.clone());
+        let record = large::receive(name.clone(), model, request, manifest, receiver_identity(), Path::new(&store), |spec| {
+            let path = base.join(&spec.locator);
+            let path = s.checked_path(&path.to_string_lossy(), Access::Read).map_err(|e| ContractError::Provider(e.to_string()))?;
+            let path = std::fs::canonicalize(path).map_err(|e| ContractError::Provider(e.to_string()))?;
+            if !path.starts_with(&base) {
+                return Err(ContractError::Invalid("external package source escaped through a link"));
+            }
+            let f = std::fs::File::open(path).map_err(|e| ContractError::Provider(e.to_string()))?;
+            let meta = f.metadata().map_err(|e| ContractError::Provider(e.to_string()))?;
+            if !meta.is_file() || meta.len() != spec.bytes {
+                return Err(ContractError::Invalid("ExternalSourceChanged: file size or kind"));
+            }
+            Ok(Box::new(f))
+        })
+        .map_err(error)?;
+        let id = record.result_id().to_string();
+        let admission: crate::external::receive::Admission = serde_json::from_slice(record.admission_json()).map_err(error)?;
+        let context: large::Context = serde_json::from_slice(record.context_json()).map_err(error)?;
+        // The already checked immutable record is installed once. Reopening separately
+        // performs the same source/admission checks; no solve-success claim is invented.
+        s.external_chunked_results.insert(name.clone(), Arc::new(record));
+        s.results_stored = s.results_stored.wrapping_add(1);
+        Ok(json!({"archive_key":name,"result_id":id,"schema":"fieldcraft-external-trajectory/2","admission":admission,
+            "publication":context.publication,"observed_frames":context.summary.observed_frames,"session_installed":true,
+            "project_saved":false,"runtime_qualification":"unverified","timings_seconds":{"receive_total":total.elapsed().as_secs_f64()}}))
+    }
 }
 fn receiver_identity() -> ReceiverIdentity {
     #[cfg(not(target_arch = "wasm32"))]

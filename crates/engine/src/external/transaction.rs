@@ -309,6 +309,23 @@ impl<P: SnapshotProvider> ReceiveTransaction<'_, P> {
         Ok(self.decorate(stream.finish(terminal)?, policy_applied))
     }
 
+    /// A crate-owned publisher runs while the same identity/run lock is held.
+    pub(crate) fn with_validated_stream<S, T>(
+        self,
+        header: &ResultEnvelope,
+        terminal: Option<&TerminalClaim>,
+        feed: impl FnOnce(&mut StreamingAdmission<'_>) -> Result<S, ContractError>,
+        publish: impl FnOnce(Admission, S) -> Result<T, ContractError>,
+    ) -> Result<T, ContractError> {
+        let state = self.host.lock()?;
+        let applied = self.validate_header_locked(&state, header)?;
+        let verifier = ProviderVerifier { provider: &self.host.provider, current: &state.model };
+        let receiver = ExternalReceiver::new(verifier);
+        let mut stream = receiver.begin_stream(&self.binding, &self.run, header)?;
+        let summary = feed(&mut stream)?;
+        publish(self.decorate(stream.finish(terminal)?, applied), summary)
+    }
+
     pub fn validate(&self, envelope: &ResultEnvelope) -> Result<Admission, ContractError> {
         let state = self.host.lock()?;
         self.validate_locked(&state, envelope)

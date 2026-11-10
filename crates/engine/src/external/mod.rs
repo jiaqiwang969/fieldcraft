@@ -7,7 +7,10 @@
 //! run identifiers.
 
 pub mod archive;
+pub(crate) mod atomic_file;
 pub mod chunked;
+pub mod chunked_archive;
+pub(crate) mod chunked_store;
 pub mod context;
 pub mod control;
 #[cfg(not(target_arch = "wasm32"))]

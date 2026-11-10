@@ -15,7 +15,11 @@ impl Session {
         if name.trim().is_empty() || name.len() > 1024 {
             return Err(EngineError::Params("ExternalArchiveLimit: result name".into()));
         }
-        if self.external_results.contains_key(name) || self.results.contains_key(name) || self.model.step(name).is_some() {
+        if self.external_results.contains_key(name)
+            || self.external_chunked_results.contains_key(name)
+            || self.results.contains_key(name)
+            || self.model.step(name).is_some()
+        {
             return Err(EngineError::Params("ExternalArchiveNameConflict: choose a unique result name".into()));
         }
         Ok(())
@@ -28,6 +32,21 @@ impl Session {
         self.results_stored = self.results_stored.wrapping_add(1);
         Ok(())
     }
+    pub(crate) fn keep_external_chunked(&mut self, record: fieldcraft_io::external_results::ArchivedChunkedTrajectory) -> Result<()> {
+        self.check_external_name(record.archive_key())?;
+        let current = IoModelContext::new(self.model.clone(), self.sources.clone(), self.run.clone(), record.binding().artifacts.clone());
+        super::chunked_archive::reopen(&record, current).map_err(|e| EngineError::Params(e.to_string()))?;
+        self.external_chunked_results.insert(record.archive_key().into(), Arc::new(record));
+        self.results_stored = self.results_stored.wrapping_add(1);
+        Ok(())
+    }
+    /// Raw diagnostic blobs can contain a failed frame. Only the admission's qualified
+    /// prefix is eligible numerical data; persistence never changes that boundary.
+    pub fn external_chunked_result(&self, name: &str) -> Result<&fieldcraft_io::external_results::ArchivedChunkedTrajectory> {
+        let r = self.external_chunked_results.get(name).ok_or_else(|| EngineError::Params("external chunked result not found".into()))?;
+        r.validate_binding(&self.model, &self.sources, &self.run)?;
+        Ok(r)
+    }
     /// Check current model binding before exposing stored external fields to a caller.
     pub fn external_result(&self, name: &str) -> Result<&ArchivedTrajectory> {
         let record = self.external_results.get(name).ok_or_else(|| EngineError::Params("external result not found".into()))?;
@@ -35,7 +54,7 @@ impl Session {
         Ok(record)
     }
     pub fn external_results_summary(&self) -> Value {
-        let rows:Vec<Value>=self.external_results.values().map(|record|{
+        let mut rows:Vec<Value>=self.external_results.values().map(|record|{
             let current=record.validate_binding(&self.model,&self.sources,&self.run);
             let content=||->std::result::Result<Value,String>{
                 let context=ReceiveContextV1::decode(&record.context_json).map_err(|e|e.to_string())?;
@@ -57,6 +76,20 @@ impl Session {
             };
             content().unwrap_or_else(|error|json!({"archive_key":record.archive_key,"error":error,"stale":true}))
         }).collect();
+        for record in self.external_chunked_results.values() {
+            let current = record.validate_binding(&self.model, &self.sources, &self.run);
+            let parsed = serde_json::from_slice::<super::chunked_archive::Context>(record.context_json());
+            let admission = serde_json::from_slice::<super::receive::Admission>(record.admission_json());
+            rows.push(match (parsed, admission) {
+                (Ok(c), Ok(a)) => json!({"kind":13,"schema":"fieldcraft-external-trajectory/2","archive_key":record.archive_key(),
+                    "result_id":record.result_id(),"run":c.request.expected.run,"goal":c.request.expected.profile.goal,
+                    "acceptance":c.request.acceptance,"observed_frames":c.summary.observed_frames,"first_failed_facts":c.summary.first_failed_facts,"qualified_coverage":a.coverage,
+                    "admission":a,"publication":c.publication,"runtime_qualification":c.runtime_qualification,"quantities":c.summary.quantities,
+                    "native_postprocessing":"unsupported","stale":current.is_err(),"binding_error":current.err().map(|e|e.to_string())}),
+                _ => json!({"archive_key":record.archive_key(),"stale":true,"error":"ExternalArchiveContext: metadata"}),
+            });
+        }
+        rows.sort_by(|a, b| a["archive_key"].as_str().cmp(&b["archive_key"].as_str()));
         json!(rows)
     }
 }
