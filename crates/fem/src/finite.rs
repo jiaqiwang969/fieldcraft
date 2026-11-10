@@ -88,6 +88,9 @@
 //! tangent's negative pivots.)
 //! Plane stress stays refused, with or without the modes.
 
+mod fbar;
+pub use fbar::FbarEvaluation;
+
 use crate::constitutive::{MaterialModel, Response, add_pressure, logarithmic_strain};
 use crate::dense::{Cholesky, Matrix, inverse3};
 use crate::element::{Formulation, PointStress, Solid, accumulate_symmetric, b_block};
