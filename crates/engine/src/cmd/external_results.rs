@@ -38,7 +38,7 @@ pub const REMOVE: CommandSpec = CommandSpec {
     run: |s, p| {
         let name: String = super::req(p, "name")?;
         if s.external_results.remove(&name).is_none() {
-            return Err(EngineError::Params("external result name not found".into()));
+            return Err(EngineError::Params(format!("no external result `{}`", name.chars().take(80).collect::<String>())));
         }
         s.results_stored = s.results_stored.wrapping_add(1);
         Ok(json!({"removed":name,"published_files_deleted":false,"project_saved":false}))

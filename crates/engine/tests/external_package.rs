@@ -1,6 +1,6 @@
 mod external_support;
 use external_support::Fixture;
-use fieldcraft_engine::external::{Observed, context::*, production::*, receive::*};
+use fieldcraft_engine::external::{ContractError, Observed, context::*, production::*, receive::*};
 use std::sync::Arc;
 #[test]
 fn original_bytes_context_and_policy_reopen_without_republication() {
@@ -51,4 +51,26 @@ fn wrong_expected_identity_missing_source_and_failed_frame_never_publish() {
         assert!(f.prepare().and_then(|p| p.publish(store)).is_err(), "{case}");
         assert_eq!(std::fs::read_dir(f.root.join("store")).unwrap().count(), 0);
     }
+}
+
+#[test]
+fn payload_corruption_and_replaced_publication_have_distinct_diagnostics() {
+    let f = Fixture::new("publication-diagnostics");
+    let store = Arc::new(FileResultStore::new(f.root.join("store")).unwrap());
+    let published = f.prepare().unwrap().publish(store.clone()).unwrap();
+    let original = store.read_published(&published.raw.result_id).unwrap();
+    let mut raw = store.read_published(&published.raw.result_id).unwrap();
+    raw.envelope_json.push(b' ');
+    assert_eq!(published.context.revalidate(f.model.clone(), &raw).unwrap_err(), ContractError::ArchivePayloadMismatch);
+    raw.payload_sha256 = fieldcraft_io::sha256_hex(&raw.envelope_json);
+    raw.result_id = format!("fieldcraft-result/{}", raw.payload_sha256);
+    assert_eq!(published.context.revalidate(f.model.clone(), &raw).unwrap_err(), ContractError::ArchivePublicationMismatch);
+    // A changed identifier alone also contradicts the frozen publication.
+    let mut raw = store.read_published(&published.raw.result_id).unwrap();
+    raw.result_id = format!("fieldcraft-result/{}", fieldcraft_io::sha256_hex(b"another publication"));
+    assert_eq!(published.context.revalidate(f.model.clone(), &raw).unwrap_err(), ContractError::ArchivePublicationMismatch);
+    let (envelope, admission) = published.context.revalidate(f.model.clone(), &original).unwrap();
+    assert_eq!(envelope, f.envelope);
+    assert_eq!(admission, published.admission);
+    assert_eq!(std::fs::read_dir(f.root.join("store")).unwrap().count(), 1);
 }

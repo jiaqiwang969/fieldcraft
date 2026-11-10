@@ -172,11 +172,11 @@ impl ReceiveContextV1 {
     /// No publication, launch or observation of the current machine occurs here.
     pub fn revalidate(&self, model: IoModelContext, raw: &PublishedResultBytes) -> Result<(ResultEnvelope, Admission), ContractError> {
         self.validate()?;
-        if self.publication.result_id != raw.result_id
-            || self.publication.payload_sha256 != raw.payload_sha256
-            || fieldcraft_io::sha256_hex(&raw.envelope_json) != raw.payload_sha256
-        {
-            return Err(ContractError::ChecksumMismatch);
+        if fieldcraft_io::sha256_hex(&raw.envelope_json) != raw.payload_sha256 {
+            return Err(ContractError::ArchivePayloadMismatch);
+        }
+        if self.publication.result_id != raw.result_id || self.publication.payload_sha256 != raw.payload_sha256 {
+            return Err(ContractError::ArchivePublicationMismatch);
         }
         let envelope: ResultEnvelope = serde_json::from_slice(&raw.envelope_json).map_err(|e| ContractError::Provider(e.to_string()))?;
         let prior: Admission = serde_json::from_slice(&raw.admission_json).map_err(|e| ContractError::Provider(e.to_string()))?;

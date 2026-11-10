@@ -3271,6 +3271,7 @@ mod tests {
         "no relaxation field",
         "no saved view",
         "no render",
+        "no external result",
         "is not a composite shell",
         "lock source must precede the target",
         "no pretension section result",
