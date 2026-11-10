@@ -345,5 +345,6 @@ MITC6-a curved modal perturbations: reference-geometry linear preload and conser
 
 Element-level full Hex8/neo-Hookean mean-J F-bar energy, force and analytic tangent
 are available through `Solid::fbar_reference`; see
-[scope and verification](docs/manual/structural/fbar-kernel.md). Model/command
-selection and global nonlinear/prestress integration remain pending.
+[scope and verification](docs/manual/structural/fbar-kernel.md). The `f_bar` section switch reaches finite-strain nonlinear static Newton assembly
+and effective stress recovery. Prestress/base-state integration and benchmark
+convergence remain pending.

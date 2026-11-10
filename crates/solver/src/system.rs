@@ -769,6 +769,21 @@ impl Mesh {
                     return Err(Error::NotSupported(format!("section `{name}`: enhanced_strain13 supports linear static analysis only")));
                 }
             }
+            if section.formulation.f_bar {
+                if !matches!(elastic, Elastic::Isotropic { .. })
+                    || section.orientation.is_some()
+                    || material.plastic.is_some()
+                    || !matches!(material.hyperelastic, Some(fieldcraft_model::Hyperelastic::NeoHookean {}))
+                    || material.thermal.as_ref().is_some_and(|t| t.expansion.is_some())
+                {
+                    return Err(Error::NotSupported(format!(
+                        "section `{name}`: f_bar requires isotropic neo-Hookean without orientation, plasticity or expansion"
+                    )));
+                }
+                if model.steps().iter().any(|s| !matches!(&s.procedure, fieldcraft_model::Procedure::NonlinearStatic(n) if n.nonlinear_geometry)) {
+                    return Err(Error::NotSupported(format!("section `{name}`: f_bar currently supports finite-strain nonlinear static only")));
+                }
+            }
             if section.formulation.b_bar {
                 if !matches!(elastic, Elastic::Isotropic { .. }) || section.orientation.is_some() {
                     return Err(Error::NotSupported(format!("section `{name}`: B-bar requires isotropic elasticity without material orientation")));

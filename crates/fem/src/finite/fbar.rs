@@ -25,7 +25,7 @@ impl Solid<'_> {
     /// Only full Hex8 and finite positive neo-Hookean shear/bulk moduli are supported.
     /// This explicit kernel API does not change the meaning of the linear B-bar option.
     pub fn fbar_reference(&self, m: &MaterialModel, u: &[[f64; 3]], tangent: bool) -> Result<FbarEvaluation> {
-        if self.ty.kind != ElementKind::Hex8 || self.formulation != Formulation::Full {
+        if self.ty.kind != ElementKind::Hex8 || !matches!(self.formulation, Formulation::Full | Formulation::FBar) {
             return Err(Error::NotSupported("reference-J F-bar requires full Hex8".into()));
         }
         let MaterialModel::NeoHookean { shear, bulk } = m else {

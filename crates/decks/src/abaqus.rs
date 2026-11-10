@@ -310,6 +310,9 @@ pub fn element_type(kind: ElementKind, section: &Section) -> std::result::Result
         }
         return Ok("C3D8I".into());
     }
+    if f.f_bar {
+        return Err("f_bar reference-volume projection has no faithful Abaqus element mapping".into());
+    }
     if f.b_bar && (kind != K::Hex8 || !matches!(section.kind, S::Solid {}) || f.hybrid || f.incompatible_modes || reduced) {
         return Err("B-bar requires full, non-hybrid, non-incompatible solid Hex8".into());
     }

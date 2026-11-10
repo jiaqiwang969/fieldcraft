@@ -300,6 +300,9 @@ pub struct Formulation {
     /// Volume-averaged dilatation for linear isotropic Hex8; default remains standard.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub b_bar: bool,
+    /// Reference-volume mean-J F-bar, finite-strain neo-Hookean Hex8 only.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub f_bar: bool,
     /// Thirteen-parameter enhanced strain Hex8, linear static only.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub enhanced_strain13: bool,
@@ -320,6 +323,18 @@ impl Formulation {
     /// Check the options against each other and against the section kind (the element kinds are
     /// checked when the model is resolved).
     pub fn validate_for(&self, kind: &SectionKind) -> Result<()> {
+        if self.f_bar
+            && (!matches!(kind, SectionKind::Solid {})
+                || self.b_bar
+                || self.solid_shell
+                || self.axisymmetric_shell
+                || self.enhanced_strain13
+                || self.hybrid
+                || self.incompatible_modes
+                || self.integration != Integration::Full)
+        {
+            return Err(Error::Invalid("f_bar requires full solid without other formulation options".into()));
+        }
         if self.axisymmetric_shell
             && (!matches!(kind, SectionKind::Shell { .. } | SectionKind::CompositeShell { .. })
                 || self.solid_shell
@@ -481,6 +496,7 @@ mod tests {
         let choices = [
             Formulation { solid_shell: true, ..Default::default() },
             Formulation { b_bar: true, ..Default::default() },
+            Formulation { f_bar: true, ..Default::default() },
             Formulation { enhanced_strain13: true, ..Default::default() },
             Formulation { axisymmetric_shell: true, ..Default::default() },
         ];
@@ -492,6 +508,7 @@ mod tests {
                 let combined = Formulation {
                     solid_shell: a.solid_shell || b.solid_shell,
                     b_bar: a.b_bar || b.b_bar,
+                    f_bar: a.f_bar || b.f_bar,
                     enhanced_strain13: a.enhanced_strain13 || b.enhanced_strain13,
                     axisymmetric_shell: a.axisymmetric_shell || b.axisymmetric_shell,
                     ..Default::default()
@@ -501,10 +518,10 @@ mod tests {
             }
         }
         for lumped_mass in [LumpedMass::Hrz, LumpedMass::RowSum, LumpedMass::Consistent] {
-            for f in &choices[..3] {
+            for f in choices.iter().filter(|f| !f.axisymmetric_shell) {
                 Formulation { lumped_mass, ..*f }.validate_for(&solid).unwrap();
             }
-            let ring = Formulation { lumped_mass, ..choices[3] };
+            let ring = Formulation { lumped_mass, axisymmetric_shell: true, ..Default::default() };
             assert_eq!(ring.validate_for(&shell).is_ok(), lumped_mass == LumpedMass::Hrz);
         }
     }
