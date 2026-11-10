@@ -1376,7 +1376,7 @@ mod identity_transactions {
         std::fs::write(root.join("programs/interface-fixture"), &program).unwrap();
         let digest = fieldcraft_io::identity::artifact_digest(&program);
         let (mut context, entities) = production_context();
-        context.artifacts = ["producer", "adapter", "receiver"].into_iter().map(|role| (role.into(), digest.clone())).collect();
+        context.artifacts = fieldcraft_io::identity::REQUIRED_ARTIFACT_ROLES.into_iter().map(|role| (role.into(), digest.clone())).collect();
         let native = fieldcraft_io::write_with(
             &context.model,
             &context.geometry,
@@ -1420,7 +1420,7 @@ mod identity_transactions {
             document.model,
             document.geometry,
             document.run,
-            ["producer", "adapter", "receiver"].into_iter().map(|role| (role.into(), disk_digest.clone())).collect(),
+            fieldcraft_io::identity::REQUIRED_ARTIFACT_ROLES.into_iter().map(|role| (role.into(), disk_digest.clone())).collect(),
         );
         assert_eq!(IoSnapshotProvider.freeze(&disk_context, &entities).unwrap(), input.binding);
         let disk_store = Arc::new(FileResultStore::new(root.join("store")).unwrap());
@@ -1444,7 +1444,7 @@ mod identity_transactions {
                 "malformed_mesh_identity" => wrong.binding.snapshot.reference_mesh_digest = fieldcraft_io::sha256_hex(b"wrong mesh"),
                 "mesh" => {
                     wrong.binding.snapshot.reference_mesh_digest = fieldcraft_io::sha256_hex(b"wrong mesh");
-                    wrong.binding.snapshot.model_id = format!("sha256:{}", wrong.binding.snapshot.reference_mesh_digest);
+                    wrong.binding.snapshot.model_id = fieldcraft_io::identity::model_id(&wrong.binding.snapshot.reference_mesh_digest);
                 }
                 "program" => {
                     wrong.binding.artifacts.insert("receiver".into(), fieldcraft_io::sha256_hex(b"wrong executable"));
@@ -1547,6 +1547,115 @@ mod identity_transactions {
             json!({"result_id":id,"reopened_equal":true,"refusals":refusals,
             "binding":input.binding,"evidence_class":"protocol_fixture","libuipc_called":false})
         );
+        if export.is_none() {
+            std::fs::remove_dir_all(root).unwrap();
+        }
+    }
+    fn open_policy_profile(context: &IoModelContext, e: &ResultEnvelope, value: serde_json::Value) -> ReceiveProfile {
+        let request = fieldcraft_io::contact_policy::PolicyRequest::freeze(&context.model, &context.geometry, &context.run, "Modes", &value).unwrap();
+        let bytes = serde_json::to_vec_pretty(&request).unwrap();
+        let mut p = profile(e);
+        p.policy_request =
+            Some(PolicyRequestPayload { wire_sha256: fieldcraft_io::sha256_hex(&bytes), bytes, request_digest: request.digest().unwrap() });
+        p.require_policy_applied = true;
+        p
+    }
+
+    #[test]
+    // A solved native specimen proves the policy can be applied. The received frames
+    // remain a separate protocol fixture: they carry no trusted runtime qualification
+    // bound to that base state. Declaration/application must not promote them to a
+    // publishable solver result. A qualified successful round trip needs that contract.
+    fn applied_open_policy_without_runtime_qualification_is_refused_at_commit() {
+        use serde_json::{Value, json};
+        let export = std::env::var_os("FIELDCRAFT_CROSS_OPEN_EVIDENCE").map(std::path::PathBuf::from);
+        let root = export.clone().unwrap_or_else(|| std::env::temp_dir().join(format!("external-open-{}", std::process::id())));
+        std::fs::create_dir(&root).unwrap();
+        std::fs::create_dir(root.join("programs")).unwrap();
+        let program = std::fs::read(std::env::current_exe().unwrap()).unwrap();
+        std::fs::write(root.join("programs/interface-fixture"), &program).unwrap();
+        let digest = fieldcraft_io::identity::artifact_digest(&program);
+        let mut script: Value = serde_json::from_str(include_str!("fixtures/contact-tangent-free.json")).unwrap();
+        for c in script.as_array_mut().unwrap() {
+            if c["command"] == "mesh.node.add" && c["params"]["label"].as_u64().unwrap() >= 9 {
+                c["params"]["xyz"][2] = json!(c["params"]["xyz"][2].as_f64().unwrap() + 0.02);
+            }
+            if c["command"] == "model.boundary_condition.create" && c["params"]["name"] == "top" {
+                c["params"]["values"][2] = json!(0.0);
+            }
+            if c["command"] == "model.step.create" && c["params"]["name"] == "Modes" {
+                c["params"]["contact_perturbation"]["Interface"] = json!("open");
+            }
+        }
+        std::fs::write(root.join("native-input.json"), serde_json::to_vec_pretty(&script).unwrap()).unwrap();
+        let mut s = fieldcraft_engine::Session::default();
+        s.run_script(&script).unwrap();
+        s.execute("solve.nonlinear", &json!({"step":"Preload","threads":1})).unwrap();
+        let modes = s.execute("solve.frequency", &json!({"step":"Modes","threads":1})).unwrap();
+        std::fs::write(root.join("native-mode-reply.json"), serde_json::to_vec_pretty(&modes).unwrap()).unwrap();
+        let info = s.execute("model.info", &json!({})).unwrap();
+        assert_eq!(info["contact_policy_capabilities"]["steps"]["Modes"]["selection"], "explicit_open");
+        assert_eq!(info["contact_policy_capabilities"]["steps"]["Modes"]["runtime_qualification"], "unverified");
+        let entities = entities_for_model(&s.model);
+        let mut artifacts: std::collections::BTreeMap<String, String> =
+            fieldcraft_io::identity::REQUIRED_ARTIFACT_ROLES.into_iter().map(|role| (role.into(), digest.clone())).collect();
+        artifacts.insert("observer".into(), digest);
+        let context = IoModelContext::new(s.model, fieldcraft_io::Geometry::default(), fieldcraft_io::Run::default(), artifacts);
+        let native = fieldcraft_io::write_with(
+            &context.model,
+            &context.geometry,
+            &[],
+            &fieldcraft_io::JournalHeader::default(),
+            &fieldcraft_io::View::default(),
+            &fieldcraft_io::Extras { run: context.run.clone(), ..Default::default() },
+        )
+        .unwrap();
+        std::fs::write(root.join("input.fieldcraft"), native).unwrap();
+        let run = RunKey { run_id: "native-open-policy-cross".into(), epoch: 1, worker_generation: "cpu-protocol-fixture".into() };
+        let binding = IoSnapshotProvider.freeze(&context, &entities).unwrap();
+        assert_eq!(binding.artifacts.len(), 4, "required roles are a minimum; a legitimate extra role is retained");
+        let mut e = production_envelope(&run, binding, entities.clone());
+        let p = open_policy_profile(&context, &e, json!({"Interface":"open"}));
+        e.policy_request_digest = Some(p.policy_request.as_ref().unwrap().request_digest.clone());
+        std::fs::write(root.join("policy-request.json"), &p.policy_request.as_ref().unwrap().bytes).unwrap();
+        std::fs::write(root.join("input-envelope.json"), serde_json::to_vec_pretty(&e).unwrap()).unwrap();
+        let e: ResultEnvelope = serde_json::from_slice(&std::fs::read(root.join("input-envelope.json")).unwrap()).unwrap();
+        let store = Arc::new(FileResultStore::new(root.join("store")).unwrap());
+        let host = ReceiverHost::with_store(context.clone(), run.clone(), IoSnapshotProvider, store.clone()).unwrap();
+        let tx = host.begin(&run, entities.clone(), p.clone()).unwrap();
+        let admission = tx.validate(&e).unwrap();
+        assert_eq!(admission.transfer, TransferState::Verified);
+        assert_eq!(admission.coverage, Coverage::Complete { last: 3 });
+        assert_eq!(admission.commit, CommitState::NotAttempted);
+        assert_eq!(admission.solve, SolveOutcome::Unknown);
+        let policy = admission.policy.as_ref().unwrap();
+        assert_eq!(policy.declaration, EvidenceCheck::Verified);
+        assert_eq!(policy.application, EvidenceCheck::Verified);
+        assert_eq!(policy.runtime_qualification, EvidenceCheck::Unverified);
+        // The legacy blocker text conflates application and qualification. The typed
+        // admission above identifies the missing qualification, not an unapplied policy.
+        let error = tx.commit(&e).unwrap_err();
+        assert_eq!(error, ContractError::Invalid("result store requires a complete solver success"));
+        let stored_files = std::fs::read_dir(root.join("store")).unwrap().count();
+        assert_eq!(stored_files, 0, "unqualified policy must not create a published result");
+        // Failed commit releases its lease; begin/validate still confirm the same
+        // applied declaration. This is not a successful commit or result readback.
+        let retry = host.begin(&run, entities, p).unwrap();
+        assert_eq!(retry.validate(&e).unwrap(), admission);
+        drop(retry);
+        assert_eq!(std::fs::read_dir(root.join("store")).unwrap().count(), 0);
+        let receipt = json!({
+            "case":"applied_open_policy_without_runtime_qualification",
+            "admission":admission,"commit_error":error.to_string(),"commit_debug":format!("{error:?}"),
+            "refusal_reason":"runtime qualification unverified after declaration and application verified",
+            "stored_files":stored_files,"lease_released":true,"native_model_info":info,
+            "external_evidence_class":"protocol_fixture","external_numerical_solve_verified":false,
+            "successful_policy_commit_verified":false,"successful_policy_reopen_verified":false,
+            "extra_role_accepted":true
+        });
+        std::fs::write(root.join("qualification-refusal.json"), serde_json::to_vec_pretty(&receipt).unwrap()).unwrap();
+        std::fs::write(root.join("admission.json"), serde_json::to_vec_pretty(&admission).unwrap()).unwrap();
+        println!("OPEN_QUALIFICATION_REFUSAL {receipt}");
         if export.is_none() {
             std::fs::remove_dir_all(root).unwrap();
         }
