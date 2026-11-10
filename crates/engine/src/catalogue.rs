@@ -816,6 +816,14 @@ pub static CATALOGUE: &[Capability] = &[
         "Write a solved step as VTK unstructured grids for ParaView",
         &["results.export.animation", "results.render.save", "results.render.delete"],
     ),
+    ready_more(
+        "results.external.receive",
+        "Receive External Results",
+        Results,
+        "Files",
+        "Receive identity-bound trajectories and retain availability and run evidence",
+        &["results.external.list", "results.external.remove"],
+    ),
     soon("results.read", "Read Results", Results, "Files", "M9", "Read results in public formats"),
     soon("results.convergence", "Convergence", Results, "Files", "M9", "Mesh convergence studies"),
     // ---- Tools ----
