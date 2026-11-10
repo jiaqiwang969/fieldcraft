@@ -156,3 +156,25 @@ unsupported-magic result-drop policy is unchanged.
 ## Kind 12
 
 Kind 12 is a frequency result produced by `solve.frequency` in the unified 07 layout. Its payload is the FrequencyResult schema with `mass_kind` (`consistent` or `lumped`) and `section_mass_policy` explicitly recorded. Kind 1 remains the frozen legacy frequency payload; missing metadata is exposed as mass identity `unrecorded`, never inferred from the model or step. Kind 12 does not alter kinds 0–11, and it carries no fatigue fields.
+
+## External backend trajectories (kind 13)
+
+Version 07 stores `external_results::ArchivedTrajectory` under kind 13 without a
+native solver step. The outer name is `archive_key`; the outer definition bytes
+are the bound model revision, not `definition_hash` of a fabricated step.
+The payload uses `fieldcraft-external-trajectory/1`. Its record checksum is SHA256
+of the codec tuple `(schema, archive_key, binding, entity_map, result_id,
+payload_sha256, envelope_json, admission_json, context_json)` in this exact order.
+The checksum is excluded from itself. Three JSON byte arrays are preserved,
+not reserialized; each is capped at 256 MiB, within the existing results cap.
+The envelope checksum and original result ID must agree. Names are nonempty,
+at most 1024 UTF-8 bytes, and cannot collide with native step names.
+
+IO validates structure, integrity and the existing snapshot/entity binding on
+both project write and read. Receiver-owned frame, context and admission
+semantics are revalidated by the engine before installing a reopened project.
+Opaque JSON accepted by IO alone is not a qualified solver result. Unavailable
+fields and unknown observations remain in their original payload bytes. A
+self-consistent digest is not authentication of a source; producer artifacts
+must be checked against independent expectations at admission. Old producers
+need not equal the current reader. No result layout other than kind 13 changes.
