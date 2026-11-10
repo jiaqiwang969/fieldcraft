@@ -340,3 +340,14 @@ Direct and modal transient base_state perturbations reuse the converged equilibr
 Pure rod2 nonlinear static equilibria now share the geometric transient St Venant–Kirchhoff force and tangent. Frequency and direct/modal transient base_state use the actual converged state, preserving stress stiffening; reference linear-preload K+K_sigma remains a separately documented approximation. Zero-load and tensile equilibrium/derivative/time-history/native round-trip tests cover both mass policies. Contact/solid and kind12 layouts are unchanged.
 
 MITC6-a curved modal perturbations: reference-geometry linear preload and conservative pressure stiffness verified on the fine cylindrical-ring mesh. Bounded inverse residual correction resolves the original-pencil modal residual defect; coarse preload failures and curved prestressed harmonic/nonlinear refusals remain.
+
+### Reference-volume F-bar kernel
+
+Element-level full Hex8/neo-Hookean mean-J F-bar energy, force and analytic tangent
+are available through `Solid::fbar_reference`; see
+[scope and verification](docs/manual/structural/fbar-kernel.md). The `f_bar` section switch reaches finite-strain nonlinear static Newton assembly
+and effective stress recovery. Large benchmark convergence remains pending.
+
+F-bar finite-strain pretension and locked-base frequency/harmonic/direct-modal transient
+assembly use the converged consistent tangent. Two-cube axial theory and native archive
+checks cover explicit paired cuts; continuous-face transient preparation remains unsupported.
