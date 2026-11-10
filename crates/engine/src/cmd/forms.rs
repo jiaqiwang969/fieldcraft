@@ -1327,7 +1327,7 @@ pub const STEP_CREATE: &[Field] = &[
     STEP_LOADS,
     reference("base_state", "Equilibrium base", C::Step)
         .help("Earlier static/nonlinear static equilibrium for frequency, harmonic or direct/modal transient increments."),
-    json("contact_perturbation", "Contact perturbation policies").help("Map every contact to stick, closed_tangent_free or open: planar linear solid pair, fixed main, frequency/NLGEOM and unchanged supports. stick requires a strict friction-cone interior; closed_tangent_free requires zero shear and strict interior overlap; open requires strict separation with zero contact force and history. Empty keeps the reported legacy policy."),
+    json("contact_perturbation", "Contact perturbation policies").help("Map every contact to stick, closed_tangent_free or open: frequency/NLGEOM and unchanged supports. stick permits planar linear/quadratic solid faces and a fixed or moving main, with strict friction-cone interior and frozen relative mortar rows. closed_tangent_free requires linear faces, a fixed main, zero shear and strict interior overlap. open permits planar linear or straight-midpoint quadratic faces and a fixed or moving main, with strict separation and zero contact force/history. Empty keeps the reported legacy policy."),
     flag("linear_base", "Linear base stiffness")
         .help("Keep a linear static base dependency without initial-stress stiffness; no pretension.")
         .def("false"),
