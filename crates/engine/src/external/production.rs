@@ -31,7 +31,7 @@ impl IoModelContext {
         run: fieldcraft_io::Run,
         artifacts: BTreeMap<String, String>,
     ) -> Self {
-        Self { model, geometry, run, artifacts, backend_version: "0.0.29".into() }
+        Self { model, geometry, run, artifacts, backend_version: fieldcraft_io::identity::BACKEND_VERSION.into() }
     }
 }
 

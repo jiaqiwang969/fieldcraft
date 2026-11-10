@@ -61,7 +61,7 @@ fn reopen(root: &Path) -> Result<Value> {
     let expected: Admission = decode(root, "admission.json")?;
     require(original.entities == entities && original.binding == binding, "original input binding or map changed")?;
     let program_digest = fieldcraft_io::identity::artifact_digest(&read(&root.join("programs/interface-fixture"))?);
-    let artifacts = ["producer", "adapter", "receiver"].into_iter().map(|role| (role.into(), program_digest.clone())).collect();
+    let artifacts = fieldcraft_io::identity::REQUIRED_ARTIFACT_ROLES.into_iter().map(|role| (role.into(), program_digest.clone())).collect();
     let model = fieldcraft_io::read(&read(&root.join("input.fieldcraft"))?)?;
     let context = IoModelContext::new(model.model, model.geometry, model.run, artifacts);
     let recomputed = IoSnapshotProvider.freeze(&context, &entities)?;
