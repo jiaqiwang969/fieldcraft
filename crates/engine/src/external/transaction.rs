@@ -6,11 +6,13 @@
 
 use std::sync::{Arc, Mutex, MutexGuard};
 
+use fieldcraft_io::identity::digest_valid;
+
 use super::control::ControlEvidenceReceipt;
 use super::production::ResultStore;
 use super::receive::{Admission, EntityMap, EvidenceCheck, ExternalReceiver, IdentityVerifier, ModelBinding, Quantity, ResultEnvelope};
 use super::run::RunGoal;
-use super::{ContractError, EvidenceKind, RunKey, SourceRef, digest_valid};
+use super::{ContractError, EvidenceKind, RunKey, SourceRef};
 
 /// Receiver-owned expectations, frozen before accepting any producer envelope.
 #[derive(Debug, Clone, PartialEq)]

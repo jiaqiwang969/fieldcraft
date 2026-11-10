@@ -14,6 +14,7 @@ pub mod transaction;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod worker;
 
+use fieldcraft_io::identity::digest_valid;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -83,10 +84,6 @@ impl RunKey {
 
 pub(super) fn token_valid(s: &str) -> bool {
     !s.trim().is_empty() && s.len() <= 1024 && !s.chars().any(char::is_control)
-}
-
-pub(super) fn digest_valid(s: &str) -> bool {
-    s.len() == 64 && s.bytes().all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
