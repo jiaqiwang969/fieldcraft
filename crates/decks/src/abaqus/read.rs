@@ -19,6 +19,7 @@ mod composite;
 mod constraints;
 mod discrete;
 mod dynamic;
+mod foundation;
 mod history;
 mod lex;
 mod mass;
@@ -123,6 +124,7 @@ fn read_mode(text: &str, preset: Preset, limits: Limits, analysis: bool) -> Resu
         read.mass_requirements = mass::inspect(flat)?;
         mass::restore(flat, &mut read.model)?;
         constraints::import(flat, &mut read, preset, limits)?;
+        foundation::import(flat, &mut read, preset, limits)?;
         if analysis {
             history::import(flat, &mut read, preset, limits)?;
         }
@@ -136,7 +138,7 @@ fn read_mode(text: &str, preset: Preset, limits: Limits, analysis: bool) -> Resu
         if read.model.steps().iter().any(|s| matches!(s.procedure, fieldcraft_model::Procedure::NonlinearStatic(_)))
             && read.model.elements().values().any(|e| e.kind == fieldcraft_model::ElementKind::Rod2)
         {
-            read.warnings.push("NLGEOM=YES T3D2/T2D2 steps and base_state are retained semantically, but native nonlinear static truss solving is not supported; solve.nonlinear and dependent frequency will refuse, not use NLGEOM=NO".into());
+            read.warnings.push("NLGEOM=YES T3D2/T2D2 uses the native nonlinear static truss St. Venant-Kirchhoff formulation and preserves base_state; unsupported constitutive or analysis combinations are refused, never changed to NLGEOM=NO".into());
         }
         if read.model.steps().iter().any(
             |s| matches!(&s.procedure, fieldcraft_model::Procedure::Transient(t) if matches!(t.method, fieldcraft_model::dynamics::Method::Direct)),
@@ -464,18 +466,25 @@ fn parse(text: &str, preset: Preset, limits: Limits) -> Result<Read> {
                     for (index, row) in block.rows.iter().enumerate() {
                         check_work(index)?;
                         let f = row_fields(row.text, row.line)?;
-                        let [id, node] = f.as_slice() else {
-                            return Err(error(row.line, "MASS/SPRING1 requires an element label and one node"));
-                        };
-                        let id = label(id, row.line)?;
-                        let node = label(node, row.line)?;
+                        if f.len() != 1 + kind.node_count() {
+                            return Err(error(
+                                row.line,
+                                format!("{} requires an element label and {} node(s)", block.required("TYPE")?, kind.node_count()),
+                            ));
+                        }
+                        let id = label(f.first().map(String::as_str).unwrap_or_default(), row.line)?;
+                        let node = label(f.get(1).map(String::as_str).unwrap_or_default(), row.line)?;
+                        let second = f.get(2).map(|v| label(v, row.line)).transpose()?;
+                        if second == Some(node) {
+                            return Err(error(row.line, "two-point discrete element requires distinct nodes"));
+                        }
                         if !element_labels.insert(id) {
                             return Err(error(row.line, format!("duplicate element {id}")));
                         }
                         if element_labels.len() > limits.elements {
                             return Err(error(row.line, format!("element limit of {} reached", limits.elements)));
                         }
-                        discrete_elements.insert(id, discrete::Record { kind, node, line: row.line });
+                        discrete_elements.insert(id, discrete::Record { kind, node, second, line: row.line });
                         if let Some(name) = &set {
                             let raw = elsets.entry(name.clone()).or_default();
                             raw.line = line;
@@ -528,7 +537,7 @@ fn parse(text: &str, preset: Preset, limits: Limits) -> Result<Read> {
                     return Err(error(line, "*ELEMENT has no data"));
                 }
             }
-            "MASS" | "SPRING" => discrete_properties.push(block),
+            "MASS" | "ROTARYINERTIA" | "SPRING" | "DASHPOT" => discrete_properties.push(block),
             "NSET" | "ELSET" => {
                 block.only(if k == "NSET" { &["NSET", "GENERATE", "ELSET"] } else { &["ELSET", "GENERATE"] })?;
                 let name = named(block.required(k)?, line)?;
@@ -757,7 +766,9 @@ fn parse(text: &str, preset: Preset, limits: Limits) -> Result<Read> {
         raw.line = line;
         for l in elements {
             if let Some(e) = discrete_elements.get(l) {
-                append_member(raw, Member::Label(e.node, line), &mut budget, member_limit, line)?;
+                for node in std::iter::once(e.node).chain(e.second) {
+                    append_member(raw, Member::Label(node, line), &mut budget, member_limit, line)?;
+                }
             } else if let Some(e) = model.element(*l) {
                 for n in &e.nodes {
                     append_member(raw, Member::Label(*n, line), &mut budget, member_limit, line)?;
@@ -848,12 +859,12 @@ fn parse(text: &str, preset: Preset, limits: Limits) -> Result<Read> {
         let spelling = names.get(&name).ok_or_else(|| error(1, "missing set spelling"))?;
         model.add_set(spelling, set).map_err(|e| error(1, e.to_string()))?;
     }
-    if budget.saturating_add(discrete_elements.len()) > member_limit {
+    if budget.saturating_add(discrete_elements.values().map(|r| r.kind.node_count()).sum::<usize>()) > member_limit {
         return Err(error(1, "discrete target membership limit reached"));
     }
     discrete::apply(&mut model, &discrete_elements, &discrete_properties, &expanded_elements, &units)?;
     if !discrete_elements.is_empty() {
-        warnings.push(format!("{} MASS/SPRING1 labels mapped to native InpDiscreteElement<label> definitions and explicit node target sets; their original ELSET memberships remain in source, not mesh element sets.", discrete_elements.len()));
+        warnings.push(format!("{} MASS/ROTARYI/SPRING1/SPRING2/DASHPOT1/DASHPOT2 labels mapped to native InpDiscreteElement<label> definitions and explicit node target sets; their original ELSET memberships remain in source, not mesh element sets.", discrete_elements.len()));
     }
     let mut has_planar = false;
     let mut assigned = BTreeMap::new();

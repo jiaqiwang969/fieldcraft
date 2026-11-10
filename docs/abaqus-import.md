@@ -54,14 +54,20 @@ the current document; save existing work before running it in a session you are 
 
 - `NODE`, with optional node set; labels and coordinates.
 - `ELEMENT`, with type, connectivity and optional element set. Long connectivity may continue.
-- Constant isotropic or global diagonal anisotropic `MASS` and grounded `SPRING1` elements with `MASS`/`SPRING` properties.
+- Constant isotropic or global diagonal anisotropic `MASS` and global `ROTARYI`, `SPRING1/2`, `DASHPOT1/2` elements with their corresponding properties.
   These become native point masses and springs named `InpDiscreteElement<label>` with explicit,
   collision-free node target sets. Translational and rotational spring stiffness use their own
   unit quantities. Discrete ELSETs resolve properties and `NSET, ELSET=...`; discrete labels are
   excluded from native mesh element sets, with a warning. Their original labels and memberships
   remain in the retained source. Translated instances remap labels and property set references;
-  springs and anisotropic masses in rotated instances are explicitly refused. Oriented/damped masses, nonlinear or
-  frequency-dependent springs, SPRING2/A, dashpots and rotary inertia are not mapped yet.
+  springs, dashpots, rotary inertia and anisotropic masses in rotated instances are explicitly refused.
+  Oriented/damped masses, nonlinear or frequency/temperature/field-dependent spring/dashpot
+  coefficients, and axial SPRINGA/DASHPOTA are not mapped. Two-point elements require two
+  distinct existing nodes and the same global DOF (1–6) at both ends. Different endpoint DOFs
+  cannot be represented by the native shared direction and are refused. Translational damping
+  uses N·s/m and rotational damping N·m·s/rad, rather than stiffness units. SPRING2 is limited
+  to linear static, frequency and direct harmonic import; DASHPOT1/2 requires direct harmonic
+  import, rather than silently discarding damping in a modal or static procedure.
   Gravity may select ordinary mesh elements despite unrelated point masses; targets containing
   discrete elements and whole-model gravity with point masses remain refused.
 - `NSET` and `ELSET`: label lists, other set names and bounded `GENERATE` ranges. A node set may
@@ -280,8 +286,9 @@ factorization is needed. With no path the command assembles and reports metadata
 only; `solve.run` does not silently create files. Loads, initial fields, preload,
 nonlinear material behavior and nondefault matrix options are refused. Files are
 atomic individually, not a transaction. A native project saves the procedure;
-operator files are separate artifacts. Normalized deck writers currently refuse
-these procedures; `deck.source.write` replays their original text exactly.
+operator files are separate artifacts. The Abaqus canonical writer supports the
+limited random/matrix subsets described below; other deck formats still refuse them.
+`deck.source.write` independently replays their original text exactly.
 
 The SDOF random test compares every sampled displacement PSD with the analytic
 transfer function, then reopens and executes the saved definition. The axial-bar
@@ -576,7 +583,8 @@ thermal/initial stress, nonlinear materials, orientation and unsupported analysi
 combinations remain refused. A constant-simplex one-DOF test independently checks
 consistent versus row-sum modal frequencies and every sampled force PSD, including
 an incompatible cached source, save/reopen and exact source replay. Normalized
-random-step export remains a named refusal; source replay is not semantic export. A mixed
+random-step export now preserves the supported constant correlated modal subset;
+source replay remains a separate operation. A mixed
 B-bar Hex8/consistent Tet4 matrix test checks inertia integrals and `C=alpha M+beta K`.
 
 
@@ -859,7 +867,7 @@ included in result invalidation, and exposed by `model.step.create/edit`.
 Normalized export retains `NLGEOM=NO`; it refuses a nonlatest base or a base shared
 by linear and stress-stiffened consumers because one source general step cannot
 express both choices. Nonlinear equilibrium remains a distinct procedure: no YES
-flag is changed to NO and unsupported nonlinear rod solving still refuses.
+flag is changed to NO. Nonlinear rods use the native St. Venant–Kirchhoff formulation; unsupported constitutive combinations still refuse.
 
 Frequency and harmonic perturbations retain the base support DOFs with zero
 incremental values. Inherited static amplitudes are cleared before validating the
@@ -966,3 +974,66 @@ element-local or material-local; a local stress component is not a global one by
 Plastic state still starts from zero in each independent native nonlinear equilibrium.
 A single step's load path is not state transfer between general steps. Multiple-step plastic
 import remains refused; the limited single-step hardening mapping above is unchanged.
+
+### Global rotary inertia
+
+`ROTARYI` with `ROTARY INERTIA, ELSET=...` maps a constant global tensor to
+native point rotary inertia, independently of translational MASS. Three diagonal
+entries or six entries ordered I11,I22,I33,I12,I13,I23 are accepted; products
+retain their signs. Values use the declared mass × length² units and are stored
+in kg·m². The native positive-semidefinite tensor checks remain active. No beam
+or distributed mass policy is changed by import.
+
+This mapping supports linear static, frequency and direct harmonic steps at nodes
+with rotational degrees of freedom (for example B31 nodes). Local ORIENTATION,
+rotated instances, ALPHA/COMPOSITE damping and other analysis combinations are
+refused rather than discarded. Translated instance sets are resolved normally.
+Source replay retains original labels; canonical output uses native generated
+ROTARYI sets. A beam-end torsional oscillator checks the added inertia against
+GJ/L and the beam's consistent polar mass, with native solve/save/reopen/replay.
+Reference: [ROTARY INERTIA](https://abaqus.uclouvain.be/English/SIMACAEKEYRefMap/simakey-r-rotaryinertia.htm).
+
+
+## Constant normal element foundations
+
+`FOUNDATION` model data imports constant Tet4 face supports: element label or element set,
+`F1` through `F4`, and normal stiffness per area (force/length³). The model stores N/m³.
+Part/instance references follow element numbering; the support remains active across steps.
+The adapter uses the existing consistent face operator, not diagonal nodal springs.
+Linear static, frequency and direct harmonic steps are mapped. Step activation, keyword
+parameters, beam/planar/shell face identifiers and other element types are explicitly refused.
+Finite-displacement foundation normals in the public format follow the deformed face;
+the native reference-face operator is not that law, so nonlinear history is refused and
+the source retained. Matrix-based foundation export is a separate format and is not imported.
+An original Tet4 compression model on a triangular bed checks `u_b=-F/(k A)`,
+`u_tip-u_b=-3 F h/(E A)` at zero Poisson ratio, and `sigma_zz=-3 F/A`, with original,
+reopened and normalized-deck results and an independent native-command model.
+Source: [public foundation definition](https://abaqus.uclouvain.be/English/SIMACAEMODRefMap/simamod-c-foundation.htm).
+
+### Constant two-point springs and dashpots
+
+The public [SPRING](https://abaqus.uclouvain.be/English/SIMACAEKEYRefMap/simakey-r-spring.htm)
+and [DASHPOT](https://abaqus.uclouvain.be/English/SIMACAEKEYRefMap/simakey-r-dashpot.htm)
+DOF rows identify each endpoint separately. The supported equal-global-DOF subset maps to
+the native two-node relative operator: `k [[1,-1],[-1,1]]` or `c [[1,-1],[-1,1]]`;
+a grounded element contributes just `k` or `c`. Neither adds mass. Point masses remain
+explicit and continuum mass policy is never inferred from a spring/dashpot card.
+
+Constant properties are persistent model data. Extra data columns, local orientations,
+nonlinear/complex properties, missing or duplicate endpoints and mismatched property sets
+are reported by name and line. Step-level redefinition is not approximated. Canonical writing
+uses the existing SPRING1/2 and DASHPOT1/2 writer, while original labels, comments and
+unknown source text remain available through source replay after saving and reopening.
+
+### Canonical random and matrix steps
+
+The canonical writer now emits the supported unloaded linear `MATRIX GENERATE`/
+`MATRIX OUTPUT` operator selections instead of requiring source replay. Nonzero
+prescribed motion, active loads and base-state matrices remain named refusals.
+For modal random response it writes the immediately preceding unwindowed frequency
+step reference, one band including its bias and frequency scale, mode-number damping,
+and one real constant fully correlated multiplier PSD. Concentrated loads use case 2;
+distributed loads use case 1. Mixed cases, nonconstant spectra, explicit-frequency
+procedures and extra global damping are refused. Runtime sampling overrides remain
+solver-call settings, not invented input keywords. These paths preserve native model
+semantics; they do not assert equivalence of different solvers' sampling or recovery.

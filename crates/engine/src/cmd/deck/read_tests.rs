@@ -1170,8 +1170,9 @@ fn random_continuum_mass_uses_requested_operator_not_cached_modes_and_reopens() 
     s.execute("deck.source.write", &json!({"path":replay})).unwrap();
     assert_eq!(std::fs::read_to_string(replay).unwrap(), source);
     let normalized = dir.join("normalized.inp");
-    let error = s.execute("deck.write", &json!({"path":normalized,"format":"abaqus"})).unwrap_err().to_string();
-    assert!(error.contains("random response is not written yet"), "{error}");
+    s.execute("deck.write", &json!({"path":normalized,"format":"abaqus"})).unwrap();
+    let imported = s.execute("deck.read", &json!({"path":normalized,"format":"abaqus","units":"m-kg-s-N-Pa"})).unwrap();
+    assert_eq!(imported["analysis_complete"], true);
     let again = s.execute("solve.random", &json!({"step":"Random","mass":"lumped","nodes":[2],"sampling_frequencies":grid})).unwrap();
     assert_eq!(again["natural_frequencies"], lumped["natural_frequencies"]);
     assert_eq!(again["node_displacement_rms"], lumped["node_displacement_rms"]);
@@ -1226,7 +1227,8 @@ fn nonlinear_rod_import_preserves_yes_base_state_and_source() {
     let fieldcraft_model::Procedure::NonlinearStatic(n) = &s.model.step("Preload").unwrap().procedure else { panic!("nonlinear step lost") };
     assert!(n.nonlinear_geometry);
     assert_eq!(n.initial_increment, 1.0);
-    assert!(report["warnings"].to_string().contains("nonlinear static truss"));
+    assert!(report["warnings"].to_string().contains("native nonlinear static truss St. Venant-Kirchhoff"));
+    assert!(!report["warnings"].to_string().contains("truss solving is not supported"));
     // Independent StVK force law: N=EA*lambda*(lambda^2-1)/2.
     // Bisection uses only the prescribed force, not the solver's displacement.
     let (mut lo, mut hi) = (1.0_f64, 1.001_f64);

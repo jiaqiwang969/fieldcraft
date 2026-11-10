@@ -83,10 +83,11 @@ fn classify(t: &str) -> (Option<&'static str>, &'static str, &'static str, &'sta
             "full rotational/drilling inertia rule not established",
         ),
         "MASS" => (None, "specified_point_mass", "explicit mass property", "not a distributed mass selection"),
-        "SPRING1" => (
+        "ROTARYI" => (None, "specified_rotary_inertia", "explicit global inertia tensor", "not a distributed mass selection"),
+        "SPRING1" | "SPRING2" | "DASHPOT1" | "DASHPOT2" => (
             None,
             "zero_incremental_mass",
-            "grounded spring; difference from identical point-mass control",
+            "constant spring/dashpot has no inertia term; point masses remain explicit",
             "not a direct standalone native mass export",
         ),
         _ => (None, "unknown", "outside established mass evidence", "no mass-default mapping"),
