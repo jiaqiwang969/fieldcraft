@@ -17,6 +17,7 @@ impl Session {
         }
         if self.external_results.contains_key(name)
             || self.external_chunked_results.contains_key(name)
+            || self.external_static_base_results.contains_key(name)
             || self.results.contains_key(name)
             || self.model.step(name).is_some()
         {
@@ -40,11 +41,23 @@ impl Session {
         self.results_stored = self.results_stored.wrapping_add(1);
         Ok(())
     }
+    pub(crate) fn keep_external_static_base(&mut self, record: fieldcraft_io::external_results::ArchivedStaticBase) -> Result<()> {
+        self.check_external_name(record.archive_key())?;
+        record.validate_binding(&self.model, &self.sources, &self.run).map_err(|e| EngineError::Params(e.to_string()))?;
+        self.external_static_base_results.insert(record.archive_key().into(), Arc::new(record));
+        self.results_stored = self.results_stored.wrapping_add(1);
+        Ok(())
+    }
     /// Raw diagnostic blobs can contain a failed frame. Only the admission's qualified
     /// prefix is eligible numerical data; persistence never changes that boundary.
     pub fn external_chunked_result(&self, name: &str) -> Result<&fieldcraft_io::external_results::ArchivedChunkedTrajectory> {
         let r = self.external_chunked_results.get(name).ok_or_else(|| EngineError::Params("external chunked result not found".into()))?;
         r.validate_binding(&self.model, &self.sources, &self.run)?;
+        Ok(r)
+    }
+    pub fn external_static_base_result(&self, name: &str) -> Result<&fieldcraft_io::external_results::ArchivedStaticBase> {
+        let r = self.external_static_base_results.get(name).ok_or_else(|| EngineError::Params("external static base result not found".into()))?;
+        r.validate_binding(&self.model, &self.sources, &self.run).map_err(|e| EngineError::Params(e.to_string()))?;
         Ok(r)
     }
     /// Check current model binding before exposing stored external fields to a caller.
@@ -88,6 +101,21 @@ impl Session {
                     "native_postprocessing":"unsupported","stale":current.is_err(),"binding_error":current.err().map(|e|e.to_string())}),
                 _ => json!({"archive_key":record.archive_key(),"stale":true,"error":"ExternalArchiveContext: metadata"}),
             });
+        }
+        for record in self.external_static_base_results.values() {
+            let current = record.validate_binding(&self.model, &self.sources, &self.run);
+            rows.push(json!({
+                "kind":13,
+                "schema":fieldcraft_io::external_results::STATIC_BASE_SCHEMA,
+                "archive_key":record.archive_key(),
+                "result_id":record.result_id(),
+                "source_backend":record.external_static_base().source_backend,
+                "runtime_qualification":record.external_static_base().runtime_qualification,
+                "frequency_response":record.external_static_base().frequency_response,
+                "native_postprocessing":"unsupported",
+                "stale":current.is_err(),
+                "binding_error":current.err().map(|e| e.to_string()),
+            }));
         }
         rows.sort_by(|a, b| a["archive_key"].as_str().cmp(&b["archive_key"].as_str()));
         json!(rows)

@@ -95,6 +95,7 @@ impl LegacyFrequency {
 pub enum Solved {
     External(crate::external_results::ArchivedTrajectory),
     ExternalChunked(crate::external_results::ArchivedChunkedTrajectory),
+    ExternalStaticBase(Box<crate::external_results::ArchivedStaticBase>),
     /// A static, frequency, buckling, heat transfer or harmonic step.
     Implicit(fieldcraft_solver::StepResult),
     Explicit(ExplicitResult),
@@ -107,6 +108,7 @@ pub enum Solved {
 pub enum SolvedRef<'a> {
     External(&'a crate::external_results::ArchivedTrajectory),
     ExternalChunked(&'a crate::external_results::ArchivedChunkedTrajectory),
+    ExternalStaticBase(&'a crate::external_results::ArchivedStaticBase),
     Implicit(&'a fieldcraft_solver::StepResult),
     Explicit(&'a ExplicitResult),
     Fluid(&'a FluidResult),
@@ -122,6 +124,7 @@ impl Solved {
             Solved::Nonlinear(r) => SolvedRef::Nonlinear(r),
             Solved::External(r) => SolvedRef::External(r),
             Solved::ExternalChunked(r) => SolvedRef::ExternalChunked(r),
+            Solved::ExternalStaticBase(r) => SolvedRef::ExternalStaticBase(r),
         }
     }
 
@@ -139,6 +142,7 @@ impl<'a> SolvedRef<'a> {
             SolvedRef::Nonlinear(r) => &r.step,
             SolvedRef::External(r) => &r.archive_key,
             SolvedRef::ExternalChunked(r) => r.archive_key(),
+            SolvedRef::ExternalStaticBase(r) => r.archive_key(),
         }
     }
 
@@ -171,7 +175,7 @@ impl<'a> SolvedRef<'a> {
             SolvedRef::Explicit(_) => 3,
             SolvedRef::Fluid(_) => 4,
             SolvedRef::Nonlinear(_) => 11,
-            SolvedRef::External(_) | SolvedRef::ExternalChunked(_) => 13,
+            SolvedRef::External(_) | SolvedRef::ExternalChunked(_) | SolvedRef::ExternalStaticBase(_) => 13,
         }
     }
 
@@ -193,6 +197,7 @@ impl<'a> SolvedRef<'a> {
             SolvedRef::Nonlinear(r) => codec::encode_to(r, out),
             SolvedRef::External(r) => codec::encode_to(r, out),
             SolvedRef::ExternalChunked(r) => codec::encode_to(r.record.as_ref(), out),
+            SolvedRef::ExternalStaticBase(r) => codec::encode_to(r, out),
         }
     }
 }
@@ -262,7 +267,8 @@ pub fn encode_to(results: &[(&str, StoredRef<'_>)], out: &mut dyn std::io::Write
     let mut sorted: Vec<&(&str, StoredRef<'_>)> = results.iter().collect();
     sorted.sort_by(|a, b| a.0.cmp(b.0));
     if sorted.windows(2).any(|w| w.first().map(|a| a.0) == w.get(1).map(|b| b.0)) {
-        if results.iter().any(|(_, r)| matches!(r.result, SolvedRef::External(_) | SolvedRef::ExternalChunked(_))) {
+        if results.iter().any(|(_, r)| matches!(r.result, SolvedRef::External(_) | SolvedRef::ExternalChunked(_) | SolvedRef::ExternalStaticBase(_)))
+        {
             return invalid("ExternalArchiveDuplicateKey");
         }
         return invalid(format!("{PART}: a step's result is listed twice"));
@@ -282,6 +288,11 @@ pub fn encode_to(results: &[(&str, StoredRef<'_>)], out: &mut dyn std::io::Write
             return invalid("ExternalArchiveDefinitionMismatch");
         }
         if let SolvedRef::ExternalChunked(r) = stored.result
+            && r.definition()? != stored.definition
+        {
+            return invalid("ExternalArchiveDefinitionMismatch");
+        }
+        if let SolvedRef::ExternalStaticBase(r) = stored.result
             && r.definition()? != stored.definition
         {
             return invalid("ExternalArchiveDefinitionMismatch");
@@ -438,6 +449,8 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded> {
                         record: std::sync::Arc::new(record),
                         source: std::sync::Arc::new(crate::external_chunked::MissingSource),
                     })
+                } else if schema == crate::external_results::STATIC_BASE_SCHEMA.as_bytes() {
+                    Solved::ExternalStaticBase(Box::new(codec::decode(payload).map_err(damaged)?))
                 } else {
                     return invalid("ExternalArchiveSchemaUnsupported");
                 }
@@ -459,6 +472,11 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded> {
             }
         }
         if let Solved::ExternalChunked(value) = &result
+            && value.definition()? != definition
+        {
+            return invalid("ExternalArchiveDefinitionMismatch");
+        }
+        if let Solved::ExternalStaticBase(value) = &result
             && value.definition()? != definition
         {
             return invalid("ExternalArchiveDefinitionMismatch");
@@ -647,6 +665,7 @@ pub fn check(r: &Solved) -> std::result::Result<(), String> {
         Solved::Nonlinear(r) => r.validate(),
         Solved::External(r) => r.validate().map_err(|e| e.to_string()),
         Solved::ExternalChunked(r) => r.validate().map_err(|e| e.to_string()),
+        Solved::ExternalStaticBase(r) => r.validate().map_err(|e| e.to_string()),
     }
 }
 
@@ -910,6 +929,8 @@ fn decode_stream_inner(reader: &mut dyn std::io::Read, size: u64) -> Result<Deco
                 })
             } else if schema == crate::external_results::SCHEMA.as_bytes() {
                 Solved::External(codec::decode_from(&mut payload, len as usize).map_err(|e| Error::Invalid(e.to_string()))?)
+            } else if schema == crate::external_results::STATIC_BASE_SCHEMA.as_bytes() {
+                Solved::ExternalStaticBase(Box::new(codec::decode_from(&mut payload, len as usize).map_err(|e| Error::Invalid(e.to_string()))?))
             } else {
                 return invalid("ExternalArchiveSchemaUnsupported");
             }
@@ -931,6 +952,7 @@ fn decode_stream_inner(reader: &mut dyn std::io::Read, size: u64) -> Result<Deco
         match &result {
             Solved::External(a) if a.definition()? != definition => return invalid("ExternalArchiveDefinitionMismatch"),
             Solved::ExternalChunked(a) if a.definition()? != definition => return invalid("ExternalArchiveDefinitionMismatch"),
+            Solved::ExternalStaticBase(a) if a.definition()? != definition => return invalid("ExternalArchiveDefinitionMismatch"),
             _ => {}
         }
         check(&result).map_err(Error::Invalid)?;

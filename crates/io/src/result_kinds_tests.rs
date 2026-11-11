@@ -126,6 +126,7 @@ fn original_zero_through_five_read_version_05() {
             Solved::Fluid(x) => codec::encode_into(x, &mut payload).unwrap(),
             Solved::External(x) => codec::encode_into(x, &mut payload).unwrap(),
             Solved::ExternalChunked(x) => codec::encode_into(x.record.as_ref(), &mut payload).unwrap(),
+            Solved::ExternalStaticBase(_) => panic!("not an original kind"),
         }
         let old = record(LEGACY_MAGIC, kind as u8, &payload);
         assert_eq!(decoded(&old), r);

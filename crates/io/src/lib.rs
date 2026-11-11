@@ -40,6 +40,7 @@ pub mod codec;
 pub mod contact_policy;
 mod external_chunked;
 pub mod external_results;
+pub mod external_static_base;
 mod external_stream;
 pub use external_stream::read_path_streamed;
 pub mod fs;
