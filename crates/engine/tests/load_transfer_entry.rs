@@ -124,6 +124,8 @@ fn receive_save_reopen_resave_is_byte_identical_and_apply_creates_native_history
     assert_eq!(applied["ready_for"], "solve.transient");
     assert_eq!(applied["nodes"], 1);
     assert_eq!(applied["load_components"], 1);
+    assert_eq!(applied["program_identity"]["receiver_sha256"], reply["program_identity"]["receiver_sha256"]);
+    assert_eq!(applied["program_identity"]["current_receiver_sha256"], reply["program_identity"]["receiver_sha256"]);
     assert_eq!(applied["transient_settings"]["output_every"], 1);
     assert_eq!(applied["transient_settings"]["integration"]["type"], "average_acceleration");
     assert!(applied["boundary_condition_warning"].is_string());

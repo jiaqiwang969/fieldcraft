@@ -28,6 +28,12 @@ qualification and the backend crash receipt. A producer-claimed verified
 qualification is rejected; qualification can only be established by an
 independent receiver-side record. The reply also reports the actual SHA256
 identities of the producer artifact, adapter artifact and receiving executable.
+When `apply` reopens a saved project, it checks that the producer and adapter
+identities still match the received record. `receiver_sha256` is the executable
+that received and persisted the record; `current_receiver_sha256` is measured
+when applying it. Those two receiver identities may differ, so a saved project
+can be reopened on another program version or machine without weakening the
+producer/adapter identity check.
 `apply` creates native unit-force loads with tabular amplitudes. When the named
 step already exists and is a transient step, the loads and amplitude tables are
 added to that step while its boundary conditions, integration, method, damping,

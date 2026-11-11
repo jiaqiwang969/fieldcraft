@@ -115,16 +115,44 @@ fn receiver_program_sha256() -> Result<String> {
     }
 }
 
+fn load_transfer_source_artifacts(identity: &load_transfer::LoadIdentity) -> Result<BTreeMap<String, String>> {
+    identity.validate_program_digests().map_err(error)?;
+    Ok(BTreeMap::from([("producer".to_string(), identity.producer_sha256.clone()), ("adapter".to_string(), identity.adapter_sha256.clone())]))
+}
+
 fn load_transfer_artifacts(archive: &LoadTransferArchive, receiver_sha256: &str) -> Result<BTreeMap<String, String>> {
-    archive.identity.validate_program_digests().map_err(error)?;
+    let mut artifacts = load_transfer_source_artifacts(&archive.identity)?;
     if !fieldcraft_io::identity::digest_valid(receiver_sha256) {
         return Err(error("receiving program identity has invalid SHA256"));
     }
-    Ok(BTreeMap::from([
-        ("producer".to_string(), archive.identity.producer_sha256.clone()),
-        ("adapter".to_string(), archive.identity.adapter_sha256.clone()),
-        ("receiver".to_string(), receiver_sha256.to_string()),
-    ]))
+    artifacts.insert("receiver".to_string(), receiver_sha256.to_string());
+    Ok(artifacts)
+}
+
+/// Apply is allowed to run in a different executable from receive.  The producer and adapter
+/// artifacts are part of the incoming record and must remain identical; the receiver artifact
+/// is a historical fact retained in the project, while the current executable is measured again
+/// and reported separately.
+fn validate_load_transfer_apply_identity(
+    binding_artifacts: &BTreeMap<String, String>,
+    identity: &load_transfer::LoadIdentity,
+    current_receiver_sha256: &str,
+) -> Result<String> {
+    let source_artifacts = load_transfer_source_artifacts(identity)?;
+    for role in ["producer", "adapter"] {
+        if binding_artifacts.get(role) != source_artifacts.get(role) {
+            return Err(error(format!("load-transfer {role} identity does not match the received record")));
+        }
+    }
+    let received_receiver_sha256 =
+        binding_artifacts.get("receiver").ok_or_else(|| error("load-transfer record is missing the receiving program identity"))?;
+    if !fieldcraft_io::identity::digest_valid(received_receiver_sha256) {
+        return Err(error("load-transfer record has an invalid receiving program identity"));
+    }
+    if !fieldcraft_io::identity::digest_valid(current_receiver_sha256) {
+        return Err(error("current receiving program identity has invalid SHA256"));
+    }
+    Ok(received_receiver_sha256.clone())
 }
 
 fn archive_binding(
@@ -256,7 +284,7 @@ fn receive_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
         "conservation":conservation,
         "applicability":decoded.archive.applicability,
         "runtime_qualification":decoded.archive.qualification,
-        "program_identity": {"producer_sha256": decoded.archive.identity.producer_sha256, "adapter_sha256": decoded.archive.identity.adapter_sha256, "receiver_sha256": receiver_sha256},
+        "program_identity": {"producer_sha256": decoded.archive.identity.producer_sha256, "adapter_sha256": decoded.archive.identity.adapter_sha256, "receiver_sha256": receiver_sha256, "current_receiver_sha256": receiver_sha256},
         "crash":decoded.archive.crash,
         "mapped_frames":decoded.mapped_frames.len(),
         "node_loads_per_frame":decoded.archive.mapping.nodes.len(),
@@ -287,11 +315,9 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
     if matches!(decoded.archive.qualification, load_transfer::RuntimeQualification::Verified { .. }) {
         return Err(error("load-transfer apply rejects a producer-claimed runtime qualification; independent qualification is receiver-owned"));
     }
-    let receiver_sha256 = receiver_program_sha256()?;
-    let artifacts = load_transfer_artifacts(&decoded.archive, &receiver_sha256)?;
-    if record.binding.artifacts != artifacts {
-        return Err(error("load-transfer program identity does not match the receiving executable or incoming artifacts"));
-    }
+    let current_receiver_sha256 = receiver_program_sha256()?;
+    let received_receiver_sha256 =
+        validate_load_transfer_apply_identity(&record.binding.artifacts, &decoded.archive.identity, &current_receiver_sha256)?;
     record.validate_binding(&s.model, &s.sources, &s.run).map_err(error)?;
     let conservation = conservation_response(&decoded)?;
     if decoded.archive.applicability.geometry_status == load_transfer::ApplicabilityStatus::Inapplicable {
@@ -496,7 +522,7 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
         "load_components":active_components.len(),
         "conservation":conservation,
         "runtime_qualification":decoded.archive.qualification,
-        "program_identity":{"producer_sha256":decoded.archive.identity.producer_sha256,"adapter_sha256":decoded.archive.identity.adapter_sha256,"receiver_sha256":receiver_sha256},
+        "program_identity":{"producer_sha256":decoded.archive.identity.producer_sha256,"adapter_sha256":decoded.archive.identity.adapter_sha256,"receiver_sha256":received_receiver_sha256,"current_receiver_sha256":current_receiver_sha256},
         "applicability":decoded.archive.applicability,
         "conclusion_allowed":decoded.archive.applicability.adoption_status == load_transfer::ApplicabilityStatus::Applicable,
         "boundary_conditions":boundary_conditions,
@@ -508,6 +534,7 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
         "ready_for":"solve.transient"
     }))
 }
+
 fn receive(s: &mut Session, p: &Value) -> Result<Value> {
     let total = Instant::now();
     let name: String = super::req(p, "name")?;
@@ -629,4 +656,54 @@ fn receiver_identity() -> ReceiverIdentity {
         };
     }
     ReceiverIdentity { source_commit: None, program: None, unknown_reason: Some("current receiving executable cannot be read on this host".into()) }
+}
+#[cfg(test)]
+mod load_transfer_identity_tests {
+    use super::*;
+
+    fn identity() -> load_transfer::LoadIdentity {
+        load_transfer::LoadIdentity {
+            archive_key: "load".into(),
+            run_id: "run".into(),
+            epoch: 1,
+            worker_generation: "worker".into(),
+            model_revision: "a".repeat(64),
+            mesh_digest: "b".repeat(64),
+            coordinate_frame: "world".into(),
+            units: "SI".into(),
+            producer_sha256: fieldcraft_io::sha256_hex(b"producer"),
+            adapter_sha256: fieldcraft_io::sha256_hex(b"adapter"),
+        }
+    }
+
+    #[test]
+    fn apply_allows_a_new_receiver_but_rejects_changed_source_artifacts() {
+        let identity = identity();
+        let received_receiver = fieldcraft_io::sha256_hex(b"receiver-at-receive");
+        let current_receiver = fieldcraft_io::sha256_hex(b"receiver-at-apply");
+        let binding = BTreeMap::from([
+            ("producer".to_string(), identity.producer_sha256.clone()),
+            ("adapter".to_string(), identity.adapter_sha256.clone()),
+            ("receiver".to_string(), received_receiver.clone()),
+        ]);
+        assert_eq!(validate_load_transfer_apply_identity(&binding, &identity, &current_receiver).unwrap(), received_receiver);
+
+        let mut changed_producer = binding.clone();
+        changed_producer.insert("producer".into(), fieldcraft_io::sha256_hex(b"other-producer"));
+        assert!(
+            validate_load_transfer_apply_identity(&changed_producer, &identity, &current_receiver)
+                .unwrap_err()
+                .to_string()
+                .contains("producer identity")
+        );
+
+        let mut changed_adapter = binding;
+        changed_adapter.insert("adapter".into(), fieldcraft_io::sha256_hex(b"other-adapter"));
+        assert!(
+            validate_load_transfer_apply_identity(&changed_adapter, &identity, &current_receiver)
+                .unwrap_err()
+                .to_string()
+                .contains("adapter identity")
+        );
+    }
 }
