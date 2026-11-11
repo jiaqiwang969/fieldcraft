@@ -15,13 +15,13 @@ fn fixture() -> (Model, ArchivedStaticBase) {
     let entity_map = EntityMap { nodes: vec![], elements: vec![] };
     let artifacts: BTreeMap<_, _> = REQUIRED_ARTIFACT_ROLES.iter().map(|role| ((*role).to_string(), artifact_digest(role.as_bytes()))).collect();
     let binding = Binding::freeze(&model, &Geometry::default(), &Run::default(), &entity_map, artifacts, BACKEND_VERSION).unwrap();
-    let identity = DenseMatrix::square(vec![1.0, 0.0, 0.0, 1.0], 2).unwrap();
+    let identity = DenseMatrix::square(vec![1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0], 3).unwrap();
     let mut base = ExternalStaticBase {
         name: "external_static_base".into(),
         state: StaticBaseState {
-            reference_coordinates: vec![0.0, 0.0],
-            coordinates: vec![0.002, 0.001],
-            velocities: vec![1e-9, 1e-9],
+            reference_coordinates: vec![0.0, 0.0, 0.0],
+            coordinates: vec![0.002, 0.001, 0.003],
+            velocities: vec![1e-9, 1e-9, 1e-9],
             units: "SI".into(),
             hold: HoldWindow {
                 no_reset_steps: 10,
@@ -49,7 +49,7 @@ fn fixture() -> (Model, ArchivedStaticBase) {
             state_changes: 0,
         },
         stiffness: StiffnessField {
-            matrix: DenseMatrix::square(vec![4.0, 0.0, 0.0, 9.0], 2).unwrap(),
+            matrix: DenseMatrix::square(vec![4.0, 0.0, 0.0, 0.0, 9.0, 0.0, 0.0, 0.0, 16.0], 3).unwrap(),
             source_backend: "external_reconstruction".into(),
             probe_error: 0.0,
             symmetry_error: 0.0,
@@ -59,17 +59,17 @@ fn fixture() -> (Model, ArchivedStaticBase) {
             matrix: identity.clone(),
             kind: "consistent".into(),
             source_backend: "external_reconstruction".into(),
-            declared_total: 2.0,
+            declared_total: 1.0,
             symmetry_error: 0.0,
         },
         constraints: ConstraintMapping {
-            full_dofs: 2,
-            reduced_dofs: 2,
-            q0: vec![0.0, 0.0],
-            full_coordinates: vec![0.002, 0.001],
-            reduced_coordinates: vec![0.002, 0.001],
+            full_dofs: 3,
+            reduced_dofs: 3,
+            q0: vec![0.0, 0.0, 0.0],
+            full_coordinates: vec![0.002, 0.001, 0.003],
+            reduced_coordinates: vec![0.002, 0.001, 0.003],
             t: identity.clone(),
-            reduced_stiffness: DenseMatrix::square(vec![4.0, 0.0, 0.0, 9.0], 2).unwrap(),
+            reduced_stiffness: DenseMatrix::square(vec![4.0, 0.0, 0.0, 0.0, 9.0, 0.0, 0.0, 0.0, 16.0], 3).unwrap(),
             reduced_mass: identity,
             constraint_residual: 0.0,
             projection_error: 0.0,
@@ -79,17 +79,17 @@ fn fixture() -> (Model, ArchivedStaticBase) {
         frequency_response: "not_run".into(),
         modal: None,
     };
-    let reference_shapes = vec![vec![1.0, 0.0], vec![0.0, 1.0]];
+    let reference_shapes = vec![vec![1.0, 0.0, 0.0], vec![0.0, 1.0, 0.0], vec![0.0, 0.0, 1.0]];
     let modal = base.compute_modal(reference_shapes).unwrap();
     base.modal = Some(modal);
     let archive = ArchivedStaticBase::from_payload(
-        "s07-closed-static-base".into(),
+        "external-static-base-fixture".into(),
         binding,
         entity_map,
         base,
         br#"{"solve":"succeeded","coverage":"complete"}"#.to_vec(),
         br#"{"runtime_qualification":"unverified","frequency_response":"not_run"}"#.to_vec(),
-        br#"{"source":"S07","backend":"external_reconstruction","command":"independent-prototype"}"#.to_vec(),
+        br#"{"source":"fixture","backend":"external_reconstruction","command":"test-prototype"}"#.to_vec(),
     )
     .unwrap();
     (model, archive)
@@ -116,11 +116,6 @@ fn save(model: &Model, archive: &ArchivedStaticBase) -> Vec<u8> {
 #[test]
 fn closed_base_roundtrip_has_modal_package_and_unverified_runtime() {
     let (model, archive) = fixture();
-    if let Some(path) = std::env::var_os("FIELDCRAFT_STATIC_BASE_EVIDENCE") {
-        let path = std::path::PathBuf::from(path);
-        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-        std::fs::write(path, serde_json::to_vec_pretty(&archive).unwrap()).unwrap();
-    }
     let bytes = save(&model, &archive);
     let opened = fieldcraft_io::read(&bytes).unwrap();
     let Solved::ExternalStaticBase(restored) = &opened.results[0].result else { panic!("kind 13 static base missing") };
@@ -128,7 +123,7 @@ fn closed_base_roundtrip_has_modal_package_and_unverified_runtime() {
     assert_eq!(restored.external_static_base().runtime_qualification, "unverified");
     assert_eq!(restored.external_static_base().frequency_response, "not_run");
     let modal = restored.external_static_base().modal.as_ref().unwrap();
-    assert_eq!(modal.modes.len(), 2);
+    assert_eq!(modal.modes.len(), 3);
     assert!(modal.modes.iter().all(|mode| mode.residual <= 1e-8));
     assert_eq!(save(&opened.model, restored.as_ref()), bytes);
 }
@@ -150,22 +145,22 @@ fn closed_base_rejects_open_sliding_bad_tangent_and_bad_modal() {
     let mut open = archive.external_static_base().clone();
     open.contact.gap_normal[0] = 2e-10;
     let error = rebuild(open).unwrap_err().to_string();
-    println!("S07_REJECT_OPEN {error}");
+    println!("STATIC_BASE_REJECT_OPEN {error}");
     assert!(error.contains("contact_open"));
     let mut sliding = archive.external_static_base().clone();
     sliding.contact.tangential_increment[0] = 2e-10;
     let error = rebuild(sliding).unwrap_err().to_string();
-    println!("S07_REJECT_SLIDING {error}");
+    println!("STATIC_BASE_REJECT_SLIDING {error}");
     assert!(error.contains("contact_sliding"));
     let mut bad_tangent = archive.external_static_base().clone();
     bad_tangent.stiffness.probe_error = 2e-4;
     let error = rebuild(bad_tangent).unwrap_err().to_string();
-    println!("S07_REJECT_TANGENT {error}");
+    println!("STATIC_BASE_REJECT_TANGENT {error}");
     assert!(error.contains("tangent"));
     let mut bad_modal = archive.external_static_base().clone();
     bad_modal.modal.as_mut().unwrap().modes[0].residual = 2e-6;
     let error = rebuild(bad_modal).unwrap_err().to_string();
-    println!("S07_REJECT_MODAL {error}");
+    println!("STATIC_BASE_REJECT_MODAL {error}");
     assert!(error.contains("modal"));
     assert!(archive.validate_binding(&model, &Geometry::default(), &Run::default()).is_ok());
 }

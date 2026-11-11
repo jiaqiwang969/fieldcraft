@@ -117,23 +117,28 @@ pub struct HoldWindow {
 impl HoldWindow {
     fn validate(&self) -> Result<()> {
         if self.no_reset_steps < 10 || self.no_reset_steps > MAX_HOLD_STEPS {
-            return invalid("ExternalStaticBase: static hold window");
+            return invalid(format!(
+                "ExternalStaticBase: static hold item=no_reset_steps measured={} threshold=10..{}",
+                self.no_reset_steps, MAX_HOLD_STEPS
+            ));
         }
-        if !self.converged || self.solver_cap_hit {
-            return invalid("ExternalStaticBase: static hold did not converge");
+        if !self.converged {
+            return invalid("ExternalStaticBase: static hold item=converged measured=false threshold=true");
         }
-        if !self.free_residual_norm.is_finite()
-            || self.free_residual_norm >= STATIC_RESIDUAL_MAX
-            || !self.max_velocity.is_finite()
-            || self.max_velocity >= STATIC_VELOCITY_MAX
-            || !self.single_step_drift.is_finite()
-            || self.single_step_drift >= STATIC_DRIFT_MAX
-            || !self.inertia_internal_difference.is_finite()
-            || self.inertia_internal_difference >= STATIC_INERTIA_MAX
-            || !self.support_error.is_finite()
-            || self.support_error >= STATIC_SUPPORT_MAX
-        {
-            return invalid("ExternalStaticBase: static hold threshold");
+        if self.solver_cap_hit {
+            return invalid("ExternalStaticBase: static hold item=solver_cap_hit measured=true threshold=false");
+        }
+        let checks = [
+            ("free_residual_norm", self.free_residual_norm, STATIC_RESIDUAL_MAX),
+            ("max_velocity", self.max_velocity, STATIC_VELOCITY_MAX),
+            ("single_step_drift", self.single_step_drift, STATIC_DRIFT_MAX),
+            ("inertia_internal_difference", self.inertia_internal_difference, STATIC_INERTIA_MAX),
+            ("support_error", self.support_error, STATIC_SUPPORT_MAX),
+        ];
+        for (item, measured, threshold) in checks {
+            if !measured.is_finite() || measured >= threshold {
+                return invalid(format!("ExternalStaticBase: static hold item={item} measured={measured} threshold<{threshold}"));
+            }
         }
         Ok(())
     }
@@ -194,14 +199,20 @@ impl ContactState {
             return invalid("contact_state_unknown: missing or malformed pair state");
         }
         if self.state_changes != 0 {
-            return invalid("contact_open: contact state changed during hold");
+            return invalid(format!("contact_open: item=state_changes measured={} threshold=0", self.state_changes));
         }
-        if self.active.iter().any(|active| !*active) || self.gap_normal.iter().any(|gap| *gap > GAP_MAX) {
-            return invalid("contact_open: gap or active mask");
+        if let Some((pair, active)) = self.active.iter().enumerate().find(|(_, active)| !**active) {
+            return invalid(format!("contact_open: pair={pair} item=active measured={active} threshold=true"));
+        }
+        if let Some((pair, gap)) = self.gap_normal.iter().enumerate().find(|(_, gap)| **gap > GAP_MAX) {
+            return invalid(format!("contact_open: pair={pair} item=gap_normal measured={gap} threshold<={GAP_MAX}"));
+        }
+        if let Some((pair, increment)) = self.tangential_increment.iter().enumerate().find(|(_, increment)| **increment < 0.0) {
+            return invalid(format!("contact_state_unknown: pair={pair} item=tangential_increment measured={increment} threshold>=0"));
         }
         if self.policy == "closed_bonded" {
-            if self.tangential_increment.iter().any(|slip| *slip > BONDED_TANGENTIAL_MAX) {
-                return invalid("contact_sliding: bonded tangential increment");
+            if let Some((pair, slip)) = self.tangential_increment.iter().enumerate().find(|(_, slip)| **slip > BONDED_TANGENTIAL_MAX) {
+                return invalid(format!("contact_sliding: pair={pair} item=tangential_increment measured={slip} threshold<={BONDED_TANGENTIAL_MAX}"));
             }
             return Ok(());
         }
@@ -223,12 +234,21 @@ impl ContactState {
         {
             return invalid("contact_state_unknown: sticking metrics malformed");
         }
-        if slip > STICK_SLIP_RATIO_MAX || utilization >= STICK_FRICTION_UTILIZATION_MAX {
-            return invalid("contact_sliding: sticking slip or friction limit");
+        if slip < 0.0 {
+            return invalid(format!("contact_state_unknown: item=slip_ratio measured={slip} threshold>=0"));
+        }
+        if utilization < 0.0 {
+            return invalid(format!("contact_state_unknown: item=friction_utilization measured={utilization} threshold>=0"));
+        }
+        if slip > STICK_SLIP_RATIO_MAX {
+            return invalid(format!("contact_sliding: item=slip_ratio measured={slip} threshold<={STICK_SLIP_RATIO_MAX}"));
+        }
+        if utilization >= STICK_FRICTION_UTILIZATION_MAX {
+            return invalid(format!("contact_sliding: item=friction_utilization measured={utilization} threshold<{STICK_FRICTION_UTILIZATION_MAX}"));
         }
         let derived = self.normal_force.iter().zip(&self.tangential_force).map(|(normal, tangent)| tangent.abs() / (mu * normal)).fold(0.0, f64::max);
         if (derived - utilization).abs() > 1e-12 {
-            return invalid("contact_state_unknown: friction utilization mismatch");
+            return invalid(format!("contact_state_unknown: item=friction_utilization measured={} derived={} threshold=1e-12", utilization, derived));
         }
         Ok(())
     }
@@ -346,9 +366,18 @@ impl ExternalStaticBase {
         {
             return invalid("ExternalStaticBase: mass check");
         }
-        let mass_total = self.mass.matrix.values.iter().sum::<f64>();
-        if (mass_total - self.mass.declared_total).abs() > 1e-12_f64.max(1e-9 * self.mass.declared_total) {
-            return invalid("ExternalStaticBase: mass total");
+        if n % 3 != 0 {
+            return invalid("ExternalStaticBase: mass total requires xyz translational ordering");
+        }
+        let tolerance = 1e-12_f64.max(1e-9 * self.mass.declared_total);
+        for axis in 0..3 {
+            let total = (axis..n).step_by(3).map(|i| self.mass.matrix.at(i, i)).sum::<f64>();
+            if (total - self.mass.declared_total).abs() > tolerance {
+                return invalid(format!(
+                    "ExternalStaticBase: mass total axis={axis} measured={total} threshold={}±{}",
+                    self.mass.declared_total, tolerance
+                ));
+            }
         }
         let (full, reduced) = self.validate_mapping(n)?;
         if full != n || reduced == 0 {
@@ -426,7 +455,7 @@ impl ExternalStaticBase {
         self.validate_without_modal()?;
         let n = self.constraints.reduced_stiffness.rows as usize;
         let mode_count = requested_modes.min(n);
-        if mode_count == 0 {
+        if mode_count == 0 || reference_shapes.is_empty() || reference_shapes.len() < mode_count {
             return invalid("ExternalStaticBase: modal mode count");
         }
         let l = cholesky(&self.constraints.reduced_mass, n)?;
@@ -512,10 +541,7 @@ impl ExternalStaticBase {
             return invalid("ExternalStaticBase: modal mass orthogonality");
         }
         if modal.reference_shapes.is_empty() {
-            if modal.mac.shape()? != (modal.modes.len(), 0) {
-                return invalid("ExternalStaticBase: modal reference shape absence");
-            }
-            return Ok(());
+            return invalid("ExternalStaticBase: modal reference shapes required");
         }
         if modal.reference_shapes.iter().any(|shape| shape.len() != n || shape.iter().any(|v| !v.is_finite()))
             || modal.mac.shape()? != (modal.modes.len(), modal.reference_shapes.len())
@@ -528,8 +554,17 @@ impl ExternalStaticBase {
             return invalid("ExternalStaticBase: MAC mismatch");
         }
         for pair in &expected_pairs {
-            if pair.mac < MAC_MIN || pair.margin < MAC_MARGIN_MIN {
-                return invalid("ExternalStaticBase: MAC pairing threshold");
+            if pair.mac < MAC_MIN {
+                return invalid(format!(
+                    "ExternalStaticBase: modal pair={} reference={} item=mac measured={} threshold>={}",
+                    pair.mode, pair.reference, pair.mac, MAC_MIN
+                ));
+            }
+            if pair.margin < MAC_MARGIN_MIN {
+                return invalid(format!(
+                    "ExternalStaticBase: modal pair={} reference={} item=margin measured={} threshold>={}",
+                    pair.mode, pair.reference, pair.margin, MAC_MARGIN_MIN
+                ));
             }
         }
         if expected_pairs.iter().zip(&modal.pairs).any(|(expected, actual)| expected != actual) {
@@ -612,6 +647,37 @@ impl ArchivedStaticBase {
         Ok(value)
     }
 
+    /// Construct a sealed diagnostic refusal package without claiming that its
+    /// physical contract is valid.  This is used only for measured open/slip
+    /// rejection evidence; every normal producer path must use `from_payload`.
+    pub fn from_payload_unchecked(
+        archive_key: String,
+        binding: identity::Binding,
+        entity_map: identity::EntityMap,
+        external_static_base: ExternalStaticBase,
+        admission_json: Vec<u8>,
+        context_json: Vec<u8>,
+        source_json: Vec<u8>,
+    ) -> Result<Self> {
+        let payload_sha256 = payload_digest(&external_static_base)?;
+        let result_id = format!("fieldcraft-result/{payload_sha256}");
+        let mut value = Self {
+            schema: STATIC_BASE_SCHEMA.into(),
+            archive_key,
+            binding,
+            entity_map,
+            result_id,
+            payload_sha256,
+            external_static_base,
+            admission_json,
+            context_json,
+            source_json,
+            record_sha256: String::new(),
+        };
+        value.record_sha256 = value.record_digest_unchecked()?;
+        Ok(value)
+    }
+
     fn check_parts(&self) -> Result<()> {
         if self.schema != STATIC_BASE_SCHEMA || self.archive_key.trim().is_empty() || self.archive_key.len() > 1024 {
             return invalid("ExternalStaticBase: schema or archive key");
@@ -649,6 +715,10 @@ impl ArchivedStaticBase {
 
     pub fn record_digest(&self) -> Result<String> {
         self.check_parts()?;
+        self.record_digest_unchecked()
+    }
+
+    fn record_digest_unchecked(&self) -> Result<String> {
         let bytes = codec::encode(&(
             &self.schema,
             &self.archive_key,
@@ -858,7 +928,7 @@ fn gram(modes: &[ModalMode], mass: &DenseMatrix) -> Result<DenseMatrix> {
 
 fn pair_modes(modes: &[ModalMode], refs: &[Vec<f64>], mass: &DenseMatrix) -> Result<(Vec<Vec<f64>>, DenseMatrix, Vec<ModalPair>)> {
     if refs.is_empty() {
-        return Ok((Vec::new(), DenseMatrix { rows: modes.len() as u32, cols: 0, values: Vec::new() }, Vec::new()));
+        return invalid("ExternalStaticBase: modal reference shapes required");
     }
     let n = mass.rows as usize;
     if refs.iter().any(|shape| shape.len() != n) {

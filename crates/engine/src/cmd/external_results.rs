@@ -160,17 +160,34 @@ fn receive_static_base(s: &mut Session, p: &Value) -> Result<Value> {
     if incoming.archive_key() != name || incoming.binding() != &profile.binding {
         return Err(error("ExternalStaticBaseProfile: package binding differs from frozen expectation"));
     }
+    let receiver = receiver_identity();
+    let receiver_sha256 = receiver
+        .program
+        .as_ref()
+        .map(|program| program.sha256.clone())
+        .ok_or_else(|| error("ExternalStaticBaseProfile: receiving executable identity unavailable"))?;
+    if profile.binding.artifacts.get("receiver") != Some(&receiver_sha256) {
+        return Err(error(format!(
+            "ExternalStaticBaseProfile: receiver artifact mismatch measured={} expected={}",
+            receiver_sha256,
+            profile.binding.artifacts.get("receiver").map(String::as_str).unwrap_or("missing")
+        )));
+    }
     // Validate the producer package and the current model/mesh before deriving
     // any product result.  This is the authoritative identity gate.
     incoming.validate_binding(&s.model, &s.sources, &s.run).map_err(error)?;
     let producer_payload_sha256 = incoming.payload_sha256().to_string();
     let mut base = incoming.external_static_base().clone();
+    // Qualification is an independent lane-20 decision.  A producer claim is
+    // never propagated through the product-owned receive path.
+    base.runtime_qualification = "unverified".into();
     let modal = base.compute_modal_with_count(profile.reference_shapes, profile.mode_count).map_err(error)?;
     let mode_count = modal.modes.len();
     let max_residual = modal.modes.iter().map(|mode| mode.residual).fold(0.0, f64::max);
     let mass_off_diagonal =
         modal.mass_gram.values.iter().enumerate().filter(|(i, _)| i / mode_count != i % mode_count).map(|(_, value)| value.abs()).fold(0.0, f64::max);
-    let min_mac = modal.mac.values.iter().copied().fold(1.0, f64::min);
+    let min_mac = modal.pairs.iter().map(|pair| pair.mac).fold(1.0, f64::min);
+    let min_mac_margin = modal.pairs.iter().map(|pair| pair.margin).fold(1.0, f64::min);
     base.modal = Some(modal);
     // Re-archive the product-owned payload so the result id and record digest
     // describe what the product actually computed, while retaining the original
@@ -198,6 +215,8 @@ fn receive_static_base(s: &mut Session, p: &Value) -> Result<Value> {
         "modal_max_residual": max_residual,
         "modal_max_mass_off_diagonal": mass_off_diagonal,
         "modal_min_mac": min_mac,
+        "modal_min_pair_margin": min_mac_margin,
+        "receiver_program_sha256": receiver_sha256,
         "runtime_qualification": "unverified",
         "frequency_response": "not_run",
         "session_installed": true,
