@@ -822,7 +822,7 @@ pub static CATALOGUE: &[Capability] = &[
         Results,
         "Files",
         "Receive identity-bound trajectories and retain availability and run evidence",
-        &["results.external.list", "results.external.remove"],
+        &["results.external.list", "results.external.remove", "results.external.load_transfer.receive", "results.external.load_transfer.apply"],
     ),
     soon("results.read", "Read Results", Results, "Files", "M9", "Read results in public formats"),
     soon("results.convergence", "Convergence", Results, "Files", "M9", "Mesh convergence studies"),

@@ -70,6 +70,31 @@ fn applicability_input(active_area_difference: f64) -> ApplicabilityInput {
     }
 }
 
+fn impact_fixture_activation() -> ActivationData {
+    ActivationData {
+        frames: (0..154)
+            .map(|index| ActivationFrame {
+                frame_index: index,
+                source_active: vec![ActivationPoint { contact_id: "impact".to_string(), weight: 1.0, gap_m: 0.0 }],
+                feedback_active: Some(vec![ActivationPoint {
+                    contact_id: "impact".to_string(),
+                    weight: if index < 27 { 0.0 } else { 1.0 },
+                    gap_m: 0.0,
+                }]),
+                source_peak_force_n: Some(1.0),
+                feedback_peak_force_n: Some(1.0),
+            })
+            .collect(),
+        activation_length_m: 1.0,
+        required_fields: true,
+        structural_feedback: true,
+        force_precision: ForcePrecisionLimit {
+            kappa_pa: UnknownOr::unknown("libuipc 0.0.29 does not expose per-frame effective kappa"),
+            truncated: UnknownOr::unknown("per-frame truncation is not exposed"),
+        },
+    }
+}
+
 #[test]
 fn h_transpose_conserves_force_moment_and_virtual_work() {
     let spec = mapping();
@@ -105,7 +130,11 @@ fn applicability_keeps_unknown_force_precision_parallel_to_geometry() {
 
 #[test]
 fn impact_fixture_is_inapplicable_at_first_changed_frame() {
-    let report = pre_research_impact_report().unwrap();
+    let activation = impact_fixture_activation();
+    let input = activation.applicability_input().unwrap();
+    let report =
+        evaluate_applicability(&input, &RuntimeQualification::Unverified { reason: "G25 independent runtime qualification is pending".to_string() })
+            .unwrap();
     assert_eq!(report.geometry_status, ApplicabilityStatus::Inapplicable);
     assert_eq!(report.adoption_status, ApplicabilityStatus::Inapplicable);
     let failure = report.first_failure.unwrap();
@@ -153,9 +182,31 @@ fn crash_receipt_preserves_exit_signal_first_error_and_prefix() {
 fn archive_round_trip_is_reversible_and_tamper_evident() {
     let spec = mapping();
     let frames = vec![frame(0.0, 1.0), frame(0.01, 2.0)];
-    let applicability =
-        evaluate_applicability(&applicability_input(0.05), &RuntimeQualification::Verified { source: "independent".to_string() }).unwrap();
-    let archive = LoadTransferArchive { identity: identity(), mapping: spec, frames, applicability, crash: None };
+    let activation = ActivationData {
+        frames: vec![
+            ActivationFrame {
+                frame_index: 0,
+                source_active: vec![ActivationPoint { contact_id: "p0".to_string(), weight: 1.0, gap_m: 0.0 }],
+                feedback_active: Some(vec![ActivationPoint { contact_id: "p0".to_string(), weight: 1.0, gap_m: 0.0 }]),
+                source_peak_force_n: Some(1.0),
+                feedback_peak_force_n: Some(1.0),
+            },
+            ActivationFrame {
+                frame_index: 1,
+                source_active: vec![ActivationPoint { contact_id: "p0".to_string(), weight: 1.0, gap_m: 0.0 }],
+                feedback_active: Some(vec![ActivationPoint { contact_id: "p0".to_string(), weight: 1.0, gap_m: 0.0 }]),
+                source_peak_force_n: Some(1.0),
+                feedback_peak_force_n: Some(1.0),
+            },
+        ],
+        activation_length_m: 1.0,
+        required_fields: true,
+        structural_feedback: true,
+        force_precision: ForcePrecisionLimit { kappa_pa: UnknownOr::unknown("not exposed"), truncated: UnknownOr::unknown("not exposed") },
+    };
+    let qualification = RuntimeQualification::Verified { source: "independent".to_string() };
+    let applicability = evaluate_applicability(&activation.applicability_input().unwrap(), &qualification).unwrap();
+    let archive = LoadTransferArchive { identity: identity(), mapping: spec, frames, activation, qualification, applicability, crash: None };
     let bundle = archive.encode().unwrap();
     let decoded = LoadTransferArchive::decode(&bundle).unwrap();
     assert_eq!(decoded.archive, archive);

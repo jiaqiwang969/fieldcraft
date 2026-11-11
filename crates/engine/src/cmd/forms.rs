@@ -2416,6 +2416,11 @@ const SAVE_GEOMETRY: Field = choice("geometry", "Geometry", &[("refer", "Refer t
 pub const FILE_SAVE: &[Field] =
     &[path("path", "File", true).help("Where to save; the model's own file when empty.").hint("the model's file"), SAVE_RESULTS, SAVE_GEOMETRY];
 pub const FILE_SAVE_AS: &[Field] = &[path("path", "File", true).help("The file to save to.").req(), SAVE_RESULTS, SAVE_GEOMETRY];
+pub const LOAD_TRANSFER_RECEIVE: &[Field] = &[
+    path("path", "Load-transfer bundle", false).help("A result-kind-13 load-transfer bundle or canonical envelope.").req(),
+    text("name", "Archive name").help("The archive key frozen into the bundle.").req(),
+    path("project", "Project", true).help("Optional project file to save with the accepted type-13 result."),
+];
 pub const RECOVERY_LIST: &[Field] =
     &[path("dir", "Folder", false).help("The recovery folder; the default one when empty.").hint("the recovery folder")];
 pub const CRASH_REPORTS: &[Field] = &[

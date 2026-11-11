@@ -77,6 +77,8 @@ use crate::{CommandSpec, EngineError, Result, Session};
 
 pub static ALL: &[CommandSpec] = &[
     external_results::RECEIVE,
+    external_results::LOAD_TRANSFER_RECEIVE,
+    external_results::LOAD_TRANSFER_APPLY,
     external_results::LIST,
     external_results::REMOVE,
     model::INFO,

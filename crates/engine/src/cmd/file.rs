@@ -542,7 +542,7 @@ fn contents(s: &Session, keep: Keep) -> Vec<String> {
 }
 
 /// Save to `path` (as given by the caller), keeping what `keep` says.
-fn save_to(s: &mut Session, path: &str, keep: Keep) -> Result<Value> {
+pub(crate) fn save_to(s: &mut Session, path: &str, keep: Keep) -> Result<Value> {
     let target = absolute(path);
     if std::fs::metadata(&target).is_ok_and(|m| !m.is_file()) {
         return Err(EngineError::Params(format!("`{target}` exists and is not a regular file")));

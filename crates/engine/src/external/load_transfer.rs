@@ -178,10 +178,10 @@ pub struct FrameFacts {
 
 impl FrameFacts {
     fn validate(&self) -> Result<(), LoadTransferError> {
-        if let UnknownOr::Known { value } = &self.kappa_pa {
-            if !value.is_finite() || *value < 0.0 {
-                return Err(LoadTransferError::Invalid("kappa"));
-            }
+        if let UnknownOr::Known { value } = &self.kappa_pa
+            && (!value.is_finite() || *value < 0.0)
+        {
+            return Err(LoadTransferError::Invalid("kappa"));
         }
         Ok(())
     }
@@ -384,6 +384,121 @@ pub struct ForcePrecisionLimit {
     pub truncated: UnknownOr<bool>,
 }
 
+/// One raw contact activation observation from the producer and (when available) the
+/// structural feedback.  Applicability is derived from these observations at receive time;
+/// callers cannot supply the already reduced differences as authoritative values.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ActivationPoint {
+    pub contact_id: String,
+    pub weight: f64,
+    pub gap_m: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ActivationFrame {
+    pub frame_index: u64,
+    pub source_active: Vec<ActivationPoint>,
+    pub feedback_active: Option<Vec<ActivationPoint>>,
+    pub source_peak_force_n: Option<f64>,
+    pub feedback_peak_force_n: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ActivationData {
+    pub frames: Vec<ActivationFrame>,
+    pub activation_length_m: f64,
+    pub required_fields: bool,
+    pub structural_feedback: bool,
+    pub force_precision: ForcePrecisionLimit,
+}
+
+impl ActivationData {
+    pub fn validate(&self) -> Result<(), LoadTransferError> {
+        if !self.activation_length_m.is_finite() || self.activation_length_m <= 0.0 {
+            return Err(LoadTransferError::Invalid("activation length"));
+        }
+        if self.frames.is_empty() {
+            return Err(LoadTransferError::Invalid("empty activation data"));
+        }
+        let mut previous = None;
+        for frame in &self.frames {
+            if previous.is_some_and(|index| frame.frame_index <= index) {
+                return Err(LoadTransferError::Invalid("non-monotonic activation frame"));
+            }
+            previous = Some(frame.frame_index);
+            for point in frame.source_active.iter().chain(frame.feedback_active.iter().flatten()) {
+                if !token_valid(&point.contact_id) || !point.weight.is_finite() || point.weight < 0.0 || !point.gap_m.is_finite() {
+                    return Err(LoadTransferError::Invalid("activation point"));
+                }
+            }
+            for peak in [frame.source_peak_force_n, frame.feedback_peak_force_n].into_iter().flatten() {
+                if !peak.is_finite() || peak < 0.0 {
+                    return Err(LoadTransferError::Invalid("activation force peak"));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Reduce the raw activation observations into the frozen applicability input.
+    pub fn applicability_input(&self) -> Result<ApplicabilityInput, LoadTransferError> {
+        self.validate()?;
+        let mut metrics = Vec::with_capacity(self.frames.len());
+        for frame in &self.frames {
+            let Some(feedback) = &frame.feedback_active else {
+                continue;
+            };
+            let source: BTreeMap<&str, &ActivationPoint> = frame.source_active.iter().map(|p| (p.contact_id.as_str(), p)).collect();
+            let target: BTreeMap<&str, &ActivationPoint> = feedback.iter().map(|p| (p.contact_id.as_str(), p)).collect();
+            let mut union_weight = 0.0;
+            let mut intersection_weight = 0.0;
+            let mut gap_difference: f64 = 0.0;
+            let mut component_changes = Vec::new();
+            let mut ids = BTreeSet::new();
+            ids.extend(source.keys().copied());
+            ids.extend(target.keys().copied());
+            for id in ids {
+                let source_weight = source.get(id).map_or(0.0, |p| p.weight);
+                let target_weight = target.get(id).map_or(0.0, |p| p.weight);
+                union_weight += source_weight.max(target_weight);
+                intersection_weight += source_weight.min(target_weight);
+                if let (Some(a), Some(b)) = (source.get(id), target.get(id)) {
+                    gap_difference = gap_difference.max((a.gap_m - b.gap_m).abs() / self.activation_length_m);
+                } else if source_weight.max(target_weight) > 0.0 {
+                    gap_difference = gap_difference.max(1.0);
+                }
+                let scale = source_weight.max(target_weight).max(1e-30);
+                let change = (source_weight - target_weight).abs() / scale;
+                if change > 0.0 {
+                    component_changes.push(ComponentChange { component_id: id.to_string(), weight_fraction: change });
+                }
+            }
+            let active_area_difference = if union_weight > 0.0 { 1.0 - intersection_weight / union_weight } else { 0.0 };
+            metrics.push(ActivationMetric {
+                frame_index: frame.frame_index,
+                significant: union_weight > 0.0,
+                transition: !component_changes.is_empty() || active_area_difference > 0.0,
+                active_area_difference,
+                gap_difference,
+                component_changes,
+            });
+        }
+        let source_peak = self.frames.iter().filter_map(|f| f.source_peak_force_n).fold(0.0, f64::max);
+        let feedback_peak = self.frames.iter().filter_map(|f| f.feedback_peak_force_n).fold(0.0, f64::max);
+        let peak_sampling_loss = if source_peak > 0.0 { ((source_peak - feedback_peak) / source_peak).max(0.0) } else { 0.0 };
+        Ok(ApplicabilityInput {
+            metrics,
+            peak_sampling_loss,
+            required_fields: self.required_fields,
+            structural_feedback: self.structural_feedback && self.frames.iter().all(|f| f.feedback_active.is_some()),
+            force_precision: self.force_precision.clone(),
+        })
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "state", rename_all = "snake_case", deny_unknown_fields)]
 pub enum RuntimeQualification {
@@ -492,32 +607,6 @@ pub fn evaluate_applicability(input: &ApplicabilityInput, qualification: &Runtim
     Ok(ApplicabilityReport { geometry_status, adoption_status, first_failure, force_precision: input.force_precision.clone() })
 }
 
-pub fn pre_research_impact_report() -> Result<ApplicabilityReport, LoadTransferError> {
-    let metrics = (0..154)
-        .map(|index| ActivationMetric {
-            frame_index: index,
-            significant: true,
-            transition: false,
-            active_area_difference: if index < 27 { 1.0 } else { 0.0 },
-            gap_difference: 0.0,
-            component_changes: Vec::new(),
-        })
-        .collect();
-    evaluate_applicability(
-        &ApplicabilityInput {
-            metrics,
-            peak_sampling_loss: 0.0,
-            required_fields: true,
-            structural_feedback: true,
-            force_precision: ForcePrecisionLimit {
-                kappa_pa: UnknownOr::unknown("libuipc 0.0.29 does not expose per-frame effective kappa"),
-                truncated: UnknownOr::unknown("per-frame truncation is not exposed"),
-            },
-        },
-        &RuntimeQualification::Unverified { reason: "G25 independent runtime qualification is pending".to_string() },
-    )
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum BackendState {
@@ -579,6 +668,8 @@ pub struct LoadTransferArchive {
     pub identity: LoadIdentity,
     pub mapping: MappingSpec,
     pub frames: Vec<LoadFrame>,
+    pub activation: ActivationData,
+    pub qualification: RuntimeQualification,
     pub applicability: ApplicabilityReport,
     pub crash: Option<CrashReceipt>,
 }
@@ -589,11 +680,50 @@ pub struct DecodedArchive {
     pub mapped_frames: Vec<MappedFrame>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ArchiveBundle {
     pub manifest_json: Vec<u8>,
     pub point_binary: Vec<u8>,
     pub nodal_binary: Vec<u8>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ExternalEnvelope {
+    schema: String,
+    result_kind: u8,
+    manifest_json: Vec<u8>,
+    point_binary: Vec<u8>,
+    nodal_binary: Vec<u8>,
+}
+
+/// The kind-13 payload kept by the project codec.  The bytes are intentionally a canonical JSON
+/// envelope around the three archive parts so a save/open/save cycle does not re-encode the
+/// producer's point or nodal payload.
+pub fn encode_external_envelope(bundle: &ArchiveBundle) -> Result<Vec<u8>, ArchiveError> {
+    serde_json::to_vec(&ExternalEnvelope {
+        schema: SCHEMA.to_string(),
+        result_kind: RESULT_KIND,
+        manifest_json: bundle.manifest_json.clone(),
+        point_binary: bundle.point_binary.clone(),
+        nodal_binary: bundle.nodal_binary.clone(),
+    })
+    .map_err(|e| ArchiveError::Json(e.to_string()))
+}
+
+pub fn decode_external_envelope(bytes: &[u8]) -> Result<ArchiveBundle, ArchiveError> {
+    let envelope: ExternalEnvelope = serde_json::from_slice(bytes).map_err(|e| ArchiveError::Json(e.to_string()))?;
+    if envelope.schema != SCHEMA || envelope.result_kind != RESULT_KIND {
+        return Err(ArchiveError::Invalid("external envelope schema or kind"));
+    }
+    Ok(ArchiveBundle { manifest_json: envelope.manifest_json, point_binary: envelope.point_binary, nodal_binary: envelope.nodal_binary })
+}
+
+pub fn is_external_envelope(bytes: &[u8]) -> bool {
+    serde_json::from_slice::<serde_json::Value>(bytes)
+        .ok()
+        .and_then(|value| value.get("schema").and_then(serde_json::Value::as_str).map(str::to_string))
+        .is_some_and(|schema| schema == SCHEMA)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -632,6 +762,8 @@ struct ArchiveWire {
     identity: LoadIdentity,
     mapping: MappingSpec,
     frames: Vec<FrameWire>,
+    activation: ActivationData,
+    qualification: RuntimeQualification,
     applicability: ApplicabilityReport,
     crash: Option<CrashReceipt>,
     point_bytes: u64,
@@ -664,8 +796,14 @@ impl LoadTransferArchive {
     pub fn encode(&self) -> Result<ArchiveBundle, ArchiveError> {
         self.identity.validate().map_err(ArchiveError::Mapping)?;
         self.mapping.validate().map_err(ArchiveError::Mapping)?;
+        self.activation.validate().map_err(ArchiveError::Mapping)?;
         if self.frames.is_empty() {
             return Err(ArchiveError::Invalid("empty archive"));
+        }
+        let computed = evaluate_applicability(&self.activation.applicability_input().map_err(ArchiveError::Mapping)?, &self.qualification)
+            .map_err(ArchiveError::Mapping)?;
+        if computed != self.applicability {
+            return Err(ArchiveError::Invalid("applicability is not derived from activation data"));
         }
         if let Some(crash) = &self.crash {
             crash.validate().map_err(ArchiveError::Mapping)?;
@@ -700,6 +838,8 @@ impl LoadTransferArchive {
             identity: self.identity.clone(),
             mapping: self.mapping.clone(),
             frames,
+            activation: self.activation.clone(),
+            qualification: self.qualification.clone(),
             applicability: self.applicability.clone(),
             crash: self.crash.clone(),
             point_bytes: point_binary.len() as u64,
@@ -727,6 +867,12 @@ impl LoadTransferArchive {
         }
         wire.identity.validate().map_err(ArchiveError::Mapping)?;
         wire.mapping.validate().map_err(ArchiveError::Mapping)?;
+        wire.activation.validate().map_err(ArchiveError::Mapping)?;
+        let computed = evaluate_applicability(&wire.activation.applicability_input().map_err(ArchiveError::Mapping)?, &wire.qualification)
+            .map_err(ArchiveError::Mapping)?;
+        if computed != wire.applicability {
+            return Err(ArchiveError::Invalid("applicability is not derived from activation data"));
+        }
         if let Some(crash) = &wire.crash {
             crash.validate().map_err(ArchiveError::Mapping)?;
         }
@@ -784,6 +930,8 @@ impl LoadTransferArchive {
                 identity: wire.identity,
                 mapping: wire.mapping,
                 frames,
+                activation: wire.activation,
+                qualification: wire.qualification,
                 applicability: wire.applicability,
                 crash: wire.crash,
             },
