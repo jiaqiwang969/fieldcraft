@@ -404,3 +404,24 @@ correction when the original K phi = lambda M phi relative residual exceeds
 and reports any remaining error; it does not change K, M, loading or a benchmark
 tolerance. The [curved-shell modal checks](../../solvers/curved-shell-modes.md)
 include the previously failing MITC6-a single/two-mode cases and native reopening.
+
+## Reusing a saved elastic equilibrium
+
+`solve.frequency` and `solve.harmonic` accept `reuse_base: true`. First solve the
+named `base_state` with `solve.nonlinear`, or open a native file containing its
+current result. The command checks the stored input identity, full-load convergence
+and the reconstructed displacement constraints and equilibrium. It evaluates the
+existing elastic terminal tangent at that displacement without Newton increments;
+reference mass and perturbation elimination are unchanged. The command reply names
+the reused base and reports zero new Newton iterations. `max_newton_iterations`
+remains a work cap for the default recomputation path.
+
+This opt-in supports monotone NLGEOM elastic 3D solids, including F-bar, continuous
+pretension cuts, current-value FIXED and reference-surface foundations. It is not
+a general restart: contact, plastic/initial history, incompatible or hybrid element
+history, imperfections, arc-length and scheduled load paths are refused by name.
+A missing or stale result is refused rather than silently recomputed. Without the
+flag, the existing recomputation path remains the default. Saving and reopening
+preserve the producer input identity; changing mesh, material, support or base-step
+inputs invalidates it. Direct solver API callers must check producer provenance
+before binding a `StoredEquilibrium`; displacement output alone is not provenance.

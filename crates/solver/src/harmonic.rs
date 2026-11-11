@@ -29,7 +29,7 @@ mod model;
 mod residual;
 pub use model::{
     ElementStressRecovery, Frame, HarmonicResult, MatrixExport, StressLocation, export_matrices, export_matrices_with_mass, solve_harmonic,
-    solve_harmonic_with_mass, solve_harmonic_with_mass_cached,
+    solve_harmonic_from_equilibrium, solve_harmonic_with_mass, solve_harmonic_with_mass_cached,
 };
 pub(crate) use model::{damping_operators, damping_operators_with_mass, load_vector, stresses};
 
