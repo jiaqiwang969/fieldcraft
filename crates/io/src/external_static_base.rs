@@ -728,10 +728,21 @@ fn project(a: &DenseMatrix, t: &DenseMatrix) -> Result<DenseMatrix> {
     if n != n2 || n != full {
         return invalid("ExternalStaticBase: projection shape");
     }
+    // Compute T^T A T as two ordinary dense products.  The former nested
+    // reduction evaluated the same expression with four loop levels and
+    // therefore became O(n^4) for an identity map (the normal compliant
+    // 675-DOF case).  This keeps the contract check exact while making the
+    // bounded dense package practical at its declared size.
+    let mut left = vec![0.0; reduced * n];
+    for i in 0..reduced {
+        for r in 0..n {
+            left[i * n + r] = (0..n).map(|k| t.at(k, i) * a.at(k, r)).sum();
+        }
+    }
     let mut values = vec![0.0; reduced * reduced];
     for i in 0..reduced {
         for j in 0..reduced {
-            values[i * reduced + j] = (0..n).map(|r| (0..n).map(|c| t.at(r, i) * a.at(r, c) * t.at(c, j)).sum::<f64>()).sum();
+            values[i * reduced + j] = (0..n).map(|r| left[i * n + r] * t.at(r, j)).sum();
         }
     }
     DenseMatrix::new(reduced, reduced, values)
