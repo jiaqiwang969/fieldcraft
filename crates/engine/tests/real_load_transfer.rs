@@ -78,6 +78,76 @@ fn archive_from_input(input: &Value, model: &fieldcraft_model::Model, name: &str
     }
 }
 
+fn relative_error(actual: &[f64], reference: &[f64]) -> f64 {
+    assert_eq!(actual.len(), reference.len());
+    let numerator = actual.iter().zip(reference).map(|(a, b)| (a - b).abs()).fold(0.0, f64::max);
+    let denominator = reference.iter().map(|value| value.abs()).fold(0.0, f64::max);
+    if denominator == 0.0 { numerator } else { numerator / denominator }
+}
+
+fn flat_sample_field(samples: &Value, field: &str) -> Vec<f64> {
+    samples
+        .as_array()
+        .unwrap()
+        .iter()
+        .flat_map(|sample| sample[field].as_array().unwrap().iter().map(|value| value.as_f64().unwrap()).collect::<Vec<_>>())
+        .collect()
+}
+
+fn history_relative_checks(product: &Value, history: &Value, tip_node: u64, far_node: u64) -> Value {
+    let product_frames = product["frames"].as_array().unwrap();
+    let history_frames = history["frames"].as_array().unwrap();
+    assert_eq!(product_frames.len(), history_frames.len());
+    let product_times: Vec<f64> = product_frames.iter().map(|frame| frame["time"].as_f64().unwrap()).collect();
+    let history_times: Vec<f64> = history_frames.iter().map(|frame| frame["time"].as_f64().unwrap()).collect();
+    assert_eq!(product_times, history_times, "real load path changed the structural time axis");
+    let product_energy: Vec<f64> =
+        product_frames.iter().map(|frame| frame["kinetic_energy"].as_f64().unwrap() + frame["strain_energy"].as_f64().unwrap()).collect();
+    let history_energy: Vec<f64> =
+        history_frames.iter().map(|frame| frame["kinetic_energy"].as_f64().unwrap() + frame["strain_energy"].as_f64().unwrap()).collect();
+    let history_nodes: std::collections::BTreeMap<u64, &Value> =
+        history["nodes"].as_array().unwrap().iter().map(|node| (node["node"].as_u64().unwrap(), node)).collect();
+    let product_nodes: std::collections::BTreeMap<u64, &Value> =
+        product["nodes"].as_array().unwrap().iter().map(|node| (node["node"].as_u64().unwrap(), node)).collect();
+    assert_eq!(product_nodes.keys().collect::<Vec<_>>(), history_nodes.keys().collect::<Vec<_>>());
+    let mut max_displacement = 0.0;
+    let mut max_stress = 0.0;
+    let mut max_displacement_node = None;
+    let mut max_stress_node = None;
+    for (node, history_node) in &history_nodes {
+        let product_node = product_nodes[node];
+        let displacement = relative_error(
+            &flat_sample_field(&product_node["samples"], "displacement"),
+            &flat_sample_field(&history_node["samples"], "displacement"),
+        );
+        let stress = relative_error(&flat_sample_field(&product_node["samples"], "stress"), &flat_sample_field(&history_node["samples"], "stress"));
+        if displacement > max_displacement {
+            max_displacement = displacement;
+            max_displacement_node = Some(*node);
+        }
+        if stress > max_stress {
+            max_stress = stress;
+            max_stress_node = Some(*node);
+        }
+    }
+    let checks = json!({
+        "tip_displacement_all_components": relative_error(
+            &flat_sample_field(&product_nodes[&tip_node]["samples"], "displacement"),
+            &flat_sample_field(&history_nodes[&tip_node]["samples"], "displacement"),
+        ),
+        "far_stress_all_components": relative_error(
+            &flat_sample_field(&product_nodes[&far_node]["samples"], "stress"),
+            &flat_sample_field(&history_nodes[&far_node]["samples"], "stress"),
+        ),
+        "mechanical_energy": relative_error(&product_energy, &history_energy),
+        "max_probe_node_displacement": max_displacement,
+        "max_probe_node_stress": max_stress,
+        "max_probe_node_displacement_node": max_displacement_node,
+        "max_probe_node_stress_node": max_stress_node,
+    });
+    checks
+}
+
 #[test]
 fn real_frozen_point_forces_use_receive_map_conservation_apply_and_impact_gate() {
     let input_path = std::env::var("LOAD_TRANSFER_REAL_INPUT")
@@ -141,4 +211,128 @@ fn real_frozen_point_forces_use_receive_map_conservation_apply_and_impact_gate()
     let _ = fs::remove_file(load_path);
     let _ = fs::remove_file(impact_path);
     let _ = fs::remove_file(project_path);
+}
+
+/// The candidate regression must exercise the product entry points against the
+/// frozen 621-node model.  Without the Dell paths this remains a fast, explicit
+/// skip so the ordinary unit-test suite does not pretend to have run the heavy
+/// solve locally.
+#[test]
+fn real_frozen_point_forces_run_the_product_receive_apply_solve_chain() {
+    let Ok(model_path) = std::env::var("LOAD_TRANSFER_REAL_MODEL") else {
+        eprintln!("skip real product chain: LOAD_TRANSFER_REAL_MODEL is not set");
+        return;
+    };
+    let Ok(history_path) = std::env::var("LOAD_TRANSFER_REAL_HISTORY") else {
+        eprintln!("skip real product chain: LOAD_TRANSFER_REAL_HISTORY is not set");
+        return;
+    };
+    let Ok(output_dir) = std::env::var("LOAD_TRANSFER_REAL_OUTPUT") else {
+        eprintln!("skip real product chain: LOAD_TRANSFER_REAL_OUTPUT is not set");
+        return;
+    };
+    let input_path = std::env::var("LOAD_TRANSFER_REAL_INPUT")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..").join("记录/第五阶段/回归/补齐候选/真实载荷输入.json"));
+    let output_dir = PathBuf::from(output_dir);
+    fs::create_dir_all(&output_dir).unwrap();
+    let input_bytes = fs::read(&input_path).unwrap();
+    let input: Value = serde_json::from_slice(&input_bytes).unwrap();
+    let history: Value = serde_json::from_slice(&fs::read(&history_path).unwrap()).unwrap();
+    let probe_nodes: Vec<u64> = history["nodes"].as_array().unwrap().iter().map(|node| node["node"].as_u64().unwrap()).collect();
+    let model_input_path = PathBuf::from(&history_path).with_file_name("model-input.json");
+    let model_input: Value = serde_json::from_slice(&fs::read(&model_input_path).unwrap()).unwrap();
+    let tip_node = std::env::var("LOAD_TRANSFER_REAL_TIP_NODE")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or_else(|| model_input["tip_node"].as_u64().unwrap());
+    let far_node = std::env::var("LOAD_TRANSFER_REAL_FAR_NODE")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or_else(|| model_input["far_node"].as_u64().unwrap());
+
+    let mut session = Session::default();
+    let open_reply = session.execute("file.open", &json!({"path":model_path})).unwrap();
+    // The historical Contact result is retained as an input artifact, but the
+    // new path must solve the newly applied step itself.
+    if session.model.step("Contact").is_some() {
+        session.execute("model.step.delete", &json!({"name":"Contact"})).unwrap();
+    }
+    let actual_activation: ActivationData = serde_json::from_value(input["activation"].clone()).unwrap();
+    let mut unknown_activation = actual_activation.clone();
+    unknown_activation.structural_feedback = false;
+    for frame in &mut unknown_activation.frames {
+        frame.feedback_active = None;
+    }
+    let archive = archive_from_input(&input, &session.model, "real-load", unknown_activation);
+    let bundle_path = output_dir.join("real-load.bundle.json");
+    fs::write(&bundle_path, serde_json::to_vec(&archive.encode().unwrap()).unwrap()).unwrap();
+    let receive_reply = session.execute("results.external.load_transfer.receive", &json!({"path":bundle_path,"name":"real-load"})).unwrap();
+    assert_eq!(receive_reply["conservation"]["all_frames_passed"], true);
+    assert_eq!(receive_reply["mapped_frames"], 1025);
+    let apply_reply = session
+        .execute(
+            "results.external.load_transfer.apply",
+            &json!({
+                "name":"real-load",
+                "step":"real-load-transient",
+                "integration":{"type":"average_acceleration"},
+                "method":{"type":"direct"},
+                "damping":{"alpha":0.0,"beta":0.0,"loss_factor":0.0},
+                "output_every":1,
+                "solve_mass":"consistent"
+            }),
+        )
+        .unwrap();
+    assert_eq!(apply_reply["ready_for"], "solve.transient");
+    assert_eq!(apply_reply["frames"], 1025);
+    assert_eq!(apply_reply["conclusion_allowed"], false);
+    assert_eq!(apply_reply["transient_settings"]["output_every"], 1);
+    assert_eq!(apply_reply["transient_settings"]["solve_mass"], "consistent");
+
+    let solve_reply =
+        session.execute("solve.transient", &json!({"step":"real-load-transient","mass":"consistent","threads":8,"max_memory_gib":8.0})).unwrap();
+    let product_probe = session.execute("solve.probe", &json!({"step":"real-load-transient","nodes":probe_nodes})).unwrap();
+    // Persist the raw product reply before any comparison assertion so a
+    // mismatch leaves the exact new-path result for the coordinator.
+    fs::write(output_dir.join("product-probe.json"), serde_json::to_vec_pretty(&product_probe).unwrap()).unwrap();
+    fs::write(
+        output_dir.join("real-chain-replies.json"),
+        serde_json::to_vec_pretty(&json!({
+            "model":model_path,
+            "history":history_path,
+            "input":input_path,
+            "open":open_reply,
+            "receive":receive_reply,
+            "apply":apply_reply,
+            "solve":solve_reply,
+            "product_probe_path":"product-probe.json"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let comparison = history_relative_checks(&product_probe, &history, tip_node, far_node);
+    let mut report = json!({
+        "model":model_path,
+        "history":history_path,
+        "input":input_path,
+        "open":open_reply,
+        "receive":receive_reply,
+        "apply":apply_reply,
+        "solve":solve_reply,
+        "product_probe":product_probe,
+        "historical_comparison":comparison,
+        "threshold":1e-9,
+        "tip_node":tip_node,
+        "far_node":far_node,
+    });
+    fs::write(output_dir.join("real-chain-replies.json"), serde_json::to_vec_pretty(&report).unwrap()).unwrap();
+    let checks = &report["historical_comparison"];
+    let passed =
+        ["tip_displacement_all_components", "far_stress_all_components", "mechanical_energy", "max_probe_node_displacement", "max_probe_node_stress"]
+            .into_iter()
+            .all(|key| checks[key].as_f64().unwrap() <= 1e-9);
+    report["passed"] = json!(passed);
+    fs::write(output_dir.join("historical-comparison.json"), serde_json::to_vec_pretty(&report).unwrap()).unwrap();
+    assert!(passed, "real product receive/apply/solve path differs from frozen history: {}", report["historical_comparison"]);
 }
