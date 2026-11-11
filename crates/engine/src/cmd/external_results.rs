@@ -206,8 +206,8 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
     record.validate_binding(&s.model, &s.sources, &s.run).map_err(error)?;
     let bundle = load_transfer::decode_external_envelope(&record.envelope_json).map_err(error)?;
     let decoded = LoadTransferArchive::decode(&bundle).map_err(error)?;
-    if decoded.archive.applicability.adoption_status != load_transfer::ApplicabilityStatus::Applicable {
-        return Err(error("load-transfer runtime qualification is not verified; native one-way results remain unavailable for adoption"));
+    if decoded.archive.applicability.geometry_status == load_transfer::ApplicabilityStatus::Inapplicable {
+        return Err(error("load-transfer geometry applicability is inapplicable; mapped one-way structural adoption is refused"));
     }
     let step_name = p.get("step").and_then(Value::as_str).map(str::to_owned).unwrap_or_else(|| format!("{name}-transient"));
     if s.model.step(&step_name).is_some() {
@@ -272,7 +272,7 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
     step.loads = loads;
     s.model.add_step(step, None).map_err(error)?;
     Ok(
-        json!({"archive_key":name,"step":step_name,"frames":frame_count,"nodes":decoded.archive.mapping.nodes.len(),"load_components":decoded.archive.mapping.nodes.len()*3,"runtime_qualification":decoded.archive.qualification,"applicability":decoded.archive.applicability,"ready_for":"solve.transient"}),
+        json!({"archive_key":name,"step":step_name,"frames":frame_count,"nodes":decoded.archive.mapping.nodes.len(),"load_components":decoded.archive.mapping.nodes.len()*3,"runtime_qualification":decoded.archive.qualification,"applicability":decoded.archive.applicability,"conclusion_allowed":decoded.archive.applicability.adoption_status == load_transfer::ApplicabilityStatus::Applicable,"ready_for":"solve.transient"}),
     )
 }
 fn receive(s: &mut Session, p: &Value) -> Result<Value> {
