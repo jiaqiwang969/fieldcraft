@@ -25,6 +25,8 @@ mod session;
 pub mod transaction;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod worker;
+#[rustfmt::skip]
+pub mod load_transfer;
 
 use fieldcraft_io::identity::digest_valid;
 use serde::{Deserialize, Serialize};
