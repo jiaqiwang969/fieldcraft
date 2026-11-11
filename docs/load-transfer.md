@@ -113,3 +113,19 @@ Missing per-frame effective kappa or truncation remains an unknown force
 precision limitation. It does not by itself reject geometry, while an unknown
 runtime qualification keeps adoption and any one-way conclusion unknown. A
 geometry result marked `inapplicable` is refused by `apply`.
+
+## Backend failure admission
+
+The product entry validates the four per-frame solver facts before it installs a load-transfer
+record. Every received frame must be completed and converged, with both the Newton and line-search
+limits clear. The first failing frame is named in the rejection and is outside the qualified
+prefix.
+
+An incoming `failed` or `cancelled` terminal receipt may be retained when its valid prefix and
+receipt agree: every carried frame is at or before `last_completed_frame`, an optional
+`first_error.frame_index` is after that frame, and `last_persisted_frame` does not contradict the
+carried prefix. The receive response, persisted admission/context metadata, and
+`results.external.list` expose `backend_status` with the state, exit code, signal, first error,
+last completed/persisted/requested frames, and `coverage_through_frame`. Such a record remains a
+failed or cancelled record and `results.external.load_transfer.apply` refuses it with the named
+backend-status reason; a failed prefix is never treated as a successful structural history.

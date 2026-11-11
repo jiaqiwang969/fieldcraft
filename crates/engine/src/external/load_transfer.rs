@@ -680,6 +680,26 @@ impl CrashReceipt {
     }
 }
 
+/// The receiver-owned admission view of the backend terminal state.  A missing receipt is
+/// the legacy/normal-success representation; it is reported as a completed run whose coverage
+/// is the last frame carried by the archive.  A failed or cancelled receipt remains visible and
+/// is never promoted to a solver-success claim.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct BackendStatus {
+    pub state: BackendState,
+    pub solver_success: bool,
+    pub exit_code: Option<i32>,
+    pub signal: Option<i32>,
+    pub first_error: Option<FirstError>,
+    pub last_completed_frame: Option<u64>,
+    pub last_persisted_frame: Option<u64>,
+    pub requested_last_frame: Option<u64>,
+    pub last_received_frame: Option<u64>,
+    pub coverage_through_frame: Option<u64>,
+    pub apply_allowed: bool,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoadTransferArchive {
     pub identity: LoadIdentity,
@@ -695,6 +715,120 @@ pub struct LoadTransferArchive {
 pub struct DecodedArchive {
     pub archive: LoadTransferArchive,
     pub mapped_frames: Vec<MappedFrame>,
+}
+
+/// Check the facts that are allowed to cross the load-transfer product boundary.  The archive
+/// codec already checks shapes, checksums and Hᵀ bytes; this second check is deliberately about
+/// solver admission semantics and therefore runs at receive, reopen and apply.
+pub fn validate_receive_status(archive: &LoadTransferArchive) -> Result<(), String> {
+    for frame in &archive.frames {
+        let item = if !frame.facts.completed {
+            Some("completed")
+        } else if !frame.facts.converged {
+            Some("converged")
+        } else if frame.facts.hit_newton_limit {
+            Some("hit_newton_limit")
+        } else if frame.facts.hit_line_search_limit {
+            Some("hit_line_search_limit")
+        } else {
+            None
+        };
+        if let Some(item) = item {
+            return Err(format!("load-transfer frame {} rejected: item={item}", frame.frame_index));
+        }
+    }
+
+    let Some(receipt) = &archive.crash else {
+        return Ok(());
+    };
+    if receipt.state == BackendState::Running {
+        return Err("load-transfer backend status is running; a terminal receipt is required".into());
+    }
+    let last_received = archive.frames.last().map(|frame| frame.frame_index);
+    let last_completed = receipt
+        .last_completed_frame
+        .ok_or_else(|| "load-transfer crash receipt is missing last_completed_frame".to_string())?;
+    if let Some(last_received) = last_received
+        && last_received > last_completed
+    {
+        return Err(format!(
+            "load-transfer crash/frame mismatch: received frame {last_received} exceeds last_completed_frame {last_completed}"
+        ));
+    }
+    if let Some(last_persisted) = receipt.last_persisted_frame {
+        if last_persisted > last_completed {
+            return Err(format!(
+                "load-transfer crash/frame mismatch: last_persisted_frame {last_persisted} exceeds last_completed_frame {last_completed}"
+            ));
+        }
+        if let Some(last_received) = last_received
+            && last_received > last_persisted
+        {
+            return Err(format!(
+                "load-transfer crash/frame mismatch: received frame {last_received} exceeds last_persisted_frame {last_persisted}"
+            ));
+        }
+    }
+    if let Some(first_error) = &receipt.first_error
+        && let Some(frame_index) = first_error.frame_index
+        && frame_index <= last_completed
+    {
+        return Err(format!(
+            "load-transfer crash/frame mismatch: first_error frame {frame_index} is not after last_completed_frame {last_completed}"
+        ));
+    }
+    match receipt.state {
+        BackendState::Completed => {
+            if last_received != Some(last_completed) {
+                return Err(format!(
+                    "load-transfer crash/frame mismatch: completed receipt last_completed_frame {last_completed} does not equal the received last frame {last_received:?}"
+                ));
+            }
+        }
+        BackendState::Failed | BackendState::Cancelled => {
+            if let Some(requested_last) = receipt.requested_last_frame
+                && requested_last <= last_completed
+            {
+                return Err(format!(
+                    "load-transfer crash/frame mismatch: requested_last_frame {requested_last} is not after last_completed_frame {last_completed}"
+                ));
+            }
+        }
+        BackendState::Running => return Err("load-transfer backend status is running; a terminal receipt is required".into()),
+    }
+    Ok(())
+}
+
+pub fn backend_status(archive: &LoadTransferArchive) -> BackendStatus {
+    let last_received_frame = archive.frames.last().map(|frame| frame.frame_index);
+    match &archive.crash {
+        Some(receipt) => BackendStatus {
+            state: receipt.state,
+            solver_success: receipt.solver_success(),
+            exit_code: receipt.exit_code,
+            signal: receipt.signal,
+            first_error: receipt.first_error.clone(),
+            last_completed_frame: receipt.last_completed_frame,
+            last_persisted_frame: receipt.last_persisted_frame,
+            requested_last_frame: receipt.requested_last_frame,
+            last_received_frame,
+            coverage_through_frame: last_received_frame,
+            apply_allowed: receipt.solver_success(),
+        },
+        None => BackendStatus {
+            state: BackendState::Completed,
+            solver_success: true,
+            exit_code: Some(0),
+            signal: None,
+            first_error: None,
+            last_completed_frame: last_received_frame,
+            last_persisted_frame: last_received_frame,
+            requested_last_frame: last_received_frame,
+            last_received_frame,
+            coverage_through_frame: last_received_frame,
+            apply_allowed: true,
+        },
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

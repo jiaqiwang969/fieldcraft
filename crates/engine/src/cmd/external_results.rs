@@ -231,6 +231,7 @@ fn receive_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
     let bytes = fieldcraft_io::fs::read_capped(Path::new(&path), MAX_BYTES)?;
     let bundle = load_transfer_bundle(&bytes)?;
     let decoded = LoadTransferArchive::decode(&bundle).map_err(error)?;
+    load_transfer::validate_receive_status(&decoded.archive).map_err(error)?;
     if decoded.archive.identity.archive_key != name {
         return Err(error("load-transfer archive_key must equal the receiving result name"));
     }
@@ -240,6 +241,7 @@ fn receive_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
     decoded.archive.identity.validate_program_digests().map_err(error)?;
     let receiver_sha256 = receiver_program_sha256()?;
     let conservation = conservation_response(&decoded)?;
+    let backend_status = load_transfer::backend_status(&decoded.archive);
     let map = current_entity_map(s)?;
     let binding = archive_binding(s, &decoded.archive, &map, &receiver_sha256)?;
     let envelope_json = load_transfer::encode_external_envelope(&bundle).map_err(error)?;
@@ -251,6 +253,7 @@ fn receive_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
         "runtime_qualification":qualification,
         "geometry_status":decoded.archive.applicability.geometry_status,
         "adoption_status":decoded.archive.applicability.adoption_status,
+        "backend_status":backend_status.clone(),
     }))
     .map_err(error)?;
     let context_json = serde_json::to_vec(&json!({
@@ -259,6 +262,7 @@ fn receive_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
         "result_kind":load_transfer::RESULT_KIND,
         "frames":decoded.archive.frames.len(),
         "source":"results.external.load_transfer.receive",
+        "backend_status":backend_status.clone(),
     }))
     .map_err(error)?;
     let record = fieldcraft_io::external_results::ArchivedTrajectory::new(fieldcraft_io::external_results::ArchivedTrajectoryParts {
@@ -286,9 +290,15 @@ fn receive_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
         "runtime_qualification":decoded.archive.qualification,
         "program_identity": {"producer_sha256": decoded.archive.identity.producer_sha256, "adapter_sha256": decoded.archive.identity.adapter_sha256, "receiver_sha256": receiver_sha256, "current_receiver_sha256": receiver_sha256},
         "crash":decoded.archive.crash,
+        "backend_status":backend_status,
+        "apply_allowed":backend_status.apply_allowed,
         "mapped_frames":decoded.mapped_frames.len(),
         "node_loads_per_frame":decoded.archive.mapping.nodes.len(),
-        "structural_step":"ready_for_results.external.load_transfer.apply",
+        "structural_step":if backend_status.apply_allowed {
+            "ready_for_results.external.load_transfer.apply"
+        } else {
+            "not_ready_for_results.external.load_transfer.apply"
+        },
     });
     if p.get("project").is_some() {
         let project = super::file_param(s, p, "project", Access::Write)?;
@@ -312,6 +322,21 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
     }
     let bundle = load_transfer::decode_external_envelope(&record.envelope_json).map_err(error)?;
     let decoded = LoadTransferArchive::decode(&bundle).map_err(error)?;
+    load_transfer::validate_receive_status(&decoded.archive).map_err(error)?;
+    let backend_status = load_transfer::backend_status(&decoded.archive);
+    if !backend_status.apply_allowed {
+        return Err(error(format!(
+            "load-transfer apply refused backend status: state={:?}, exit_code={:?}, signal={:?}, first_error={:?}, last_completed_frame={:?}, last_persisted_frame={:?}, requested_last_frame={:?}, coverage_through_frame={:?}",
+            backend_status.state,
+            backend_status.exit_code,
+            backend_status.signal,
+            backend_status.first_error,
+            backend_status.last_completed_frame,
+            backend_status.last_persisted_frame,
+            backend_status.requested_last_frame,
+            backend_status.coverage_through_frame,
+        )));
+    }
     if matches!(decoded.archive.qualification, load_transfer::RuntimeQualification::Verified { .. }) {
         return Err(error("load-transfer apply rejects a producer-claimed runtime qualification; independent qualification is receiver-owned"));
     }

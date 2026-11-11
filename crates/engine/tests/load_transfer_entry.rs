@@ -110,6 +110,9 @@ fn receive_save_reopen_resave_is_byte_identical_and_apply_creates_native_history
     assert_eq!(reply["conservation"]["all_frames_passed"], true);
     assert_eq!(reply["applicability"]["geometry_status"], "applicable");
     assert_eq!(reply["runtime_qualification"]["state"], "unverified");
+    assert_eq!(reply["backend_status"]["state"], "completed");
+    assert_eq!(reply["backend_status"]["solver_success"], true);
+    assert_eq!(reply["backend_status"]["coverage_through_frame"], 1);
     assert_eq!(reply["program_identity"]["producer_sha256"], fieldcraft_io::sha256_hex(b"entry-test-producer-artifact"));
     assert_eq!(reply["program_identity"]["adapter_sha256"], fieldcraft_io::sha256_hex(b"entry-test-adapter-artifact"));
     assert_eq!(reply["program_identity"]["receiver_sha256"].as_str().unwrap().len(), 64);
@@ -129,6 +132,85 @@ fn receive_save_reopen_resave_is_byte_identical_and_apply_creates_native_history
     assert_eq!(applied["transient_settings"]["output_every"], 1);
     assert_eq!(applied["transient_settings"]["integration"]["type"], "average_acceleration");
     assert!(applied["boundary_condition_warning"].is_string());
+    let _ = fs::remove_dir_all(dir);
+}
+
+fn failed_receipt(state: BackendState, exit_code: Option<i32>, signal: Option<i32>, first_error: Option<u64>) -> CrashReceipt {
+    CrashReceipt {
+        state,
+        exit_code,
+        signal,
+        first_error: first_error.map(|frame_index| FirstError {
+            frame_index: Some(frame_index),
+            phase: "solve".into(),
+            kind: "native_failure".into(),
+            message: "real backend failure; qualified prefix retained".into(),
+        }),
+        last_completed_frame: Some(1),
+        last_persisted_frame: Some(1),
+        requested_last_frame: Some(3),
+        stdout_sha256: "a".repeat(64),
+        stderr_sha256: "b".repeat(64),
+    }
+}
+
+#[test]
+fn product_entry_accepts_failed_and_signal_records_but_never_applies_them() {
+    for (label, receipt) in [
+        ("failed", failed_receipt(BackendState::Failed, Some(2), None, Some(2))),
+        ("signal", failed_receipt(BackendState::Failed, None, Some(11), None)),
+    ] {
+        let dir = test_dir(&format!("backend-{label}"));
+        let project = dir.join(format!("{label}.fieldcraft"));
+        let mut session = session_with_node();
+        let mut archive = LoadTransferArchive::decode(&bundle_for(&session.model)).unwrap().archive;
+        archive.crash = Some(receipt);
+        let path = write_bundle(&dir, label, &archive.encode().unwrap());
+        let reply = session.execute("results.external.load_transfer.receive", &json!({"path":path,"name":"support-load","project":project})).unwrap();
+        assert_eq!(reply["backend_status"]["state"], "failed");
+        assert_eq!(reply["backend_status"]["solver_success"], false);
+        assert_eq!(reply["backend_status"]["last_completed_frame"], 1);
+        assert_eq!(reply["backend_status"]["last_persisted_frame"], 1);
+        assert_eq!(reply["backend_status"]["requested_last_frame"], 3);
+        assert_eq!(reply["backend_status"]["coverage_through_frame"], 1);
+        assert_eq!(reply["apply_allowed"], false);
+        assert_eq!(reply["structural_step"], "not_ready_for_results.external.load_transfer.apply");
+        let first = fs::read(&project).unwrap();
+
+        let mut reopened = Session::default();
+        reopened.execute("file.open", &json!({"path":project})).unwrap();
+        let listed = reopened.execute("results.external.list", &json!({})).unwrap();
+        assert_eq!(listed[0]["backend_status"]["state"], "failed");
+        assert_eq!(listed[0]["backend_status"]["coverage_through_frame"], 1);
+        reopened.execute("file.save", &json!({"path":project,"results":true})).unwrap();
+        let second = fs::read(&project).unwrap();
+        assert_eq!(first, second, "failed backend record changed across reopen/save");
+        let error = reopened.execute("results.external.load_transfer.apply", &json!({"name":"support-load"})).unwrap_err().to_string();
+        assert!(error.contains("refused backend status") && error.contains("last_completed_frame"), "{error}");
+        let _ = fs::remove_dir_all(dir);
+    }
+}
+
+#[test]
+fn product_entry_rejects_bad_frame_facts_and_crash_frame_mismatch() {
+    let dir = test_dir("backend-admission-rejects");
+    let mut bad_frame = session_with_node();
+    let mut archive = LoadTransferArchive::decode(&bundle_for(&bad_frame.model)).unwrap().archive;
+    archive.frames[1].facts.converged = false;
+    let path = write_bundle(&dir, "bad-frame", &archive.encode().unwrap());
+    let error = receive_path(&mut bad_frame, &path, "support-load").unwrap_err();
+    assert!(error.contains("frame 1") && error.contains("item=converged"), "{error}");
+    no_external_results(&mut bad_frame);
+
+    let mut mismatch = session_with_node();
+    let mut archive = LoadTransferArchive::decode(&bundle_for(&mismatch.model)).unwrap().archive;
+    archive.crash = Some(failed_receipt(BackendState::Failed, Some(2), None, Some(2)));
+    archive.crash.as_mut().unwrap().last_completed_frame = Some(0);
+    archive.crash.as_mut().unwrap().last_persisted_frame = Some(0);
+    let path = write_bundle(&dir, "crash-mismatch", &archive.encode().unwrap());
+    let error = receive_path(&mut mismatch, &path, "support-load").unwrap_err();
+    assert!(error.contains("crash/frame mismatch") && error.contains("received frame 1"), "{error}");
+    no_external_results(&mut mismatch);
     let _ = fs::remove_dir_all(dir);
 }
 
@@ -422,4 +504,151 @@ fn product_entry_rejects_missing_directory_and_overlong_path_parameters() {
         .to_string();
     assert!(!error.is_empty());
     let _ = fs::remove_dir_all(dir);
+}
+
+#[test]
+#[ignore = "real case22 evidence is run explicitly with the frozen source fixture"]
+fn product_entry_accepts_real_case22_failed_prefix_and_records_raw_reply() {
+    let fixture_path =
+        std::env::var("LOAD_TRANSFER_CASE22_FAILURE_FIXTURE").map(PathBuf::from).expect("LOAD_TRANSFER_CASE22_FAILURE_FIXTURE is required");
+    let evidence_dir =
+        std::env::var("LOAD_TRANSFER_CASE22_FAILURE_EVIDENCE").map(PathBuf::from).expect("LOAD_TRANSFER_CASE22_FAILURE_EVIDENCE is required");
+    fs::create_dir_all(&evidence_dir).unwrap();
+    let fixture: Value = serde_json::from_slice(&fs::read(&fixture_path).unwrap()).unwrap();
+    let source_frames = fixture["frames"].as_array().expect("source frames");
+    assert_eq!(source_frames.len(), 11605);
+    assert_eq!(fixture["first_failed_frame"]["frame"], 11606);
+
+    let mut session = session_with_node();
+    let snapshot = identity::snapshot(&session.model, &fieldcraft_io::Geometry::default(), &fieldcraft_io::Run::default()).unwrap();
+    let activation_frames = source_frames
+        .iter()
+        .map(|frame| {
+            let peak = frame["force_n"].as_array().unwrap().iter().map(|value| value.as_f64().unwrap().abs()).sum::<f64>();
+            ActivationFrame {
+                frame_index: frame["frame_index"].as_u64().unwrap(),
+                source_active: vec![ActivationPoint { contact_id: "case22-contact".into(), weight: 1.0, gap_m: 0.0 }],
+                feedback_active: Some(vec![ActivationPoint { contact_id: "case22-contact".into(), weight: 1.0, gap_m: 0.0 }]),
+                source_peak_force_n: Some(peak),
+                feedback_peak_force_n: Some(peak),
+            }
+        })
+        .collect();
+    let activation = ActivationData {
+        frames: activation_frames,
+        activation_length_m: 1.0,
+        required_fields: true,
+        structural_feedback: true,
+        force_precision: ForcePrecisionLimit {
+            kappa_pa: UnknownOr::unknown("case22 producer did not export per-frame effective kappa"),
+            truncated: UnknownOr::unknown("case22 producer did not export per-frame truncation"),
+        },
+    };
+    let qualification = RuntimeQualification::Unverified { reason: "case22 failed run is not a runtime qualification".into() };
+    let applicability = evaluate_applicability(&activation.applicability_input().unwrap(), &qualification).unwrap();
+    let frames = source_frames
+        .iter()
+        .map(|frame| LoadFrame {
+            frame_index: frame["frame_index"].as_u64().unwrap(),
+            time_s: frame["time_s"].as_f64().unwrap(),
+            source_dt_s: if frame["frame_index"].as_u64().unwrap() == 1 { 0.0 } else { 0.0002 },
+            points: vec![PointForce {
+                point_id: "case22-foot-force-0".into(),
+                position_m: [0.0, 0.0, 0.0],
+                force_n: [frame["force_n"][0].as_f64().unwrap(), frame["force_n"][1].as_f64().unwrap(), frame["force_n"][2].as_f64().unwrap()],
+            }],
+            facts: FrameFacts {
+                completed: true,
+                converged: true,
+                hit_newton_limit: false,
+                hit_line_search_limit: false,
+                kappa_pa: UnknownOr::unknown("case22 producer did not export per-frame effective kappa"),
+                truncated: UnknownOr::unknown("case22 producer did not export per-frame truncation"),
+            },
+        })
+        .collect();
+    let archive = LoadTransferArchive {
+        identity: LoadIdentity {
+            archive_key: "case22-real-failed-prefix-11605".into(),
+            run_id: "case22-full-12400-20261110".into(),
+            epoch: 0,
+            worker_generation: "native-pid-3111910".into(),
+            model_revision: snapshot.model_revision,
+            mesh_digest: snapshot.reference_mesh_digest,
+            coordinate_frame: "world".into(),
+            units: "SI".into(),
+            producer_sha256: "385cf03b0acb729ad82b5710b85f463ade7be4e02e8143291fca4f849ecdea5e".into(),
+            adapter_sha256: "74d14f14a73da4deb112982a644e98bc664489d717db9d8222092e6086e62a74".into(),
+        },
+        mapping: MappingSpec {
+            origin_m: [0.0, 0.0, 0.0],
+            nodes: vec![MappingNode { node_id: 1, position_m: [0.0, 0.0, 0.0] }],
+            rows: vec![PointMapping {
+                point_id: "case22-foot-force-0".into(),
+                contributions: vec![NodeContribution { node_id: 1, h_block: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]] }],
+            }],
+            mapping_sha256: "c".repeat(64),
+        },
+        frames,
+        activation,
+        qualification,
+        applicability,
+        crash: Some(CrashReceipt {
+            state: BackendState::Failed,
+            exit_code: Some(2),
+            signal: None,
+            first_error: Some(FirstError {
+                frame_index: Some(11606),
+                phase: "native_step".into(),
+                kind: "native_step_not_converged".into(),
+                message: "case22 frame 11606 hit Newton limit; native exit 2".into(),
+            }),
+            last_completed_frame: Some(11605),
+            last_persisted_frame: Some(11605),
+            requested_last_frame: Some(12400),
+            stdout_sha256: "891bb6482690ef1c6c53dccff335ef20f270c892ce3d1ad704ccd2e7b745c66f".into(),
+            stderr_sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855".into(),
+        }),
+    };
+    let bundle_path = evidence_dir.join("case22-real-failed-prefix-11605.bundle.json");
+    fs::write(&bundle_path, serde_json::to_vec(&archive.encode().unwrap()).unwrap()).unwrap();
+    let project_path = evidence_dir.join("case22-real-failed-prefix-11605.fieldcraft");
+    let reply = session
+        .execute(
+            "results.external.load_transfer.receive",
+            &json!({"path":bundle_path,"name":"case22-real-failed-prefix-11605","project":project_path}),
+        )
+        .unwrap();
+    assert_eq!(reply["backend_status"]["state"], "failed");
+    assert_eq!(reply["backend_status"]["exit_code"], 2);
+    assert_eq!(reply["backend_status"]["last_completed_frame"], 11605);
+    assert_eq!(reply["backend_status"]["coverage_through_frame"], 11605);
+    assert_eq!(reply["apply_allowed"], false);
+    let first = fs::read(&project_path).unwrap();
+    let mut reopened = Session::default();
+    reopened.execute("file.open", &json!({"path":project_path})).unwrap();
+    let list = reopened.execute("results.external.list", &json!({})).unwrap();
+    reopened.execute("file.save", &json!({"path":project_path,"results":true})).unwrap();
+    let second = fs::read(&project_path).unwrap();
+    assert_eq!(first, second);
+    assert_eq!(list[0]["backend_status"]["coverage_through_frame"], 11605);
+    let apply_error =
+        reopened.execute("results.external.load_transfer.apply", &json!({"name":"case22-real-failed-prefix-11605"})).unwrap_err().to_string();
+    assert!(apply_error.contains("refused backend status"), "{apply_error}");
+    fs::write(
+        evidence_dir.join("case22-real-failed-entry-reply.json"),
+        serde_json::to_vec_pretty(&json!({
+            "source_fixture": fixture_path,
+            "source_case": fixture["source_case"],
+            "first_failed_frame": fixture["first_failed_frame"],
+            "native_exit": fixture["native_exit"],
+            "receive_reply": reply,
+            "reopen_list_reply": list,
+            "project_reopen_resave_byte_identical": first == second,
+            "apply_rejection": apply_error,
+            "qualified_prefix_frame_count": source_frames.len(),
+        }))
+        .unwrap(),
+    )
+    .unwrap();
 }

@@ -30,6 +30,7 @@ impl Session {
         if load_transfer::is_external_envelope(&record.envelope_json) {
             let bundle = load_transfer::decode_external_envelope(&record.envelope_json).map_err(|e| EngineError::Params(e.to_string()))?;
             let decoded = load_transfer::LoadTransferArchive::decode(&bundle).map_err(|e| EngineError::Params(e.to_string()))?;
+            load_transfer::validate_receive_status(&decoded.archive).map_err(EngineError::Params)?;
             if decoded.archive.identity.archive_key != record.archive_key
                 || decoded.archive.identity.model_revision != record.binding.snapshot.model_revision
                 || decoded.archive.identity.mesh_digest != record.binding.snapshot.reference_mesh_digest
@@ -75,6 +76,8 @@ impl Session {
                 if load_transfer::is_external_envelope(&record.envelope_json) {
                     let bundle = load_transfer::decode_external_envelope(&record.envelope_json).map_err(|e| e.to_string())?;
                     let decoded = load_transfer::LoadTransferArchive::decode(&bundle).map_err(|e| e.to_string())?;
+                    load_transfer::validate_receive_status(&decoded.archive)?;
+                    let backend_status = load_transfer::backend_status(&decoded.archive);
                     let conservation = decoded
                         .archive
                         .frames
@@ -95,7 +98,7 @@ impl Session {
                     return Ok(json!({"kind":13,"schema":load_transfer::SCHEMA,"archive_key":record.archive_key,"result_id":record.result_id,
                         "frames":decoded.archive.frames.len(),"conservation":conservation,"time_integrals":integrals,
                         "applicability":decoded.archive.applicability,"runtime_qualification":decoded.archive.qualification,
-                        "crash":decoded.archive.crash,"native_postprocessing":"load_transfer.apply","stale":current.is_err(),
+                        "crash":decoded.archive.crash,"backend_status":backend_status,"native_postprocessing":"load_transfer.apply","stale":current.is_err(),
                         "binding_error":current.as_ref().err().map(ToString::to_string)}));
                 }
                 let context=ReceiveContextV1::decode(&record.context_json).map_err(|e|e.to_string())?;
