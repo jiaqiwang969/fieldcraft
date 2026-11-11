@@ -32,6 +32,7 @@ pub fn svg(id: &str) -> Option<&'static str> {
         "solve.fatigue.history" | "solve.fatigue.transient" => "model.amplitude",
         "solve.fatigue.strain_cycles" => "results.xy",
         "results.external.receive" => "results.read",
+        "results.external.static_base.receive" => "results.read",
         other => other,
     };
     ICONS.binary_search_by(|(k, _)| (*k).cmp(id)).ok().and_then(|i| ICONS.get(i)).map(|(_, s)| *s)
