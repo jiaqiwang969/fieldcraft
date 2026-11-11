@@ -178,7 +178,7 @@ fn receive_static_base(s: &mut Session, p: &Value) -> Result<Value> {
     incoming.validate_binding(&s.model, &s.sources, &s.run).map_err(error)?;
     let producer_payload_sha256 = incoming.payload_sha256().to_string();
     let mut base = incoming.external_static_base().clone();
-    // Qualification is an independent lane-20 decision.  A producer claim is
+    // Qualification is an independent decision.  A producer claim is
     // never propagated through the product-owned receive path.
     base.runtime_qualification = "unverified".into();
     let modal = base.compute_modal_with_count(profile.reference_shapes, profile.mode_count).map_err(error)?;
@@ -203,6 +203,12 @@ fn receive_static_base(s: &mut Session, p: &Value) -> Result<Value> {
     )
     .map_err(error)?;
     let product_payload_sha256 = product.payload_sha256().to_string();
+    let modal_package = product
+        .external_static_base()
+        .modal
+        .as_ref()
+        .map(crate::external::session::static_base_modal_summary)
+        .ok_or_else(|| error("ExternalStaticBase: product modal package missing"))?;
     s.keep_external_static_base(product).map_err(error)?;
     Ok(json!({
         "archive_key": name,
@@ -211,6 +217,7 @@ fn receive_static_base(s: &mut Session, p: &Value) -> Result<Value> {
         "producer_payload_sha256": producer_payload_sha256,
         "product_payload_sha256": product_payload_sha256,
         "modal_source": "product_recomputed_from_K_M_T",
+        "modal_package": modal_package,
         "modal_mode_count": mode_count,
         "modal_max_residual": max_residual,
         "modal_max_mass_off_diagonal": mass_off_diagonal,

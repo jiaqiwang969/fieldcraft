@@ -21,7 +21,7 @@ pub mod production;
 pub(crate) mod program_identity;
 pub mod receive;
 pub mod run;
-mod session;
+pub(crate) mod session;
 pub mod transaction;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod worker;

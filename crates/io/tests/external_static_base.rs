@@ -129,6 +129,51 @@ fn closed_base_roundtrip_has_modal_package_and_unverified_runtime() {
 }
 
 #[test]
+fn consistent_mass_total_counts_direction_block_entries() {
+    let (_model, archive) = fixture();
+    let mut base = archive.external_static_base().clone();
+    base.state.reference_coordinates = vec![0.0; 6];
+    base.state.coordinates = vec![0.002, 0.001, 0.003, 0.004, 0.005, 0.006];
+    base.state.velocities = vec![1e-9; 6];
+    let mut stiffness = vec![0.0; 36];
+    for i in 0..6 {
+        stiffness[i * 6 + i] = 4.0 + i as f64;
+    }
+    base.stiffness.matrix = DenseMatrix::square(stiffness, 6).unwrap();
+    let mut mass = vec![0.0; 36];
+    for axis in 0..3 {
+        let first = axis;
+        let second = axis + 3;
+        mass[first * 6 + first] = 0.45;
+        mass[second * 6 + second] = 0.45;
+        mass[first * 6 + second] = 0.05;
+        mass[second * 6 + first] = 0.05;
+    }
+    base.mass.matrix = DenseMatrix::square(mass, 6).unwrap();
+    base.mass.declared_total = 1.0;
+    let identity6 = DenseMatrix::square((0..36).map(|index| if index / 6 == index % 6 { 1.0 } else { 0.0 }).collect(), 6).unwrap();
+    base.constraints.full_dofs = 6;
+    base.constraints.reduced_dofs = 6;
+    base.constraints.q0 = vec![0.0; 6];
+    base.constraints.full_coordinates = base.state.coordinates.clone();
+    base.constraints.reduced_coordinates = base.state.coordinates.clone();
+    base.constraints.t = identity6.clone();
+    base.constraints.reduced_stiffness = base.stiffness.matrix.clone();
+    base.constraints.reduced_mass = base.mass.matrix.clone();
+    base.modal = None;
+    let checked = ArchivedStaticBase::from_payload(
+        archive.archive_key.clone(),
+        archive.binding.clone(),
+        archive.entity_map.clone(),
+        base,
+        archive.admission_json().to_vec(),
+        archive.context_json().to_vec(),
+        archive.source_json().to_vec(),
+    );
+    assert!(checked.is_ok(), "consistent mass direction-block total rejected: {:?}", checked.err());
+}
+
+#[test]
 fn closed_base_rejects_open_sliding_bad_tangent_and_bad_modal() {
     let (model, archive) = fixture();
     let rebuild = |base: ExternalStaticBase| {

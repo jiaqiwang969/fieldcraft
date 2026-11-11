@@ -1,6 +1,6 @@
 //! Seal a measured refusal package before product receive.
 //!
-//! The raw S07 run supplies the contact state; this helper does not mutate a
+//! The raw measured run supplies the contact state; this helper does not mutate a
 //! sealed archive in place.  `from_payload_unchecked` is intentionally named
 //! and limited to refusal evidence because a normal package must pass
 //! `from_payload`.

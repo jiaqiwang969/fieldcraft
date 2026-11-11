@@ -1,5 +1,5 @@
 //! Product-owned kind-13 receive tests.  The fixture is deliberately small;
-//! the real S07 evidence is exercised by the external runner and the delivery
+//! the real measured evidence is exercised by the external runner and the delivery
 //! receipt, while this test covers the receive gate and persistence boundary.
 
 use fieldcraft_engine::Session;
@@ -145,10 +145,21 @@ fn static_base_receive_recomputes_unverified_and_roundtrips_byte_identically() {
     assert_eq!(reply["runtime_qualification"], "unverified");
     assert!(reply["modal_min_mac"].as_f64().unwrap() >= 0.9);
     assert!(reply["modal_min_pair_margin"].as_f64().unwrap() >= 0.05);
+    let modes = reply["modal_package"]["modes"].as_array().unwrap();
+    assert_eq!(modes.len(), 3);
+    for (index, stiffness) in [4.0_f64, 9.0, 16.0].into_iter().enumerate() {
+        let expected_frequency = stiffness.sqrt() / (2.0 * std::f64::consts::PI);
+        assert_eq!(modes[index]["mode"], json!(index + 1));
+        assert!((modes[index]["frequency_hz"].as_f64().unwrap() - expected_frequency).abs() < 1e-12);
+        assert!(modes[index]["residual"].as_f64().unwrap() <= 1e-12);
+    }
+    assert_eq!(reply["modal_package"]["shape_storage"], "stored_in_kind_13_record; omitted_from_command_response");
     session.execute("file.save_as", &json!({"path":first,"results":true})).unwrap();
     let first_bytes = fs::read(&first).unwrap();
     let mut reopened = Session::default();
     reopened.execute("file.open", &json!({"path":first})).unwrap();
+    let listed = reopened.execute("results.external.list", &json!({})).unwrap();
+    assert_eq!(listed[0]["modal_package"], reply["modal_package"]);
     reopened.execute("file.save_as", &json!({"path":second,"results":true})).unwrap();
     assert_eq!(first_bytes, fs::read(&second).unwrap());
 }

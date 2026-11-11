@@ -371,7 +371,9 @@ impl ExternalStaticBase {
         }
         let tolerance = 1e-12_f64.max(1e-9 * self.mass.declared_total);
         for axis in 0..3 {
-            let total = (axis..n).step_by(3).map(|i| self.mass.matrix.at(i, i)).sum::<f64>();
+            let direction_indices: Vec<usize> = (axis..n).step_by(3).collect();
+            let total =
+                direction_indices.iter().flat_map(|row| direction_indices.iter().map(move |column| self.mass.matrix.at(*row, *column))).sum::<f64>();
             if (total - self.mass.declared_total).abs() > tolerance {
                 return invalid(format!(
                     "ExternalStaticBase: mass total axis={axis} measured={total} threshold={}±{}",
