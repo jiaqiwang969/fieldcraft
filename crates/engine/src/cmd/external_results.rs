@@ -53,7 +53,7 @@ pub const REMOVE: CommandSpec = CommandSpec {
 pub const LOAD_TRANSFER_RECEIVE: CommandSpec = CommandSpec {
     id: "results.external.load_transfer.receive",
     label: "Receive Load Transfer",
-    params: r#"{"path":"load-transfer.json","name":"support-load","project"?:"support.fieldcraft"} — receive a result-kind-13 load-transfer bundle, recompute applicability from raw activation frames, verify the current model identity, install it through the external-results entry, and optionally save it into the project"#,
+    params: r#"{"path":"load-transfer.json","name":"support-load","project"?:"support.fieldcraft"} — receive a result-kind-13 load-transfer bundle, recompute applicability from raw activation frames, verify model and program identities, install it through the external-results entry, and optionally save it into the project"#,
     form: Some(super::forms::LOAD_TRANSFER_RECEIVE),
     kind: CommandKind::Session,
     requires: &[],
@@ -63,7 +63,7 @@ pub const LOAD_TRANSFER_RECEIVE: CommandSpec = CommandSpec {
 pub const LOAD_TRANSFER_APPLY: CommandSpec = CommandSpec {
     id: "results.external.load_transfer.apply",
     label: "Apply Mapped Load History",
-    params: r#"{"name":"support-load","step"?:"support-load-transient","boundary_conditions"?:["clamp"],"integration"?:{"type":"average_acceleration"|"linear_acceleration"|{"type":"hht","alpha":-0.1}},"method"?:{"type":"direct"|{"type":"modal","modes":8}},"damping"?:{"alpha":0,"beta":0,"loss_factor":0},"output_every"?:1,"solve_mass"?:"consistent|lumped"} — recheck conservation, then add each nonzero mapped nodal component as a native structural force and tabular amplitude. An existing transient step is reused with its boundary conditions, integration, method, damping, output cadence and other loads unchanged; a new step accepts existing boundary-condition names and warns when none are supplied"#,
+    params: r#"{"name":"support-load","step"?:"support-load-transient","boundary_conditions"?:["clamp"],"integration"?:{"type":"average_acceleration"|"linear_acceleration"|{"type":"hht","alpha":-0.1}},"method"?:{"type":"direct"|{"type":"modal","modes":8}},"damping"?:{"alpha":0,"beta":0,"loss_factor":0},"output_every"?:1} — recheck conservation, then add each nonzero mapped nodal component as a native structural force and tabular amplitude. An existing transient step is reused with its boundary conditions, integration, method, damping, output cadence and other loads unchanged; a new step accepts existing boundary-condition names and warns when none are supplied. Select consistent or lumped mass at solve time."#,
     form: None,
     kind: CommandKind::Model,
     requires: &[],
@@ -103,20 +103,42 @@ fn current_entity_map(s: &Session) -> Result<fieldcraft_io::identity::EntityMap>
     Ok(fieldcraft_io::identity::EntityMap { nodes, elements })
 }
 
-fn load_transfer_artifacts() -> BTreeMap<String, String> {
-    ["producer", "adapter", "receiver"]
-        .into_iter()
-        .map(|role| (role.to_string(), fieldcraft_io::identity::artifact_digest(format!("fieldcraft-load-transfer/{role}/1").as_bytes())))
-        .collect()
+fn receiver_program_sha256() -> Result<String> {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        crate::external::program_identity::current_program_sha256()
+            .map_err(|cause| error(format!("cannot measure receiving program identity: {cause}")))
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        Err(error("cannot measure receiving program identity on this target"))
+    }
 }
 
-fn archive_binding(s: &Session, archive: &LoadTransferArchive, map: &fieldcraft_io::identity::EntityMap) -> Result<fieldcraft_io::identity::Binding> {
+fn load_transfer_artifacts(archive: &LoadTransferArchive, receiver_sha256: &str) -> Result<BTreeMap<String, String>> {
+    archive.identity.validate_program_digests().map_err(error)?;
+    if !fieldcraft_io::identity::digest_valid(receiver_sha256) {
+        return Err(error("receiving program identity has invalid SHA256"));
+    }
+    Ok(BTreeMap::from([
+        ("producer".to_string(), archive.identity.producer_sha256.clone()),
+        ("adapter".to_string(), archive.identity.adapter_sha256.clone()),
+        ("receiver".to_string(), receiver_sha256.to_string()),
+    ]))
+}
+
+fn archive_binding(
+    s: &Session,
+    archive: &LoadTransferArchive,
+    map: &fieldcraft_io::identity::EntityMap,
+    receiver_sha256: &str,
+) -> Result<fieldcraft_io::identity::Binding> {
     let binding = fieldcraft_io::identity::Binding::freeze(
         &s.model,
         &s.sources,
         &s.run,
         map,
-        load_transfer_artifacts(),
+        load_transfer_artifacts(archive, receiver_sha256)?,
         fieldcraft_io::identity::BACKEND_VERSION,
     )
     .map_err(error)?;
@@ -184,9 +206,14 @@ fn receive_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
     if decoded.archive.identity.archive_key != name {
         return Err(error("load-transfer archive_key must equal the receiving result name"));
     }
+    if matches!(decoded.archive.qualification, load_transfer::RuntimeQualification::Verified { .. }) {
+        return Err(error("load-transfer receive rejects a producer-claimed runtime qualification; independent qualification is receiver-owned"));
+    }
+    decoded.archive.identity.validate_program_digests().map_err(error)?;
+    let receiver_sha256 = receiver_program_sha256()?;
     let conservation = conservation_response(&decoded)?;
     let map = current_entity_map(s)?;
-    let binding = archive_binding(s, &decoded.archive, &map)?;
+    let binding = archive_binding(s, &decoded.archive, &map, &receiver_sha256)?;
     let envelope_json = load_transfer::encode_external_envelope(&bundle).map_err(error)?;
     let payload_sha256 = fieldcraft_io::sha256_hex(&envelope_json);
     let qualification = serde_json::to_value(&decoded.archive.qualification).map_err(error)?;
@@ -229,6 +256,7 @@ fn receive_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
         "conservation":conservation,
         "applicability":decoded.archive.applicability,
         "runtime_qualification":decoded.archive.qualification,
+        "program_identity": {"producer_sha256": decoded.archive.identity.producer_sha256, "adapter_sha256": decoded.archive.identity.adapter_sha256, "receiver_sha256": receiver_sha256},
         "crash":decoded.archive.crash,
         "mapped_frames":decoded.mapped_frames.len(),
         "node_loads_per_frame":decoded.archive.mapping.nodes.len(),
@@ -254,9 +282,17 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
     {
         return Err(error(format!("step `{step_name}` already exists with load-transfer objects for `{name}`")));
     }
-    record.validate_binding(&s.model, &s.sources, &s.run).map_err(error)?;
     let bundle = load_transfer::decode_external_envelope(&record.envelope_json).map_err(error)?;
     let decoded = LoadTransferArchive::decode(&bundle).map_err(error)?;
+    if matches!(decoded.archive.qualification, load_transfer::RuntimeQualification::Verified { .. }) {
+        return Err(error("load-transfer apply rejects a producer-claimed runtime qualification; independent qualification is receiver-owned"));
+    }
+    let receiver_sha256 = receiver_program_sha256()?;
+    let artifacts = load_transfer_artifacts(&decoded.archive, &receiver_sha256)?;
+    if record.binding.artifacts != artifacts {
+        return Err(error("load-transfer program identity does not match the receiving executable or incoming artifacts"));
+    }
+    record.validate_binding(&s.model, &s.sources, &s.run).map_err(error)?;
     let conservation = conservation_response(&decoded)?;
     if decoded.archive.applicability.geometry_status == load_transfer::ApplicabilityStatus::Inapplicable {
         return Err(error("load-transfer geometry applicability is inapplicable; mapped one-way structural adoption is refused"));
@@ -294,11 +330,6 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
     let requested_damping = super::opt::<fieldcraft_model::harmonic::Damping>(p, "damping")?;
     let requested_output_every = super::opt::<u32>(p, "output_every")?;
     let requested_boundary_conditions = super::opt::<BTreeSet<String>>(p, "boundary_conditions")?;
-    let solve_mass = super::opt::<String>(p, "solve_mass")?.unwrap_or_else(|| "consistent".to_string());
-    if solve_mass != "consistent" && solve_mass != "lumped" {
-        return Err(error("solve_mass must be `consistent` or `lumped`"));
-    }
-
     let existing_step = s.model.step(&step_name).cloned();
     if let Some(step) = &existing_step
         && !matches!(step.procedure, fieldcraft_model::Procedure::Transient(_))
@@ -465,6 +496,7 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
         "load_components":active_components.len(),
         "conservation":conservation,
         "runtime_qualification":decoded.archive.qualification,
+        "program_identity":{"producer_sha256":decoded.archive.identity.producer_sha256,"adapter_sha256":decoded.archive.identity.adapter_sha256,"receiver_sha256":receiver_sha256},
         "applicability":decoded.archive.applicability,
         "conclusion_allowed":decoded.archive.applicability.adoption_status == load_transfer::ApplicabilityStatus::Applicable,
         "boundary_conditions":boundary_conditions,
@@ -472,7 +504,7 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
         "boundary_condition_warning":if boundary_conditions.is_empty() { Some("no boundary conditions were supplied; a newly created structural step may be unconstrained") } else { None },
         "time_step_source":"total_duration/(frames-1)",
         "time_grid_tolerance_s":LOAD_HISTORY_TIME_TOLERANCE_S,
-        "transient_settings":{"time_step":time_step,"increments":frame_count - 1,"output_every":output_every,"integration":integration,"method":method,"damping":damping,"solve_mass":solve_mass},
+        "transient_settings":{"time_step":time_step,"increments":frame_count - 1,"output_every":output_every,"integration":integration,"method":method,"damping":damping},
         "ready_for":"solve.transient"
     }))
 }

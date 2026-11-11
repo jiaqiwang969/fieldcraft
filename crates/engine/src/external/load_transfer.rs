@@ -1,4 +1,4 @@
-//! G26 load-transfer contract.
+//! Contact-load transfer contract.
 //!
 //! This module is deliberately isolated from the existing type-13 codecs.  It provides a
 //! bounded, reversible representation for point loads, the work-conjugate `Hᵀ` mapping, the
@@ -45,6 +45,14 @@ pub struct LoadIdentity {
     pub mesh_digest: String,
     pub coordinate_frame: String,
     pub units: String,
+    /// SHA256 of the producer artifact.  A legacy archive may omit this field;
+    /// the product receive command rejects that archive before installation.
+    #[serde(default)]
+    pub producer_sha256: String,
+    /// SHA256 of the adapter artifact.  This is supplied by the incoming result
+    /// and checked for digest shape at the receiver boundary.
+    #[serde(default)]
+    pub adapter_sha256: String,
 }
 
 impl LoadIdentity {
@@ -53,6 +61,13 @@ impl LoadIdentity {
             [&self.archive_key, &self.run_id, &self.worker_generation, &self.model_revision, &self.mesh_digest, &self.coordinate_frame, &self.units];
         if values.iter().any(|value| !token_valid(value)) {
             return Err(LoadTransferError::Invalid("load identity"));
+        }
+        Ok(())
+    }
+
+    pub fn validate_program_digests(&self) -> Result<(), LoadTransferError> {
+        if !is_lower_hex_digest(&self.producer_sha256) || !is_lower_hex_digest(&self.adapter_sha256) {
+            return Err(LoadTransferError::Invalid("producer or adapter program identity"));
         }
         Ok(())
     }
@@ -137,13 +152,14 @@ impl MappingSpec {
         if frame.points.len() != self.rows.len() {
             return Err(LoadTransferError::MappingMismatch);
         }
+        let rows: BTreeMap<&str, &PointMapping> = self.rows.iter().map(|row| (row.point_id.as_str(), row)).collect();
         let mut force_by_node: BTreeMap<u64, [f64; 3]> = self.nodes.iter().map(|node| (node.node_id, [0.0; 3])).collect();
         let mut seen = BTreeSet::new();
         for point in &frame.points {
             if !seen.insert(point.point_id.clone()) {
                 return Err(LoadTransferError::DuplicatePoint(point.point_id.clone()));
             }
-            let row = self.rows.iter().find(|row| row.point_id == point.point_id).ok_or(LoadTransferError::MissingPoint(point.point_id.clone()))?;
+            let row = rows.get(point.point_id.as_str()).copied().ok_or(LoadTransferError::MissingPoint(point.point_id.clone()))?;
             for contribution in &row.contributions {
                 let target = force_by_node.get_mut(&contribution.node_id).ok_or(LoadTransferError::MappingMismatch)?;
                 let contribution_force = transpose_mul(contribution.h_block, point.force_n);
@@ -262,11 +278,12 @@ pub fn check_conservation(
     let force_residual_n = sub(target_force, source_force);
     let moment_residual_nm = sub(target_moment, source_moment);
 
+    let node_index: BTreeMap<u64, usize> = mapping.nodes.iter().enumerate().map(|(index, node)| (node.node_id, index)).collect();
     let mut point_displacements: BTreeMap<&str, [f64; 3]> = BTreeMap::new();
     for row in &mapping.rows {
         let mut displacement = [0.0; 3];
         for contribution in &row.contributions {
-            let node_index = mapping.nodes.iter().position(|node| node.node_id == contribution.node_id).ok_or(LoadTransferError::MappingMismatch)?;
+            let node_index = node_index.get(&contribution.node_id).copied().ok_or(LoadTransferError::MappingMismatch)?;
             displacement = add(displacement, mat_mul(contribution.h_block, virtual_node_displacements_m[node_index]));
         }
         point_displacements.insert(row.point_id.as_str(), displacement);
@@ -946,6 +963,10 @@ fn token_valid(value: &str) -> bool {
 
 fn is_digest(value: &str) -> bool {
     value.len() == 64 && value.as_bytes().iter().all(u8::is_ascii_hexdigit)
+}
+
+fn is_lower_hex_digest(value: &str) -> bool {
+    value.len() == 64 && value.bytes().all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
 }
 
 fn finite(value: f64) -> Result<(), LoadTransferError> {

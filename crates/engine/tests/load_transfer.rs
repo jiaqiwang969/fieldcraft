@@ -1,4 +1,5 @@
 use fieldcraft_engine::external::load_transfer::*;
+use std::time::{Duration, Instant};
 
 fn identity() -> LoadIdentity {
     LoadIdentity {
@@ -10,6 +11,8 @@ fn identity() -> LoadIdentity {
         mesh_digest: "b".repeat(64),
         coordinate_frame: "world".to_string(),
         units: "SI".to_string(),
+        producer_sha256: fieldcraft_io::sha256_hex(b"unit-test-producer-artifact"),
+        adapter_sha256: fieldcraft_io::sha256_hex(b"unit-test-adapter-artifact"),
     }
 }
 
@@ -113,8 +116,52 @@ fn h_transpose_conserves_force_moment_and_virtual_work() {
 }
 
 #[test]
+fn indexed_mapping_handles_two_thousand_points_over_two_hundred_frames_in_seconds() {
+    const POINTS: usize = 2_000;
+    const FRAMES: usize = 200;
+    let identity = identity_h();
+    let spec = MappingSpec {
+        origin_m: [0.0, 0.0, 0.0],
+        nodes: (0..POINTS).map(|index| MappingNode { node_id: index as u64, position_m: [index as f64 * 1e-3, 0.0, 0.0] }).collect(),
+        rows: (0..POINTS)
+            .map(|index| PointMapping {
+                point_id: format!("p{index}"),
+                contributions: vec![NodeContribution { node_id: index as u64, h_block: identity }],
+            })
+            .collect(),
+        mapping_sha256: "0".repeat(64),
+    };
+    let virtual_displacements = vec![[0.0; 3]; POINTS];
+    let started = Instant::now();
+    for frame_index in 0..FRAMES {
+        let frame = LoadFrame {
+            frame_index: frame_index as u64,
+            time_s: frame_index as f64 * 1e-3,
+            source_dt_s: if frame_index == 0 { 0.0 } else { 1e-3 },
+            points: (0..POINTS)
+                .map(|point_index| PointForce {
+                    point_id: format!("p{point_index}"),
+                    position_m: [point_index as f64 * 1e-3, 0.0, 0.0],
+                    force_n: [1.0, 0.0, 0.0],
+                })
+                .collect(),
+            facts: facts(),
+        };
+        let mapped = spec.map_frame(&frame).unwrap();
+        let report = check_conservation(&frame, &mapped, &spec, &virtual_displacements).unwrap();
+        assert!(report.passed, "frame {frame_index}: {report:?}");
+    }
+    let elapsed = started.elapsed();
+    assert!(elapsed < Duration::from_secs(10), "indexed mapping scale test took {elapsed:?}");
+}
+
+#[test]
 fn applicability_keeps_unknown_force_precision_parallel_to_geometry() {
-    let report = evaluate_applicability(&applicability_input(0.05), &RuntimeQualification::Unverified { reason: "pending G25".to_string() }).unwrap();
+    let report = evaluate_applicability(
+        &applicability_input(0.05),
+        &RuntimeQualification::Unverified { reason: "independent runtime qualification remains pending".to_string() },
+    )
+    .unwrap();
     assert_eq!(report.geometry_status, ApplicabilityStatus::Applicable);
     assert_eq!(report.adoption_status, ApplicabilityStatus::Unknown);
     assert!(report.force_precision.kappa_pa.is_unknown());
@@ -133,7 +180,7 @@ fn impact_fixture_is_inapplicable_at_first_changed_frame() {
     let activation = impact_fixture_activation();
     let input = activation.applicability_input().unwrap();
     let report =
-        evaluate_applicability(&input, &RuntimeQualification::Unverified { reason: "G25 independent runtime qualification is pending".to_string() })
+        evaluate_applicability(&input, &RuntimeQualification::Unverified { reason: "independent runtime qualification remains pending".to_string() })
             .unwrap();
     assert_eq!(report.geometry_status, ApplicabilityStatus::Inapplicable);
     assert_eq!(report.adoption_status, ApplicabilityStatus::Inapplicable);

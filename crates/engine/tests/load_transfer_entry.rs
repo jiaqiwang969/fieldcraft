@@ -30,7 +30,7 @@ fn bundle_for(model: &Model) -> ArchiveBundle {
         structural_feedback: true,
         force_precision: ForcePrecisionLimit { kappa_pa: UnknownOr::unknown("not exposed"), truncated: UnknownOr::unknown("not exposed") },
     };
-    let qualification = RuntimeQualification::Verified { source: "entry-test".into() };
+    let qualification = RuntimeQualification::Unverified { reason: "independent qualification is not supplied by an incoming result".into() };
     let applicability = evaluate_applicability(&activation.applicability_input().unwrap(), &qualification).unwrap();
     LoadTransferArchive {
         identity: LoadIdentity {
@@ -42,6 +42,8 @@ fn bundle_for(model: &Model) -> ArchiveBundle {
             mesh_digest: snapshot.reference_mesh_digest,
             coordinate_frame: "world".into(),
             units: "SI".into(),
+            producer_sha256: fieldcraft_io::sha256_hex(b"entry-test-producer-artifact"),
+            adapter_sha256: fieldcraft_io::sha256_hex(b"entry-test-adapter-artifact"),
         },
         mapping: MappingSpec {
             origin_m: [0.0, 0.0, 0.0],
@@ -107,7 +109,10 @@ fn receive_save_reopen_resave_is_byte_identical_and_apply_creates_native_history
     assert_eq!(reply["project_saved"], true);
     assert_eq!(reply["conservation"]["all_frames_passed"], true);
     assert_eq!(reply["applicability"]["geometry_status"], "applicable");
-    assert_eq!(reply["runtime_qualification"]["state"], "verified");
+    assert_eq!(reply["runtime_qualification"]["state"], "unverified");
+    assert_eq!(reply["program_identity"]["producer_sha256"], fieldcraft_io::sha256_hex(b"entry-test-producer-artifact"));
+    assert_eq!(reply["program_identity"]["adapter_sha256"], fieldcraft_io::sha256_hex(b"entry-test-adapter-artifact"));
+    assert_eq!(reply["program_identity"]["receiver_sha256"].as_str().unwrap().len(), 64);
     let first = fs::read(&project_path).unwrap();
 
     let mut reopened = Session::default();
@@ -159,8 +164,7 @@ fn product_apply_reuses_existing_transient_step_without_dropping_supports_or_set
                 "integration":{"type":"average_acceleration"},
                 "method":{"type":"direct"},
                 "damping":{"alpha":0.0,"beta":0.0,"loss_factor":0.0},
-                "output_every":1,
-                "solve_mass":"consistent"
+                "output_every":1
             }),
         )
         .unwrap();
@@ -298,6 +302,30 @@ fn product_receive_rejects_identity_checksum_applicability_mapping_order_and_tra
         no_external_results(&mut session);
         let _ = fs::remove_dir_all(dir);
     }
+}
+
+#[test]
+fn product_receive_rejects_producer_claimed_qualification_and_bad_program_identity() {
+    let dir = test_dir("reject-qualification-and-program-identity");
+
+    let mut self_claimed = LoadTransferArchive::decode(&bundle_for(&session_with_node().model)).unwrap().archive;
+    self_claimed.qualification = RuntimeQualification::Verified { source: "producer".into() };
+    self_claimed.applicability =
+        evaluate_applicability(&self_claimed.activation.applicability_input().unwrap(), &self_claimed.qualification).unwrap();
+    let self_claimed_path = write_bundle(&dir, "self-claimed", &self_claimed.encode().unwrap());
+    let mut self_claimed_session = session_with_node();
+    let error = receive_path(&mut self_claimed_session, &self_claimed_path, "support-load").unwrap_err();
+    assert!(error.contains("producer-claimed runtime qualification"), "{error}");
+    no_external_results(&mut self_claimed_session);
+
+    let mut invalid_identity = LoadTransferArchive::decode(&bundle_for(&session_with_node().model)).unwrap().archive;
+    invalid_identity.identity.producer_sha256 = "not-a-sha256".into();
+    let invalid_identity_path = write_bundle(&dir, "invalid-program-identity", &invalid_identity.encode().unwrap());
+    let mut invalid_identity_session = session_with_node();
+    let error = receive_path(&mut invalid_identity_session, &invalid_identity_path, "support-load").unwrap_err();
+    assert!(error.contains("program identity"), "{error}");
+    no_external_results(&mut invalid_identity_session);
+    let _ = fs::remove_dir_all(dir);
 }
 
 #[test]

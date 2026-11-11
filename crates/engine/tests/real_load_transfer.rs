@@ -11,8 +11,15 @@ fn v3(value: &Value) -> [f64; 3] {
     [values[0].as_f64().unwrap(), values[1].as_f64().unwrap(), values[2].as_f64().unwrap()]
 }
 
+fn default_real_input_path() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..").join("记录/第五阶段/回归/补齐候选/真实载荷输入-身份修正.json")
+}
+
 fn archive_from_input(input: &Value, model: &fieldcraft_model::Model, name: &str, activation: ActivationData) -> LoadTransferArchive {
     let snapshot = identity::snapshot(model, &fieldcraft_io::Geometry::default(), &fieldcraft_io::Run::default()).unwrap();
+    let program_identity = input["program_identity"].as_object().expect("real input must carry actual producer and adapter identities");
+    let producer_sha256 = program_identity["producer_sha256"].as_str().expect("producer_sha256").to_owned();
+    let adapter_sha256 = program_identity["adapter_sha256"].as_str().expect("adapter_sha256").to_owned();
     let labels: Vec<u64> = input["target_node_labels"].as_array().unwrap().iter().map(|value| value.as_u64().unwrap()).collect();
     let target_xyz: Vec<[f64; 3]> = input["target_xyz_m"].as_array().unwrap().iter().map(v3).collect();
     let frames: Vec<LoadFrame> = input["time_s"]
@@ -62,13 +69,15 @@ fn archive_from_input(input: &Value, model: &fieldcraft_model::Model, name: &str
     LoadTransferArchive {
         identity: LoadIdentity {
             archive_key: name.to_string(),
-            run_id: "S04-dynamic-final-h31".into(),
+            run_id: "frozen-dynamic-input".into(),
             epoch: 1,
             worker_generation: "frozen-source".into(),
             model_revision: snapshot.model_revision,
             mesh_digest: snapshot.reference_mesh_digest,
             coordinate_frame: "world".into(),
             units: "SI".into(),
+            producer_sha256,
+            adapter_sha256,
         },
         mapping,
         frames,
@@ -153,9 +162,7 @@ fn history_relative_checks(product: &Value, history: &Value, tip_node: u64, far_
 
 #[test]
 fn real_frozen_point_forces_use_receive_map_conservation_apply_and_impact_gate() {
-    let input_path = std::env::var("LOAD_TRANSFER_REAL_INPUT")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..").join("记录/第五阶段/回归/补齐候选/真实载荷输入.json"));
+    let input_path = std::env::var("LOAD_TRANSFER_REAL_INPUT").map(PathBuf::from).unwrap_or_else(|_| default_real_input_path());
     let input_bytes = fs::read(&input_path).unwrap();
     let input: Value = serde_json::from_slice(&input_bytes).unwrap();
     let mut session = Session::default();
@@ -172,11 +179,11 @@ fn real_frozen_point_forces_use_receive_map_conservation_apply_and_impact_gate()
     }
     let load_archive = archive_from_input(&input, &session.model, "real-load", unknown_activation);
     let impact_archive = archive_from_input(&input, &session.model, "real-impact", actual_activation);
-    let load_path = input_path.with_file_name("real-load.bundle.json");
-    let impact_path = input_path.with_file_name("real-impact.bundle.json");
+    let load_path = input_path.with_file_name("real-load-identity.bundle.json");
+    let impact_path = input_path.with_file_name("real-impact-identity.bundle.json");
     fs::write(&load_path, serde_json::to_vec(&load_archive.encode().unwrap()).unwrap()).unwrap();
     fs::write(&impact_path, serde_json::to_vec(&impact_archive.encode().unwrap()).unwrap()).unwrap();
-    let project_path = input_path.with_file_name("real-load.fieldcraft");
+    let project_path = input_path.with_file_name("real-load-identity.fieldcraft");
     let load_reply =
         session.execute("results.external.load_transfer.receive", &json!({"path":load_path,"name":"real-load","project":project_path})).unwrap();
     let impact_reply = session.execute("results.external.load_transfer.receive", &json!({"path":impact_path,"name":"real-impact"})).unwrap();
@@ -195,7 +202,7 @@ fn real_frozen_point_forces_use_receive_map_conservation_apply_and_impact_gate()
     assert_eq!(apply_reply["ready_for"], "solve.transient");
     assert_eq!(apply_reply["conclusion_allowed"], false);
     assert_eq!(apply_reply["frames"], 1025);
-    let report_path = input_path.with_file_name("真实载荷全链-结果.json");
+    let report_path = input_path.with_file_name("真实载荷全链-结果-身份修正.json");
     fs::write(
         &report_path,
         serde_json::to_vec_pretty(&json!({
@@ -205,7 +212,7 @@ fn real_frozen_point_forces_use_receive_map_conservation_apply_and_impact_gate()
             "impact_receive": impact_reply,
             "project_reopen_resave_byte_identical": true,
             "apply": apply_reply,
-            "two_layer_regression": "see 记录/第五阶段/回归/当前程序重算/two-layer-current-vs-history.json and independent-3d-regression.json",
+            "two_layer_regression": "compare the product path with the frozen reference and an independent three-dimensional reference",
             "runtime_boundary": "unknown qualification is retained; structural path is diagnostic and conclusion_allowed=false",
         }))
         .unwrap(),
@@ -216,27 +223,13 @@ fn real_frozen_point_forces_use_receive_map_conservation_apply_and_impact_gate()
     let _ = fs::remove_file(project_path);
 }
 
-/// The candidate regression must exercise the product entry points against the
-/// frozen 621-node model.  Without the Dell paths this remains a fast, explicit
-/// skip so the ordinary unit-test suite does not pretend to have run the heavy
-/// solve locally.
 #[test]
+#[ignore = "heavy real-case solve; requires the frozen model, history and output paths"]
 fn real_frozen_point_forces_run_the_product_receive_apply_solve_chain() {
-    let Ok(model_path) = std::env::var("LOAD_TRANSFER_REAL_MODEL") else {
-        eprintln!("skip real product chain: LOAD_TRANSFER_REAL_MODEL is not set");
-        return;
-    };
-    let Ok(history_path) = std::env::var("LOAD_TRANSFER_REAL_HISTORY") else {
-        eprintln!("skip real product chain: LOAD_TRANSFER_REAL_HISTORY is not set");
-        return;
-    };
-    let Ok(output_dir) = std::env::var("LOAD_TRANSFER_REAL_OUTPUT") else {
-        eprintln!("skip real product chain: LOAD_TRANSFER_REAL_OUTPUT is not set");
-        return;
-    };
-    let input_path = std::env::var("LOAD_TRANSFER_REAL_INPUT")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..").join("记录/第五阶段/回归/补齐候选/真实载荷输入.json"));
+    let model_path = std::env::var("LOAD_TRANSFER_REAL_MODEL").expect("LOAD_TRANSFER_REAL_MODEL is required for this ignored heavy test");
+    let history_path = std::env::var("LOAD_TRANSFER_REAL_HISTORY").expect("LOAD_TRANSFER_REAL_HISTORY is required for this ignored heavy test");
+    let output_dir = std::env::var("LOAD_TRANSFER_REAL_OUTPUT").expect("LOAD_TRANSFER_REAL_OUTPUT is required for this ignored heavy test");
+    let input_path = std::env::var("LOAD_TRANSFER_REAL_INPUT").map(PathBuf::from).unwrap_or_else(|_| default_real_input_path());
     let output_dir = PathBuf::from(output_dir);
     fs::create_dir_all(&output_dir).unwrap();
     let input_bytes = fs::read(&input_path).unwrap();
@@ -281,8 +274,7 @@ fn real_frozen_point_forces_run_the_product_receive_apply_solve_chain() {
                 "integration":{"type":"average_acceleration"},
                 "method":{"type":"direct"},
                 "damping":{"alpha":0.0,"beta":0.0,"loss_factor":0.0},
-                "output_every":1,
-                "solve_mass":"consistent"
+                "output_every":1
             }),
         )
         .unwrap();
@@ -290,7 +282,6 @@ fn real_frozen_point_forces_run_the_product_receive_apply_solve_chain() {
     assert_eq!(apply_reply["frames"], 1025);
     assert_eq!(apply_reply["conclusion_allowed"], false);
     assert_eq!(apply_reply["transient_settings"]["output_every"], 1);
-    assert_eq!(apply_reply["transient_settings"]["solve_mass"], "consistent");
 
     let solve_reply =
         session.execute("solve.transient", &json!({"step":"real-load-transient","mass":"consistent","threads":8,"max_memory_gib":8.0})).unwrap();
@@ -339,27 +330,13 @@ fn real_frozen_point_forces_run_the_product_receive_apply_solve_chain() {
     assert!(passed, "real product receive/apply/solve path differs from frozen history: {}", report["historical_comparison"]);
 }
 
-/// Control for the remaining real-chain mismatch: keep the historical model,
-/// supports, integration and 27 load objects, but replace only each historical
-/// amplitude table with the 1025 public input samples.  This separates the
-/// product entry path from the source sampling density.
 #[test]
+#[ignore = "heavy real-case solve; requires the frozen model, history and output paths"]
 fn real_frozen_history_downsampled_control_runs_old_load_write_path() {
-    let Ok(model_path) = std::env::var("LOAD_TRANSFER_REAL_MODEL") else {
-        eprintln!("skip downsampled control: LOAD_TRANSFER_REAL_MODEL is not set");
-        return;
-    };
-    let Ok(history_path) = std::env::var("LOAD_TRANSFER_REAL_HISTORY") else {
-        eprintln!("skip downsampled control: LOAD_TRANSFER_REAL_HISTORY is not set");
-        return;
-    };
-    let Ok(output_dir) = std::env::var("LOAD_TRANSFER_REAL_OUTPUT") else {
-        eprintln!("skip downsampled control: LOAD_TRANSFER_REAL_OUTPUT is not set");
-        return;
-    };
-    let input_path = std::env::var("LOAD_TRANSFER_REAL_INPUT")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..").join("记录/第五阶段/回归/补齐候选/真实载荷输入.json"));
+    let model_path = std::env::var("LOAD_TRANSFER_REAL_MODEL").expect("LOAD_TRANSFER_REAL_MODEL is required for this ignored heavy test");
+    let history_path = std::env::var("LOAD_TRANSFER_REAL_HISTORY").expect("LOAD_TRANSFER_REAL_HISTORY is required for this ignored heavy test");
+    let output_dir = std::env::var("LOAD_TRANSFER_REAL_OUTPUT").expect("LOAD_TRANSFER_REAL_OUTPUT is required for this ignored heavy test");
+    let input_path = std::env::var("LOAD_TRANSFER_REAL_INPUT").map(PathBuf::from).unwrap_or_else(|_| default_real_input_path());
     let output_dir = PathBuf::from(output_dir);
     fs::create_dir_all(&output_dir).unwrap();
     let input: Value = serde_json::from_slice(&fs::read(&input_path).unwrap()).unwrap();
