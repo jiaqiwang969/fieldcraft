@@ -69,6 +69,27 @@ then run by
 `记录/第五阶段/回归/补齐候选/当前程序重算/compare_real_product.py` and retains
 the three frozen windows around 0.43%, 0.43% and 0.06%.
 
+The regression records two distinct comparisons. A control that uses the old
+27-load write path, the same supports and integration, and only the 1025
+incoming amplitude samples is numerically identical to the receive/apply
+product path (all probe values have zero difference). Both differ from the
+frozen historical step because that step contains the original 16,385-point
+amplitude tables while the incoming result is every sixteenth frame (1,025
+frames). The frozen five-value gate remains `1e-9`; the observed historical
+values are recorded as four values below `1.2e-10` and the node-595 stress
+value `2.9864501609485475e-8`, rather than being reported as a pass. The
+current contract uses one incoming frame per structural step and does not
+claim support for a source sampled more densely than that step.
+
+The receive path rejects a failed frame or time-integral conservation check
+before installing the archive and includes the first item, measured residual
+and tolerance in the error. Apply preflights the complete set/load object
+count, creates one set per active node, omits components that are zero over
+the whole history, and reports a named error before mutating the model. The
+entity map reports a missing node reference instead of indexing through a
+missing entry. These paths and the malformed-input rejection matrix are
+covered by `crates/engine/tests/load_transfer_entry.rs`.
+
 The frozen tolerances are relative `1e-10` with absolute `1e-12` for the
 conservation checks, activation-area change at most 5%, changed-component
 weight at most 5%, gap change at most 2%, and peak-sampling loss at most 1%.

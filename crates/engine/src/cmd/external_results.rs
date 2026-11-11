@@ -284,7 +284,8 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
             interval = Some(value);
         }
     }
-    let time_step = (decoded.archive.frames.last().unwrap().time_s - first_time) / (frame_count - 1) as f64;
+    let last_time = decoded.archive.frames.last().ok_or_else(|| error("empty structural load-history frames"))?.time_s;
+    let time_step = (last_time - first_time) / (frame_count - 1) as f64;
     if !time_step.is_finite() || time_step <= 0.0 {
         return Err(error("structural load history has an invalid total duration"));
     }
@@ -299,13 +300,15 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
     }
 
     let existing_step = s.model.step(&step_name).cloned();
-    if let Some(step) = &existing_step {
-        if !matches!(step.procedure, fieldcraft_model::Procedure::Transient(_)) {
-            return Err(error(format!("step `{step_name}` already exists and is not transient")));
-        }
+    if let Some(step) = &existing_step
+        && !matches!(step.procedure, fieldcraft_model::Procedure::Transient(_))
+    {
+        return Err(error(format!("step `{step_name}` already exists and is not transient")));
     }
     let (integration, method, damping, output_every, boundary_conditions, reused_existing_step) = if let Some(step) = &existing_step {
-        let fieldcraft_model::Procedure::Transient(existing) = &step.procedure else { unreachable!() };
+        let fieldcraft_model::Procedure::Transient(existing) = &step.procedure else {
+            return Err(error(format!("step `{step_name}` already exists and is not transient")));
+        };
         if existing.increments as usize != frame_count - 1 {
             return Err(error(format!(
                 "existing transient step `{step_name}` has {} increments but the load history has {} intervals; time grid mismatch",
@@ -426,8 +429,10 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
         }
     }
     if let Some(mut step) = existing_step {
-        let Procedure::Transient(transient) = &mut step.procedure else { unreachable!() };
-        transient.load_amplitudes.extend(load_amplitudes);
+        match &mut step.procedure {
+            Procedure::Transient(transient) => transient.load_amplitudes.extend(load_amplitudes),
+            _ => return Err(error(format!("step `{step_name}` already exists and is not transient"))),
+        }
         step.loads.extend(loads);
         model.replace_step(step).map_err(error)?;
     } else {
