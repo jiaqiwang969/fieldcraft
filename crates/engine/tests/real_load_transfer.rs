@@ -1,6 +1,7 @@
 use fieldcraft_engine::Session;
 use fieldcraft_engine::external::load_transfer::*;
 use fieldcraft_io::identity;
+use fieldcraft_model::{Load, Procedure, Target, amplitude::Amplitude};
 use serde_json::{Value, json};
 use std::fs;
 use std::path::PathBuf;
@@ -336,4 +337,79 @@ fn real_frozen_point_forces_run_the_product_receive_apply_solve_chain() {
     report["passed"] = json!(passed);
     fs::write(output_dir.join("historical-comparison.json"), serde_json::to_vec_pretty(&report).unwrap()).unwrap();
     assert!(passed, "real product receive/apply/solve path differs from frozen history: {}", report["historical_comparison"]);
+}
+
+/// Control for the remaining real-chain mismatch: keep the historical model,
+/// supports, integration and 27 load objects, but replace only each historical
+/// amplitude table with the 1025 public input samples.  This separates the
+/// product entry path from the source sampling density.
+#[test]
+fn real_frozen_history_downsampled_control_runs_old_load_write_path() {
+    let Ok(model_path) = std::env::var("LOAD_TRANSFER_REAL_MODEL") else {
+        eprintln!("skip downsampled control: LOAD_TRANSFER_REAL_MODEL is not set");
+        return;
+    };
+    let Ok(history_path) = std::env::var("LOAD_TRANSFER_REAL_HISTORY") else {
+        eprintln!("skip downsampled control: LOAD_TRANSFER_REAL_HISTORY is not set");
+        return;
+    };
+    let Ok(output_dir) = std::env::var("LOAD_TRANSFER_REAL_OUTPUT") else {
+        eprintln!("skip downsampled control: LOAD_TRANSFER_REAL_OUTPUT is not set");
+        return;
+    };
+    let input_path = std::env::var("LOAD_TRANSFER_REAL_INPUT")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..").join("记录/第五阶段/回归/补齐候选/真实载荷输入.json"));
+    let output_dir = PathBuf::from(output_dir);
+    fs::create_dir_all(&output_dir).unwrap();
+    let input: Value = serde_json::from_slice(&fs::read(&input_path).unwrap()).unwrap();
+    let history: Value = serde_json::from_slice(&fs::read(&history_path).unwrap()).unwrap();
+    let probe_nodes: Vec<u64> = history["nodes"].as_array().unwrap().iter().map(|node| node["node"].as_u64().unwrap()).collect();
+    let model_input_path = PathBuf::from(&history_path).with_file_name("model-input.json");
+    let model_input: Value = serde_json::from_slice(&fs::read(&model_input_path).unwrap()).unwrap();
+    let tip_node = model_input["tip_node"].as_u64().unwrap();
+    let far_node = model_input["far_node"].as_u64().unwrap();
+    let labels: Vec<u64> = input["target_node_labels"].as_array().unwrap().iter().map(|value| value.as_u64().unwrap()).collect();
+    let times: Vec<f64> = input["time_s"].as_array().unwrap().iter().map(|value| value.as_f64().unwrap()).collect();
+    let forces: Vec<Vec<[f64; 3]>> =
+        input["force_n"].as_array().unwrap().iter().map(|row| row.as_array().unwrap().iter().map(v3).collect()).collect();
+
+    let mut session = Session::default();
+    session.execute("file.open", &json!({"path":model_path})).unwrap();
+    let mut step = session.model.step("Contact").cloned().expect("historical Contact step");
+    let load_names: Vec<String> = step.loads.iter().cloned().collect();
+    let historical_load_objects = load_names.len();
+    let Procedure::Transient(transient) = &mut step.procedure else { panic!("historical Contact is not transient") };
+    for load_name in load_names {
+        let Load::Force { target: Target::Set(set_name), vector, .. } = session.model.loads().get(&load_name).unwrap() else {
+            panic!("historical load is not a unit force: {load_name}");
+        };
+        let node = session.model.sets().get(set_name).unwrap().nodes[0] as u64;
+        let node_index = labels.iter().position(|label| *label == node).unwrap();
+        let axis = vector.iter().position(|component| *component == 1.0).unwrap();
+        let points = times.iter().enumerate().map(|(frame, time)| [*time, forces[frame][node_index][axis]]).collect();
+        transient.load_amplitudes.insert(load_name, Amplitude::Tabular { points });
+    }
+    let control_time_step = transient.time_step;
+    session.model.replace_step(step).unwrap();
+    let solve_reply = session.execute("solve.transient", &json!({"step":"Contact","mass":"consistent","threads":8,"max_memory_gib":8.0})).unwrap();
+    let product_probe = session.execute("solve.probe", &json!({"step":"Contact","nodes":probe_nodes})).unwrap();
+    fs::write(output_dir.join("sampling-control-probe.json"), serde_json::to_vec_pretty(&product_probe).unwrap()).unwrap();
+    let comparison = history_relative_checks(&product_probe, &history, tip_node, far_node);
+    fs::write(
+        output_dir.join("sampling-control-report.json"),
+        serde_json::to_vec_pretty(&json!({
+            "model":model_path,
+            "history":history_path,
+            "input":input_path,
+            "solve":solve_reply,
+            "control_time_step":control_time_step,
+            "input_frames":times.len(),
+            "historical_load_objects":historical_load_objects,
+            "historical_comparison":comparison,
+            "threshold":1e-9,
+        }))
+        .unwrap(),
+    )
+    .unwrap();
 }
