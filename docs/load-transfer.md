@@ -49,7 +49,12 @@ damping, output cadence and solve mass are accepted for a new step and are
 returned in `transient_settings` for the solver receipt. The incoming time
 grid must be uniform; existing-step grids must have the same interval count
 and time step (within the documented rounding tolerance), and no implicit
-interpolation is performed.
+interpolation is performed. The time-axis intervals must agree within
+`1e-12 s * max(1, |interval|)`; this is the admission tolerance for accumulated
+floating-point roundoff. The step time is always computed from the complete
+duration, `(last_time - first_time) / (frames - 1)`, after that check rather
+than copied from the first interval. The reply exposes this source and
+tolerance.
 
 The full product regression is kept in
 `crates/engine/tests/real_load_transfer.rs`. On Dell it opens the frozen

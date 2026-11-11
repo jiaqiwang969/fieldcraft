@@ -13,6 +13,8 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 
+const LOAD_HISTORY_TIME_TOLERANCE_S: f64 = 1e-12;
+
 pub const RECEIVE: CommandSpec = CommandSpec {
     id: "results.external.receive",
     label: "Receive External Results",
@@ -267,21 +269,25 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
     if !first_time.is_finite() || first_time.abs() > 1e-12 {
         return Err(error(format!("structural load history must start at t=0, got {first_time:.17e}")));
     }
-    let mut dt: Option<f64> = None;
+    let mut interval: Option<f64> = None;
     for pair in decoded.archive.frames.windows(2) {
         let value = pair[1].time_s - pair[0].time_s;
         if !value.is_finite() || value <= 0.0 {
             return Err(error("structural load history time axis must be strictly increasing"));
         }
-        if let Some(expected) = dt {
-            if (value - expected).abs() > expected.abs().max(1.0) * 1e-9 {
+        if let Some(expected) = interval {
+            let tolerance = LOAD_HISTORY_TIME_TOLERANCE_S * expected.abs().max(1.0);
+            if (value - expected).abs() > tolerance {
                 return Err(error("structural transient requires a uniform load-history time step"));
             }
         } else {
-            dt = Some(value);
+            interval = Some(value);
         }
     }
-    let time_step = dt.ok_or_else(|| error("empty structural load-history time step"))?;
+    let time_step = (decoded.archive.frames.last().unwrap().time_s - first_time) / (frame_count - 1) as f64;
+    if !time_step.is_finite() || time_step <= 0.0 {
+        return Err(error("structural load history has an invalid total duration"));
+    }
     let requested_integration = super::opt::<fieldcraft_model::dynamics::Integration>(p, "integration")?;
     let requested_method = super::opt::<fieldcraft_model::dynamics::Method>(p, "method")?;
     let requested_damping = super::opt::<fieldcraft_model::harmonic::Damping>(p, "damping")?;
@@ -459,6 +465,8 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
         "boundary_conditions":boundary_conditions,
         "boundary_condition_count":boundary_conditions.len(),
         "boundary_condition_warning":if boundary_conditions.is_empty() { Some("no boundary conditions were supplied; a newly created structural step may be unconstrained") } else { None },
+        "time_step_source":"total_duration/(frames-1)",
+        "time_grid_tolerance_s":LOAD_HISTORY_TIME_TOLERANCE_S,
         "transient_settings":{"time_step":time_step,"increments":frame_count - 1,"output_every":output_every,"integration":integration,"method":method,"damping":damping,"solve_mass":solve_mass},
         "ready_for":"solve.transient"
     }))

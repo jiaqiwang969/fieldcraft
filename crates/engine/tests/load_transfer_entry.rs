@@ -198,6 +198,30 @@ fn product_apply_new_step_accepts_named_boundary_conditions() {
     let _ = fs::remove_dir_all(dir);
 }
 
+#[test]
+fn product_apply_uses_total_duration_for_accumulated_time_axis() {
+    let dir = test_dir("total-duration-time-step");
+    let mut session = session_with_node();
+    let mut archive = LoadTransferArchive::decode(&bundle_for(&session.model)).unwrap().archive;
+    let mut extra = archive.frames[1].clone();
+    extra.frame_index = 2;
+    archive.frames[0].time_s = 0.0;
+    archive.frames[0].source_dt_s = 0.0;
+    archive.frames[1].time_s = 0.1000000000005;
+    archive.frames[1].source_dt_s = 0.1000000000005;
+    extra.time_s = 0.2;
+    extra.source_dt_s = 0.0999999999995;
+    archive.frames.push(extra);
+    let path = write_bundle(&dir, "accumulated", &archive.encode().unwrap());
+    receive_path(&mut session, &path, "support-load").unwrap();
+    let reply = session.execute("results.external.load_transfer.apply", &json!({"name":"support-load"})).unwrap();
+    assert_eq!(reply["time_step_source"], "total_duration/(frames-1)");
+    assert_eq!(reply["time_grid_tolerance_s"], 1e-12);
+    assert!((reply["transient_settings"]["time_step"].as_f64().unwrap() - 0.1).abs() < 1e-15);
+    assert_eq!(reply["transient_settings"]["increments"], 2);
+    let _ = fs::remove_dir_all(dir);
+}
+
 fn test_dir(label: &str) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("fieldcraft-load-transfer-{label}-{}", std::process::id()));
     fs::create_dir_all(&dir).unwrap();
