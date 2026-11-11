@@ -61,7 +61,7 @@ pub const LOAD_TRANSFER_RECEIVE: CommandSpec = CommandSpec {
 pub const LOAD_TRANSFER_APPLY: CommandSpec = CommandSpec {
     id: "results.external.load_transfer.apply",
     label: "Apply Mapped Load History",
-    params: r#"{"name":"support-load","step"?:"support-load-transient"} — turn every mapped nodal component into a native structural force and tabular amplitude in a linear transient step; the mapped history remains available for replay"#,
+    params: r#"{"name":"support-load","step"?:"support-load-transient","integration"?:{"type":"average_acceleration"|"linear_acceleration"|{"type":"hht","alpha":-0.1}},"method"?:{"type":"direct"|{"type":"modal","modes":8}},"damping"?:{"alpha":0,"beta":0,"loss_factor":0},"output_every"?:1,"solve_mass"?:"consistent|lumped"} — recheck conservation, then turn each nonzero mapped nodal component into a native structural force and tabular amplitude in a linear transient step; one set is made per active node, and the mapped history remains available for replay"#,
     form: None,
     kind: CommandKind::Model,
     requires: &[],
@@ -78,20 +78,27 @@ fn load_transfer_bundle(bytes: &[u8]) -> Result<ArchiveBundle> {
     serde_json::from_slice(bytes).map_err(error)
 }
 
-fn current_entity_map(s: &Session) -> fieldcraft_io::identity::EntityMap {
+fn current_entity_map(s: &Session) -> Result<fieldcraft_io::identity::EntityMap> {
     let nodes: Vec<u32> = s.model.nodes().keys().copied().collect();
     let index: BTreeMap<u32, usize> = nodes.iter().enumerate().map(|(index, label)| (*label, index)).collect();
     let elements = s
         .model
         .elements()
         .iter()
-        .map(|(target, element)| fieldcraft_io::identity::MappedElement {
-            target: *target,
-            kind: element.kind,
-            source_nodes: element.nodes.iter().map(|label| index[label]).collect(),
+        .map(|(target, element)| {
+            let source_nodes = element
+                .nodes
+                .iter()
+                .map(|label| {
+                    index.get(label).copied().ok_or_else(|| {
+                        error(format!("model element {target} references missing node {label}; entity mapping refused without a panic"))
+                    })
+                })
+                .collect::<Result<Vec<_>>>()?;
+            Ok(fieldcraft_io::identity::MappedElement { target: *target, kind: element.kind, source_nodes })
         })
-        .collect();
-    fieldcraft_io::identity::EntityMap { nodes, elements }
+        .collect::<Result<Vec<_>>>()?;
+    Ok(fieldcraft_io::identity::EntityMap { nodes, elements })
 }
 
 fn load_transfer_artifacts() -> BTreeMap<String, String> {
@@ -119,17 +126,50 @@ fn archive_binding(s: &Session, archive: &LoadTransferArchive, map: &fieldcraft_
 
 fn conservation_response(decoded: &load_transfer::DecodedArchive) -> Result<Value> {
     let mut frames = Vec::with_capacity(decoded.archive.frames.len());
-    for (frame, mapped) in decoded.archive.frames.iter().zip(&decoded.mapped_frames) {
-        frames.push(
-            load_transfer::check_conservation(frame, mapped, &decoded.archive.mapping, &vec![[0.0, 0.0, 0.0]; decoded.archive.mapping.nodes.len()])
-                .map_err(error)?,
-        );
+    let virtual_displacements = vec![[0.0, 0.0, 0.0]; decoded.archive.mapping.nodes.len()];
+    for (frame_index, (frame, mapped)) in decoded.archive.frames.iter().zip(&decoded.mapped_frames).enumerate() {
+        let report = load_transfer::check_conservation(frame, mapped, &decoded.archive.mapping, &virtual_displacements).map_err(error)?;
+        if !report.passed {
+            return Err(conservation_rejection(frame_index, &report));
+        }
+        frames.push(report);
     }
     let impulse =
         load_transfer::check_time_integrals(&decoded.archive.frames, &decoded.mapped_frames, decoded.archive.mapping.origin_m).map_err(error)?;
-    let all_frames_passed = frames.iter().all(|report| report.passed);
-    let time_integrals_passed = impulse.passed;
-    Ok(json!({"frames":frames,"time_integrals":impulse,"all_frames_passed":all_frames_passed,"time_integrals_passed":time_integrals_passed}))
+    if !impulse.passed {
+        let force = max_abs3(impulse.impulse_residual_ns);
+        let angular = max_abs3(impulse.angular_impulse_residual_nms);
+        let (item, actual, tolerance) = if force > impulse.impulse_tolerance_ns {
+            ("time_integral_force", force, impulse.impulse_tolerance_ns)
+        } else {
+            ("time_integral_moment", angular, impulse.angular_impulse_tolerance_nms)
+        };
+        return Err(error(format!(
+            "load-transfer conservation rejected at time integral: item={item}, actual={actual:.17e}, tolerance={tolerance:.17e}; impulse_residual={:?}, angular_impulse_residual={:?}",
+            impulse.impulse_residual_ns, impulse.angular_impulse_residual_nms
+        )));
+    }
+    Ok(json!({"frames":frames,"time_integrals":impulse,"all_frames_passed":true,"time_integrals_passed":true}))
+}
+
+fn max_abs3(value: [f64; 3]) -> f64 {
+    value.into_iter().map(f64::abs).fold(0.0, f64::max)
+}
+
+fn conservation_rejection(frame_index: usize, report: &load_transfer::ConservationReport) -> EngineError {
+    let force = max_abs3(report.force_residual_n);
+    let moment = max_abs3(report.moment_residual_nm);
+    let (item, actual, tolerance) = if force > report.force_tolerance_n {
+        ("force", force, report.force_tolerance_n)
+    } else if moment > report.moment_tolerance_nm {
+        ("moment", moment, report.moment_tolerance_nm)
+    } else {
+        ("virtual_work", report.virtual_work_residual_j.abs(), report.virtual_work_tolerance_j)
+    };
+    error(format!(
+        "load-transfer conservation rejected at frame {frame_index}: item={item}, actual={actual:.17e}, tolerance={tolerance:.17e}; force_residual={:?}, moment_residual={:?}, virtual_work_residual={:.17e}",
+        report.force_residual_n, report.moment_residual_nm, report.virtual_work_residual_j
+    ))
 }
 
 fn receive_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
@@ -142,7 +182,8 @@ fn receive_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
     if decoded.archive.identity.archive_key != name {
         return Err(error("load-transfer archive_key must equal the receiving result name"));
     }
-    let map = current_entity_map(s);
+    let conservation = conservation_response(&decoded)?;
+    let map = current_entity_map(s)?;
     let binding = archive_binding(s, &decoded.archive, &map)?;
     let envelope_json = load_transfer::encode_external_envelope(&bundle).map_err(error)?;
     let payload_sha256 = fieldcraft_io::sha256_hex(&envelope_json);
@@ -183,7 +224,7 @@ fn receive_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
         "result_kind":load_transfer::RESULT_KIND,
         "session_installed":true,
         "project_saved":false,
-        "conservation":conservation_response(&decoded)?,
+        "conservation":conservation,
         "applicability":decoded.archive.applicability,
         "runtime_qualification":decoded.archive.qualification,
         "crash":decoded.archive.crash,
@@ -206,6 +247,7 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
     record.validate_binding(&s.model, &s.sources, &s.run).map_err(error)?;
     let bundle = load_transfer::decode_external_envelope(&record.envelope_json).map_err(error)?;
     let decoded = LoadTransferArchive::decode(&bundle).map_err(error)?;
+    let conservation = conservation_response(&decoded)?;
     if decoded.archive.applicability.geometry_status == load_transfer::ApplicabilityStatus::Inapplicable {
         return Err(error("load-transfer geometry applicability is inapplicable; mapped one-way structural adoption is refused"));
     }
@@ -233,23 +275,80 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
         }
     }
     let time_step = dt.ok_or_else(|| error("empty structural load-history time step"))?;
-    let mut loads = BTreeSet::new();
-    let mut load_amplitudes = BTreeMap::new();
+    let integration = super::opt::<fieldcraft_model::dynamics::Integration>(p, "integration")?.unwrap_or_default();
+    let method = super::opt::<fieldcraft_model::dynamics::Method>(p, "method")?.unwrap_or_default();
+    let damping = super::opt::<fieldcraft_model::harmonic::Damping>(p, "damping")?.unwrap_or_default();
+    let output_every = super::opt::<u32>(p, "output_every")?.unwrap_or(1);
+    if output_every == 0 || output_every > frame_count.saturating_sub(1) as u32 {
+        return Err(error(format!("output_every must be from 1 to {} for {frame_count} frames", frame_count.saturating_sub(1))));
+    }
+    let solve_mass = super::opt::<String>(p, "solve_mass")?.unwrap_or_else(|| "consistent".to_string());
+    if solve_mass != "consistent" && solve_mass != "lumped" {
+        return Err(error("solve_mass must be `consistent` or `lumped`"));
+    }
+
+    let mut active_nodes = Vec::new();
+    let mut active_components = Vec::new();
     for (node_index, node) in decoded.archive.mapping.nodes.iter().enumerate() {
         let label = u32::try_from(node.node_id).map_err(|_| error("mapped node label exceeds u32"))?;
         if s.model.node(label).is_none() {
             return Err(error(format!("mapped node {label} is not in the open model")));
         }
         for axis in 0..3 {
-            let set_name = format!("lt_{}_n{}_d{}_set", name, label, axis + 1);
-            let load_name = format!("lt_{}_n{}_d{}", name, label, axis + 1);
-            s.model.add_set(&set_name, Set { nodes: vec![label], ..Set::default() }).map_err(error)?;
+            if decoded.mapped_frames.iter().any(|frame| frame.nodes[node_index].force_n[axis] != 0.0) {
+                active_components.push((node_index, label, axis));
+            }
+        }
+        if active_components.iter().any(|(index, _, _)| *index == node_index) {
+            active_nodes.push((node_index, label));
+        }
+    }
+    if active_components.is_empty() {
+        return Err(error("load-transfer mapped history has no nonzero nodal components"));
+    }
+    let set_limit = fieldcraft_model::MAX_DEFINITIONS.saturating_sub(s.model.sets().len());
+    if active_nodes.len() > set_limit {
+        return Err(error(format!(
+            "load-transfer object limit exceeded before mutation: {} node sets required, {} available",
+            active_nodes.len(),
+            set_limit
+        )));
+    }
+    let load_limit = fieldcraft_model::MAX_DEFINITIONS.saturating_sub(s.model.loads().len());
+    if active_components.len() > load_limit {
+        return Err(error(format!(
+            "load-transfer object limit exceeded before mutation: {} load objects required, {} available",
+            active_components.len(),
+            load_limit
+        )));
+    }
+    let set_names: Vec<String> = active_nodes.iter().map(|(_, label)| format!("lt_{}_n{}_set", name, label)).collect();
+    let load_names: Vec<String> = active_components.iter().map(|(_, label, axis)| format!("lt_{}_n{}_d{}", name, label, axis + 1)).collect();
+    if let Some(existing) = set_names.iter().find(|candidate| s.model.sets().contains_key(*candidate)) {
+        return Err(error(format!("load-transfer set `{existing}` already exists")));
+    }
+    if let Some(existing) = load_names.iter().find(|candidate| s.model.loads().contains_key(*candidate)) {
+        return Err(error(format!("load-transfer load `{existing}` already exists")));
+    }
+
+    let mut model = s.model.clone();
+    let mut loads = BTreeSet::new();
+    let mut load_amplitudes = BTreeMap::new();
+    for (node_index, label) in &active_nodes {
+        let set_name = format!("lt_{}_n{}_set", name, label);
+        model.add_set(&set_name, Set { nodes: vec![*label], ..Set::default() }).map_err(error)?;
+        for (component_node_index, component_label, axis) in active_components.iter().filter(|(index, _, _)| index == node_index) {
+            let load_name = format!("lt_{}_n{}_d{}", name, component_label, axis + 1);
             let mut vector = [0.0; 3];
-            vector[axis] = 1.0;
-            s.model
+            vector[*axis] = 1.0;
+            model
                 .add_load(&load_name, Load::Force { target: Target::Set(set_name.clone()), vector, distribution: Distribution::Total })
                 .map_err(error)?;
-            let values = decoded.mapped_frames.iter().map(|frame| [frame.frame.time_s - first_time, frame.nodes[node_index].force_n[axis]]).collect();
+            let values = decoded
+                .mapped_frames
+                .iter()
+                .map(|frame| [frame.frame.time_s - first_time, frame.nodes[*component_node_index].force_n[*axis]])
+                .collect();
             loads.insert(load_name.clone());
             load_amplitudes.insert(load_name, fieldcraft_model::amplitude::Amplitude::Tabular { points: values });
         }
@@ -258,10 +357,10 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
         adaptive: None,
         time_step,
         increments: (frame_count - 1) as u32,
-        output_every: 1,
-        integration: Default::default(),
-        method: Default::default(),
-        damping: Default::default(),
+        output_every,
+        integration,
+        method: method.clone(),
+        damping,
         load_amplitudes,
         initial_displacement: BTreeMap::new(),
         initial_velocity: BTreeMap::new(),
@@ -270,10 +369,21 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
     });
     let mut step = Step::new(step_name.clone(), procedure);
     step.loads = loads;
-    s.model.add_step(step, None).map_err(error)?;
-    Ok(
-        json!({"archive_key":name,"step":step_name,"frames":frame_count,"nodes":decoded.archive.mapping.nodes.len(),"load_components":decoded.archive.mapping.nodes.len()*3,"runtime_qualification":decoded.archive.qualification,"applicability":decoded.archive.applicability,"conclusion_allowed":decoded.archive.applicability.adoption_status == load_transfer::ApplicabilityStatus::Applicable,"ready_for":"solve.transient"}),
-    )
+    model.add_step(step, None).map_err(error)?;
+    s.model = model;
+    Ok(json!({
+        "archive_key":name,
+        "step":step_name,
+        "frames":frame_count,
+        "nodes":active_nodes.len(),
+        "load_components":active_components.len(),
+        "conservation":conservation,
+        "runtime_qualification":decoded.archive.qualification,
+        "applicability":decoded.archive.applicability,
+        "conclusion_allowed":decoded.archive.applicability.adoption_status == load_transfer::ApplicabilityStatus::Applicable,
+        "transient_settings":{"time_step":time_step,"increments":frame_count - 1,"output_every":output_every,"integration":integration,"method":method,"damping":damping,"solve_mass":solve_mass},
+        "ready_for":"solve.transient"
+    }))
 }
 fn receive(s: &mut Session, p: &Value) -> Result<Value> {
     let total = Instant::now();
