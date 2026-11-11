@@ -413,8 +413,22 @@ impl ExternalStaticBase {
     }
 
     pub fn compute_modal(&self, reference_shapes: Vec<Vec<f64>>) -> Result<ModalPackage> {
+        self.compute_modal_with_count(reference_shapes, self.constraints.reduced_dofs as usize)
+    }
+
+    /// Recompute a bounded leading modal package from the accepted K/M mapping.
+    ///
+    /// The full generalized eigenproblem is still solved, but only the requested
+    /// leading modes are published and paired.  This lets a product receiver
+    /// retain a reviewable first-N package for a dense small model without
+    /// treating producer-provided modes or residuals as evidence.
+    pub fn compute_modal_with_count(&self, reference_shapes: Vec<Vec<f64>>, requested_modes: usize) -> Result<ModalPackage> {
         self.validate_without_modal()?;
         let n = self.constraints.reduced_stiffness.rows as usize;
+        let mode_count = requested_modes.min(n);
+        if mode_count == 0 {
+            return invalid("ExternalStaticBase: modal mode count");
+        }
         let l = cholesky(&self.constraints.reduced_mass, n)?;
         let inv_l = invert_lower(&l, n)?;
         let inv_lt = transpose(&inv_l, n, n);
@@ -424,8 +438,8 @@ impl ExternalStaticBase {
         if values.iter().any(|v| !v.is_finite() || *v <= 0.0) {
             return invalid("ExternalStaticBase: non-positive modal eigenvalue");
         }
-        let mut modes = Vec::with_capacity(n);
-        for (mode, value) in values.iter().enumerate() {
+        let mut modes = Vec::with_capacity(mode_count);
+        for (mode, value) in values.iter().take(mode_count).enumerate() {
             let mut shape = vec![0.0; n];
             for i in 0..n {
                 shape[i] = (0..n).map(|j| inv_lt[i * n + j] * vectors[j * n + mode]).sum();

@@ -2883,6 +2883,13 @@ pub const EXTERNAL_RECEIVE: &[Field] = &[
     text("name", "Result name").req().help("A unique name, separate from native analysis steps."),
     path("store", "Published result directory", true).req().help("Atomic receiving store; save the model separately to embed the trajectory."),
 ];
+pub const EXTERNAL_STATIC_BASE_RECEIVE: &[Field] = &[
+    path("path", "Static base package", false)
+        .req()
+        .help("A kind-13 static-base archive produced by the external backend; no producer modal data is trusted."),
+    path("profile", "Expected static-base profile", false).req().help("Independently frozen model, mesh, backend and reference-shape expectations."),
+    text("name", "Result name").req().help("A unique name, separate from native analysis steps."),
+];
 pub const EXTERNAL_REMOVE: &[Field] = &[text("name", "Result name").req().help("Remove this session's external result; published files remain.")];
 
 pub const DEFORMED: &[Field] = &[
