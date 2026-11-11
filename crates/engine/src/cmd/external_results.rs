@@ -243,6 +243,10 @@ fn receive_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
     let name: String = super::req(p, "name")?;
+    let step_name = p.get("step").and_then(Value::as_str).map(str::to_owned).unwrap_or_else(|| format!("{name}-transient"));
+    if s.model.step(&step_name).is_some() {
+        return Err(error(format!("step `{step_name}` already exists")));
+    }
     let record = s.external_results.get(&name).cloned().ok_or_else(|| error(format!("external result `{name}` not found")))?;
     record.validate_binding(&s.model, &s.sources, &s.run).map_err(error)?;
     let bundle = load_transfer::decode_external_envelope(&record.envelope_json).map_err(error)?;
@@ -250,10 +254,6 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
     let conservation = conservation_response(&decoded)?;
     if decoded.archive.applicability.geometry_status == load_transfer::ApplicabilityStatus::Inapplicable {
         return Err(error("load-transfer geometry applicability is inapplicable; mapped one-way structural adoption is refused"));
-    }
-    let step_name = p.get("step").and_then(Value::as_str).map(str::to_owned).unwrap_or_else(|| format!("{name}-transient"));
-    if s.model.step(&step_name).is_some() {
-        return Err(error(format!("step `{step_name}` already exists")));
     }
     let frame_count = decoded.mapped_frames.len();
     if frame_count < 2 || frame_count > u32::MAX as usize {
