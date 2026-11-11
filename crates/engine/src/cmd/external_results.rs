@@ -61,7 +61,7 @@ pub const LOAD_TRANSFER_RECEIVE: CommandSpec = CommandSpec {
 pub const LOAD_TRANSFER_APPLY: CommandSpec = CommandSpec {
     id: "results.external.load_transfer.apply",
     label: "Apply Mapped Load History",
-    params: r#"{"name":"support-load","step"?:"support-load-transient","integration"?:{"type":"average_acceleration"|"linear_acceleration"|{"type":"hht","alpha":-0.1}},"method"?:{"type":"direct"|{"type":"modal","modes":8}},"damping"?:{"alpha":0,"beta":0,"loss_factor":0},"output_every"?:1,"solve_mass"?:"consistent|lumped"} — recheck conservation, then turn each nonzero mapped nodal component into a native structural force and tabular amplitude in a linear transient step; one set is made per active node, and the mapped history remains available for replay"#,
+    params: r#"{"name":"support-load","step"?:"support-load-transient","boundary_conditions"?:["clamp"],"integration"?:{"type":"average_acceleration"|"linear_acceleration"|{"type":"hht","alpha":-0.1}},"method"?:{"type":"direct"|{"type":"modal","modes":8}},"damping"?:{"alpha":0,"beta":0,"loss_factor":0},"output_every"?:1,"solve_mass"?:"consistent|lumped"} — recheck conservation, then add each nonzero mapped nodal component as a native structural force and tabular amplitude. An existing transient step is reused with its boundary conditions, integration, method, damping, output cadence and other loads unchanged; a new step accepts existing boundary-condition names and warns when none are supplied"#,
     form: None,
     kind: CommandKind::Model,
     requires: &[],
@@ -244,10 +244,14 @@ fn receive_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
 fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
     let name: String = super::req(p, "name")?;
     let step_name = p.get("step").and_then(Value::as_str).map(str::to_owned).unwrap_or_else(|| format!("{name}-transient"));
-    if s.model.step(&step_name).is_some() {
-        return Err(error(format!("step `{step_name}` already exists")));
-    }
     let record = s.external_results.get(&name).cloned().ok_or_else(|| error(format!("external result `{name}` not found")))?;
+    let generated_prefix = format!("lt_{name}_");
+    if s.model.step(&step_name).is_some()
+        && (s.model.sets().keys().any(|candidate| candidate.starts_with(&generated_prefix))
+            || s.model.loads().keys().any(|candidate| candidate.starts_with(&generated_prefix)))
+    {
+        return Err(error(format!("step `{step_name}` already exists with load-transfer objects for `{name}`")));
+    }
     record.validate_binding(&s.model, &s.sources, &s.run).map_err(error)?;
     let bundle = load_transfer::decode_external_envelope(&record.envelope_json).map_err(error)?;
     let decoded = LoadTransferArchive::decode(&bundle).map_err(error)?;
@@ -260,6 +264,9 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
         return Err(error("a structural load history needs 2..=u32::MAX frames"));
     }
     let first_time = decoded.archive.frames[0].time_s;
+    if !first_time.is_finite() || first_time.abs() > 1e-12 {
+        return Err(error(format!("structural load history must start at t=0, got {first_time:.17e}")));
+    }
     let mut dt: Option<f64> = None;
     for pair in decoded.archive.frames.windows(2) {
         let value = pair[1].time_s - pair[0].time_s;
@@ -275,16 +282,75 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
         }
     }
     let time_step = dt.ok_or_else(|| error("empty structural load-history time step"))?;
-    let integration = super::opt::<fieldcraft_model::dynamics::Integration>(p, "integration")?.unwrap_or_default();
-    let method = super::opt::<fieldcraft_model::dynamics::Method>(p, "method")?.unwrap_or_default();
-    let damping = super::opt::<fieldcraft_model::harmonic::Damping>(p, "damping")?.unwrap_or_default();
-    let output_every = super::opt::<u32>(p, "output_every")?.unwrap_or(1);
-    if output_every == 0 || output_every > frame_count.saturating_sub(1) as u32 {
-        return Err(error(format!("output_every must be from 1 to {} for {frame_count} frames", frame_count.saturating_sub(1))));
-    }
+    let requested_integration = super::opt::<fieldcraft_model::dynamics::Integration>(p, "integration")?;
+    let requested_method = super::opt::<fieldcraft_model::dynamics::Method>(p, "method")?;
+    let requested_damping = super::opt::<fieldcraft_model::harmonic::Damping>(p, "damping")?;
+    let requested_output_every = super::opt::<u32>(p, "output_every")?;
+    let requested_boundary_conditions = super::opt::<BTreeSet<String>>(p, "boundary_conditions")?;
     let solve_mass = super::opt::<String>(p, "solve_mass")?.unwrap_or_else(|| "consistent".to_string());
     if solve_mass != "consistent" && solve_mass != "lumped" {
         return Err(error("solve_mass must be `consistent` or `lumped`"));
+    }
+
+    let existing_step = s.model.step(&step_name).cloned();
+    if let Some(step) = &existing_step {
+        if !matches!(step.procedure, fieldcraft_model::Procedure::Transient(_)) {
+            return Err(error(format!("step `{step_name}` already exists and is not transient")));
+        }
+    }
+    let (integration, method, damping, output_every, boundary_conditions, reused_existing_step) = if let Some(step) = &existing_step {
+        let fieldcraft_model::Procedure::Transient(existing) = &step.procedure else { unreachable!() };
+        if existing.increments as usize != frame_count - 1 {
+            return Err(error(format!(
+                "existing transient step `{step_name}` has {} increments but the load history has {} intervals; time grid mismatch",
+                existing.increments,
+                frame_count - 1
+            )));
+        }
+        if (existing.time_step - time_step).abs() > existing.time_step.abs().max(time_step.abs()).max(1.0) * 1e-12 {
+            return Err(error(format!(
+                "existing transient step `{step_name}` has time_step={:.17e}, incoming history has {:.17e}; time grid mismatch",
+                existing.time_step, time_step
+            )));
+        }
+        if let Some(value) = &requested_integration
+            && value != &existing.integration
+        {
+            return Err(error(format!("existing transient step `{step_name}` integration settings are preserved and do not match the request")));
+        }
+        if let Some(value) = &requested_method
+            && value != &existing.method
+        {
+            return Err(error(format!("existing transient step `{step_name}` method settings are preserved and do not match the request")));
+        }
+        if let Some(value) = &requested_damping
+            && value != &existing.damping
+        {
+            return Err(error(format!("existing transient step `{step_name}` damping settings are preserved and do not match the request")));
+        }
+        if let Some(value) = requested_output_every
+            && value != existing.output_every
+        {
+            return Err(error(format!("existing transient step `{step_name}` output cadence is preserved and does not match the request")));
+        }
+        if let Some(value) = &requested_boundary_conditions
+            && value != &step.boundary_conditions
+        {
+            return Err(error(format!("existing transient step `{step_name}` boundary conditions are preserved and do not match the request")));
+        }
+        (existing.integration, existing.method.clone(), existing.damping, existing.output_every, step.boundary_conditions.clone(), true)
+    } else {
+        (
+            requested_integration.unwrap_or_default(),
+            requested_method.unwrap_or_default(),
+            requested_damping.unwrap_or_default(),
+            requested_output_every.unwrap_or(1),
+            requested_boundary_conditions.unwrap_or_default(),
+            false,
+        )
+    };
+    if output_every == 0 || output_every > frame_count.saturating_sub(1) as u32 {
+        return Err(error(format!("output_every must be from 1 to {} for {frame_count} frames", frame_count.saturating_sub(1))));
     }
 
     let mut active_nodes = Vec::new();
@@ -353,27 +419,36 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
             load_amplitudes.insert(load_name, fieldcraft_model::amplitude::Amplitude::Tabular { points: values });
         }
     }
-    let procedure = Procedure::Transient(fieldcraft_model::dynamics::Transient {
-        adaptive: None,
-        time_step,
-        increments: (frame_count - 1) as u32,
-        output_every,
-        integration,
-        method: method.clone(),
-        damping,
-        load_amplitudes,
-        initial_displacement: BTreeMap::new(),
-        initial_velocity: BTreeMap::new(),
-        base_acceleration: None,
-        base_displacement: None,
-    });
-    let mut step = Step::new(step_name.clone(), procedure);
-    step.loads = loads;
-    model.add_step(step, None).map_err(error)?;
+    if let Some(mut step) = existing_step {
+        let Procedure::Transient(transient) = &mut step.procedure else { unreachable!() };
+        transient.load_amplitudes.extend(load_amplitudes);
+        step.loads.extend(loads);
+        model.replace_step(step).map_err(error)?;
+    } else {
+        let procedure = Procedure::Transient(fieldcraft_model::dynamics::Transient {
+            adaptive: None,
+            time_step,
+            increments: (frame_count - 1) as u32,
+            output_every,
+            integration,
+            method: method.clone(),
+            damping,
+            load_amplitudes,
+            initial_displacement: BTreeMap::new(),
+            initial_velocity: BTreeMap::new(),
+            base_acceleration: None,
+            base_displacement: None,
+        });
+        let mut step = Step::new(step_name.clone(), procedure);
+        step.boundary_conditions = boundary_conditions.clone();
+        step.loads = loads;
+        model.add_step(step, None).map_err(error)?;
+    }
     s.model = model;
     Ok(json!({
         "archive_key":name,
         "step":step_name,
+        "reused_existing_step":reused_existing_step,
         "frames":frame_count,
         "nodes":active_nodes.len(),
         "load_components":active_components.len(),
@@ -381,6 +456,9 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
         "runtime_qualification":decoded.archive.qualification,
         "applicability":decoded.archive.applicability,
         "conclusion_allowed":decoded.archive.applicability.adoption_status == load_transfer::ApplicabilityStatus::Applicable,
+        "boundary_conditions":boundary_conditions,
+        "boundary_condition_count":boundary_conditions.len(),
+        "boundary_condition_warning":if boundary_conditions.is_empty() { Some("no boundary conditions were supplied; a newly created structural step may be unconstrained") } else { None },
         "transient_settings":{"time_step":time_step,"increments":frame_count - 1,"output_every":output_every,"integration":integration,"method":method,"damping":damping,"solve_mass":solve_mass},
         "ready_for":"solve.transient"
     }))

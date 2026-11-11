@@ -25,9 +25,14 @@ resaving the project preserves its bytes.
 `receive` reports per-frame conservation, time-integral conservation,
 geometry/adoption applicability, force-precision limitations, runtime
 qualification and the backend crash receipt. `apply` creates native unit-force
-loads with tabular amplitudes in a linear transient structural step. The mapped
-history is therefore usable by the structural solver without rebuilding loads
-by hand.
+loads with tabular amplitudes. When the named step already exists and is a
+transient step, the loads and amplitude tables are added to that step while
+its boundary conditions, integration, method, damping, output cadence and
+other loads stay unchanged. When the step is absent, `apply` creates a
+transient step; pass `boundary_conditions` to enable existing supports. The
+reply reports the effective settings and boundary-condition count, and warns
+when a newly created step has no supports. The default integration is average
+acceleration, the default method is direct, and the default damping is zero.
 
 Admission is atomic: a failed force, moment, virtual-work, impulse or
 angular-impulse check names the first frame or integral item, actual residual
@@ -35,19 +40,27 @@ and tolerance before the external result is installed. `apply` repeats the
 same checks. It preflights the model definition limits before cloning the
 model, creates one set per active node and one force load per nonzero mapped
 component, and omits components that are zero for the complete history. A
-failed applicability result, nonuniform time axis, missing mapped node,
-existing step, or insufficient history is rejected before the cloned model is
-published. Integration, solution method, damping, output cadence and solve
-mass are accepted as explicit `apply` parameters and are returned in
-`transient_settings` for the solver receipt.
+failed applicability result, nonuniform time axis, a mismatched existing step
+time grid, missing mapped node, a non-transient existing step, or insufficient
+history is rejected before the cloned model is published. An existing
+transient step keeps its settings; if explicit settings or supports are
+supplied, they must match the existing values. Integration, solution method,
+damping, output cadence and solve mass are accepted for a new step and are
+returned in `transient_settings` for the solver receipt. The incoming time
+grid must be uniform; existing-step grids must have the same interval count
+and time step (within the documented rounding tolerance), and no implicit
+interpolation is performed.
 
 The full product regression is kept in
 `crates/engine/tests/real_load_transfer.rs`. On Dell it opens the frozen
-structural model, receives the 1025 point-force frames, applies the mapped
-native loads, solves the new transient step, probes the result, and writes the
-raw product reply before comparing it with the frozen history. Its five
-historical checks use a relative threshold of `1e-9`; the independent 3-D
-comparison is then run by
+structural model, retains the historical `Contact` step as an untouched
+reference, receives the 1025 point-force frames, applies the mapped native
+loads to a new step with `clamp`, average acceleration, direct integration and
+consistent mass, solves that step, probes the result, and writes the raw
+product reply before comparing it with the frozen history. Its time-axis
+comparison allows `1e-12 s` for floating-point rounding; the five historical
+checks use a relative threshold of `1e-9`. The independent 3-D comparison is
+then run by
 `记录/第五阶段/回归/补齐候选/当前程序重算/compare_real_product.py` and retains
 the three frozen windows around 0.43%, 0.43% and 0.06%.
 

@@ -100,7 +100,8 @@ fn history_relative_checks(product: &Value, history: &Value, tip_node: u64, far_
     assert_eq!(product_frames.len(), history_frames.len());
     let product_times: Vec<f64> = product_frames.iter().map(|frame| frame["time"].as_f64().unwrap()).collect();
     let history_times: Vec<f64> = history_frames.iter().map(|frame| frame["time"].as_f64().unwrap()).collect();
-    assert_eq!(product_times, history_times, "real load path changed the structural time axis");
+    let max_time_abs_s = product_times.iter().zip(&history_times).map(|(product, history)| (product - history).abs()).fold(0.0, f64::max);
+    assert!(max_time_abs_s <= 1e-12, "real load path changed the structural time axis beyond rounding tolerance: {max_time_abs_s:.17e} s");
     let product_energy: Vec<f64> =
         product_frames.iter().map(|frame| frame["kinetic_energy"].as_f64().unwrap() + frame["strain_energy"].as_f64().unwrap()).collect();
     let history_energy: Vec<f64> =
@@ -131,6 +132,7 @@ fn history_relative_checks(product: &Value, history: &Value, tip_node: u64, far_
         }
     }
     let checks = json!({
+        "time_axis_max_abs_s": max_time_abs_s,
         "tip_displacement_all_components": relative_error(
             &flat_sample_field(&product_nodes[&tip_node]["samples"], "displacement"),
             &flat_sample_field(&history_nodes[&tip_node]["samples"], "displacement"),
@@ -253,11 +255,9 @@ fn real_frozen_point_forces_run_the_product_receive_apply_solve_chain() {
 
     let mut session = Session::default();
     let open_reply = session.execute("file.open", &json!({"path":model_path})).unwrap();
-    // The historical Contact result is retained as an input artifact, but the
-    // new path must solve the newly applied step itself.
-    if session.model.step("Contact").is_some() {
-        session.execute("model.step.delete", &json!({"name":"Contact"})).unwrap();
-    }
+    // Retain the historical Contact step as the model input.  The product
+    // path creates a distinct step with the same support and integration
+    // settings, so the historical loads remain an untouched reference.
     let actual_activation: ActivationData = serde_json::from_value(input["activation"].clone()).unwrap();
     let mut unknown_activation = actual_activation.clone();
     unknown_activation.structural_feedback = false;
@@ -276,6 +276,7 @@ fn real_frozen_point_forces_run_the_product_receive_apply_solve_chain() {
             &json!({
                 "name":"real-load",
                 "step":"real-load-transient",
+                "boundary_conditions":["clamp"],
                 "integration":{"type":"average_acceleration"},
                 "method":{"type":"direct"},
                 "damping":{"alpha":0.0,"beta":0.0,"loss_factor":0.0},

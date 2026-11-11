@@ -1,7 +1,7 @@
 use fieldcraft_engine::Session;
 use fieldcraft_engine::external::load_transfer::*;
 use fieldcraft_io::identity;
-use fieldcraft_model::Model;
+use fieldcraft_model::{BoundaryCondition, Model, Procedure, Set, Step, Target};
 use serde_json::{Value, json};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -121,6 +121,80 @@ fn receive_save_reopen_resave_is_byte_identical_and_apply_creates_native_history
     assert_eq!(applied["load_components"], 1);
     assert_eq!(applied["transient_settings"]["output_every"], 1);
     assert_eq!(applied["transient_settings"]["integration"]["type"], "average_acceleration");
+    assert!(applied["boundary_condition_warning"].is_string());
+    let _ = fs::remove_dir_all(dir);
+}
+
+#[test]
+fn product_apply_reuses_existing_transient_step_without_dropping_supports_or_settings() {
+    let dir = test_dir("reuse-transient-step");
+    let mut session = session_with_node();
+    session.model.add_set("clamp", Set { nodes: vec![1], ..Set::default() }).unwrap();
+    session.model.add_boundary_condition("clamp", BoundaryCondition::Fixed { target: Target::Set("clamp".into()) }).unwrap();
+    let transient = fieldcraft_model::dynamics::Transient {
+        adaptive: None,
+        time_step: 1.0,
+        increments: 1,
+        output_every: 1,
+        integration: fieldcraft_model::dynamics::Integration::AverageAcceleration,
+        method: fieldcraft_model::dynamics::Method::Direct,
+        damping: fieldcraft_model::harmonic::Damping::default(),
+        load_amplitudes: Default::default(),
+        initial_displacement: Default::default(),
+        initial_velocity: Default::default(),
+        base_acceleration: None,
+        base_displacement: None,
+    };
+    let mut step = Step::new("Contact", Procedure::Transient(transient));
+    step.boundary_conditions.insert("clamp".into());
+    session.model.add_step(step, None).unwrap();
+    let path = write_bundle(&dir, "reuse", &bundle_for(&session.model));
+    receive_path(&mut session, &path, "support-load").unwrap();
+    let reply = session
+        .execute(
+            "results.external.load_transfer.apply",
+            &json!({
+                "name":"support-load",
+                "step":"Contact",
+                "integration":{"type":"average_acceleration"},
+                "method":{"type":"direct"},
+                "damping":{"alpha":0.0,"beta":0.0,"loss_factor":0.0},
+                "output_every":1,
+                "solve_mass":"consistent"
+            }),
+        )
+        .unwrap();
+    assert_eq!(reply["reused_existing_step"], true);
+    assert_eq!(reply["boundary_conditions"], json!(["clamp"]));
+    assert_eq!(reply["boundary_condition_count"], 1);
+    assert!(reply["boundary_condition_warning"].is_null());
+    let applied = session.model.step("Contact").unwrap();
+    assert_eq!(applied.boundary_conditions, ["clamp".to_string()].into_iter().collect());
+    assert!(matches!(applied.procedure, Procedure::Transient(_)));
+    let Procedure::Transient(transient) = &applied.procedure else { unreachable!() };
+    assert_eq!(transient.integration, fieldcraft_model::dynamics::Integration::AverageAcceleration);
+    assert_eq!(transient.method, fieldcraft_model::dynamics::Method::Direct);
+    assert_eq!(transient.output_every, 1);
+    assert_eq!(applied.loads.len(), 1);
+    let _ = fs::remove_dir_all(dir);
+}
+
+#[test]
+fn product_apply_new_step_accepts_named_boundary_conditions() {
+    let dir = test_dir("new-step-boundary-condition");
+    let mut session = session_with_node();
+    session.model.add_set("clamp", Set { nodes: vec![1], ..Set::default() }).unwrap();
+    session.model.add_boundary_condition("clamp", BoundaryCondition::Fixed { target: Target::Set("clamp".into()) }).unwrap();
+    let path = write_bundle(&dir, "new", &bundle_for(&session.model));
+    receive_path(&mut session, &path, "support-load").unwrap();
+    let reply = session
+        .execute("results.external.load_transfer.apply", &json!({"name":"support-load","step":"new-transient","boundary_conditions":["clamp"]}))
+        .unwrap();
+    assert_eq!(reply["reused_existing_step"], false);
+    assert_eq!(reply["boundary_conditions"], json!(["clamp"]));
+    assert_eq!(reply["boundary_condition_count"], 1);
+    assert!(reply["boundary_condition_warning"].is_null());
+    assert_eq!(session.model.step("new-transient").unwrap().boundary_conditions, ["clamp".to_string()].into_iter().collect());
     let _ = fs::remove_dir_all(dir);
 }
 
