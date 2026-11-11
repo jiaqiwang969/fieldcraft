@@ -145,6 +145,8 @@ use crate::sparse::{Csr, NodeGraph, add_block, add_entry};
 use crate::system::{Mesh, add_element_thermal_loads, loads, temperature_loads, translation_block, translations};
 use crate::{Error, Limits, Result};
 
+pub(crate) mod stored;
+
 #[cfg(test)]
 mod band_tests;
 
@@ -1387,9 +1389,11 @@ pub fn solve_nonlinear(model: &Model, step: Option<&str>, limits: &Limits) -> Re
         return Err(Error::Internal("nonlinear static step".into()));
     };
     settings.validate()?;
-    let Some(imperfection) = &settings.imperfection else { return solve_on(model, chosen.name.as_str(), limits, Vec::new(), None) };
+    let Some(imperfection) = &settings.imperfection else {
+        return solve_on(model, chosen.name.as_str(), limits, Vec::new(), None, None).map(std::borrow::Cow::into_owned);
+    };
     let (perturbed, note) = imperfect(model, imperfection, limits)?;
-    solve_on(&perturbed, chosen.name.as_str(), limits, vec![note], None)
+    solve_on(&perturbed, chosen.name.as_str(), limits, vec![note], None, None).map(std::borrow::Cow::into_owned)
 }
 
 /// Recompute equilibrium and capture its consistent tangent before internal history is
@@ -1428,7 +1432,7 @@ pub(crate) fn terminal_tangent(
         }
     }
     let mut tangent = None;
-    let result = solve_on(model, step, limits, Vec::new(), Some((policies, &mut tangent)))?;
+    let result = solve_on(model, step, limits, Vec::new(), Some((policies, &mut tangent)), None)?.into_owned();
     Ok((result, tangent.ok_or_else(|| Error::Internal("missing terminal tangent".into()))?))
 }
 
@@ -1457,13 +1461,14 @@ fn imperfect(model: &Model, imperfection: &Imperfection, limits: &Limits) -> Res
     Ok((out, note))
 }
 
-fn solve_on(
+fn solve_on<'a>(
     model: &Model,
     step: &str,
     limits: &Limits,
     notes: Vec<String>,
     terminal: Option<(&std::collections::BTreeMap<String, fieldcraft_model::ContactPerturbation>, &mut Option<crate::prestress::Terminal>)>,
-) -> Result<StaticResult> {
+    stored: Option<&'a StaticResult>,
+) -> Result<std::borrow::Cow<'a, StaticResult>> {
     let resolved = model.resolve()?;
     let step = model.step(step).ok_or_else(|| Error::Internal("nonlinear static step".into()))?;
     let Procedure::NonlinearStatic(settings) = &step.procedure else {
@@ -1578,6 +1583,12 @@ fn solve_on(
         converged_scale: 0.0,
         converged_moment: 0.0,
     };
+
+    if let Some(result) = stored {
+        let (_, terminal) = terminal.ok_or_else(|| Error::Internal("stored equilibrium without a tangent consumer".into()))?;
+        *terminal = Some(stored::evaluate(model, &resolved, &mut run, result)?);
+        return Ok(std::borrow::Cow::Borrowed(result));
+    }
 
     let mut history = History::default();
     let (mut frame_values, mut frames_full) = (0usize, false);
@@ -1843,6 +1854,7 @@ fn solve_on(
     }
     let contacts = problem.contacts.iter().zip(&evaluation.contact).map(|(c, s)| c.result(&mesh, s, run.augmentations)).collect();
     finish(&mesh, step, &red, &problem, u, lambda, evaluation, &run.committed, history, run.factor_entries, contacts, warnings)
+        .map(std::borrow::Cow::Owned)
 }
 
 /// The final state as a static result: displacements, reactions, Cauchy stresses and

@@ -36,6 +36,7 @@ pub mod contact;
 pub mod convergence;
 pub mod discrete;
 pub mod eigen;
+pub mod equilibrium;
 pub mod fatigue;
 pub mod foundation;
 pub mod harmonic;
@@ -57,7 +58,7 @@ pub mod transient;
 
 pub use analysis::{
     BeamResult, ElementStress, FrequencyOptions, FrequencyResult, Location, MassKind, Mode, PointResult, ShellResult, StaticResult, Stats,
-    StepResult, solve_frequency, solve_frequency_report, solve_static,
+    StepResult, solve_frequency, solve_frequency_from_equilibrium, solve_frequency_report, solve_static,
 };
 pub use buckle::{Buckling, solve_buckle};
 pub use harmonic::{HarmonicResult, MatrixExport, export_matrices, export_matrices_with_mass, solve_harmonic, solve_harmonic_with_mass};

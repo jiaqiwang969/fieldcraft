@@ -2716,6 +2716,8 @@ pub const SOLVE_MATRICES: &[Field] = &[
 pub const SOLVE_STATIC: &[Field] = &[STEP, MAX_DOFS, MAX_FACTOR, MAX_MEMORY_GIB, THREADS];
 pub const SOLVE_HARMONIC: &[Field] = &[
     STEP,
+    flag("reuse_base", "Reuse stored equilibrium").help("Require an input-matched, converged elastic NLGEOM solid base without contact/history; no Newton increments. Off: recompute the base."),
+    int("max_newton_iterations", "Max base Newton iterations", 1, fieldcraft_solver::Limits::MAX_NEWTON_ITERATIONS as i64).help("Work cap when the base is recomputed; reuse performs no Newton iterations."),
     choice("mass", "Mass matrix", &[("consistent", "Consistent"), ("lumped", "Lumped")])
         .help("Mass discretization for inertia, damping and the modal basis; random response inherits it.")
         .def("\"consistent\""),
@@ -2756,6 +2758,8 @@ pub const SOLVE_NONLINEAR: &[Field] = &[
 ];
 pub const SOLVE_FREQUENCY: &[Field] = &[
     STEP,
+    flag("reuse_base", "Reuse stored equilibrium").help("Require an input-matched, converged elastic NLGEOM solid base without contact/history; no Newton increments. Off: recompute the base."),
+    int("max_newton_iterations", "Max base Newton iterations", 1, fieldcraft_solver::Limits::MAX_NEWTON_ITERATIONS as i64).help("Work cap when the base is recomputed; reuse performs no Newton iterations."),
     choice("mass", "Mass matrix", &[("consistent", "Consistent"), ("lumped", "Lumped")])
         .help("Consistent is more accurate; lumped is cheaper.")
         .def("\"consistent\""),
