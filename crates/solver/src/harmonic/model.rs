@@ -275,7 +275,7 @@ pub fn solve_harmonic(model: &Model, name: Option<&str>, limits: &Limits) -> Res
 
 /// Solve using the same mass choice for inertia, material damping and modal reduction.
 pub fn solve_harmonic_with_mass(model: &Model, name: Option<&str>, mass: MassKind, limits: &Limits) -> Result<HarmonicResult> {
-    solve_harmonic_impl(model, name, mass, limits, None)
+    solve_harmonic_impl(model, name, mass, limits, None, None)
 }
 
 /// Reuse one exactly matched modal basis across calls, while retaining per-call assembly,
@@ -287,7 +287,20 @@ pub fn solve_harmonic_with_mass_cached(
     limits: &Limits,
     cache: &mut super::ModalCache,
 ) -> Result<HarmonicResult> {
-    solve_harmonic_impl(model, name, mass, limits, Some(cache))
+    solve_harmonic_impl(model, name, mass, limits, Some(cache), None)
+}
+
+/// Reuse a bound, stored elastic equilibrium; no nonlinear increments are solved.
+pub fn solve_harmonic_from_equilibrium(
+    model: &Model,
+    name: Option<&str>,
+    mass: MassKind,
+    limits: &Limits,
+    equilibrium: &crate::equilibrium::StoredEquilibrium<'_>,
+) -> Result<HarmonicResult> {
+    let step = model.select_step(name, |p| matches!(p, Procedure::Harmonic(_)), "harmonic")?;
+    equilibrium.validate(model, step)?;
+    solve_harmonic_impl(model, name, mass, limits, None, Some(equilibrium.result))
 }
 
 fn solve_harmonic_impl(
@@ -296,12 +309,13 @@ fn solve_harmonic_impl(
     mass: MassKind,
     limits: &Limits,
     mut cache: Option<&mut super::ModalCache>,
+    stored: Option<&crate::StaticResult>,
 ) -> Result<HarmonicResult> {
     fieldcraft_model::progress::check()?;
     if model.pretensions().values().any(|p| p.face.is_some()) {
         let resolved = model.resolve()?;
         let prepared = crate::pretension::prepare(model, &resolved, limits.max_dofs)?;
-        let mut result = solve_harmonic_with_mass(prepared.model.as_ref(), name, mass, limits)?;
+        let mut result = solve_harmonic_impl(prepared.model.as_ref(), name, mass, limits, None, stored)?;
         prepared.project_harmonic(&mut result);
         return Ok(result);
     }
@@ -357,7 +371,10 @@ fn solve_harmonic_impl(
     let setup = Setup { model, resolved: &resolved, mesh: &mesh, step };
     let assembly_timing = crate::timing::Span::new("harmonic_assembly_reduction");
     let assembled = analysis::assemble_for_step(&setup, &graph, Some(mass))?;
-    let terminal = crate::prestress::stiffness(&setup, &graph, assembled.k, limits, &mut warnings)?;
+    let terminal = match stored {
+        Some(result) => crate::prestress::stored_stiffness(&setup, assembled.k.n, result, limits, &mut warnings)?,
+        None => crate::prestress::stiffness(&setup, &graph, assembled.k, limits, &mut warnings)?,
+    };
     let red = analysis::reduction_with_frozen(
         &setup,
         true,

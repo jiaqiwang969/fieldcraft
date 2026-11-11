@@ -950,11 +950,11 @@ pub(crate) const TOLERANCE: f64 = 1e-9; // unit-factors: a relative residual
 /// lowest natural modes within the step's frequency range.
 pub fn solve_frequency(model: &Model, step: Option<&str>, options: &FrequencyOptions, limits: &Limits) -> Result<FrequencyResult> {
     let _timing = crate::timing::Span::new("solve_frequency");
-    frequency_impl(model, step, options, limits, false, false, true).map(|(result, _, _)| result)
+    frequency_impl(model, step, options, limits, false, false, true, None).map(|(result, _, _)| result)
 }
 
 pub(crate) fn solve_frequency_legacy(model: &Model, step: Option<&str>, options: &FrequencyOptions, limits: &Limits) -> Result<FrequencyResult> {
-    frequency_impl(model, step, options, limits, false, false, false).map(|(result, _, _)| result)
+    frequency_impl(model, step, options, limits, false, false, false, None).map(|(result, _, _)| result)
 }
 
 /// Solve and report the actual unshifted reduced-pencil residuals and block iterations.
@@ -966,14 +966,28 @@ pub fn solve_frequency_report(
     limits: &Limits,
 ) -> Result<(FrequencyResult, crate::convergence::ModalConvergence)> {
     let _timing = crate::timing::Span::new("solve_frequency");
-    let (result, _, convergence) = frequency_impl(model, step, options, limits, false, true, true)?;
+    let (result, _, convergence) = frequency_impl(model, step, options, limits, false, true, true, None)?;
+    Ok((result, convergence.ok_or_else(|| Error::Internal("frequency diagnostics missing".into()))?))
+}
+
+/// Use a bound, stored elastic equilibrium without solving its load increments again.
+pub fn solve_frequency_from_equilibrium(
+    model: &Model,
+    step: Option<&str>,
+    options: &FrequencyOptions,
+    limits: &Limits,
+    equilibrium: &crate::equilibrium::StoredEquilibrium<'_>,
+) -> Result<(FrequencyResult, crate::convergence::ModalConvergence)> {
+    let selected = model.select_step(step, |p| matches!(p, Procedure::Frequency { .. }), "frequency")?;
+    equilibrium.validate(model, selected)?;
+    let (result, _, convergence) = frequency_impl(model, step, options, limits, false, true, true, Some(equilibrium.result))?;
     Ok((result, convergence.ok_or_else(|| Error::Internal("frequency diagnostics missing".into()))?))
 }
 
 /// Reuse the actual physical mass operator for modal derivative contractions.
 /// Ordinary frequency solves still release it before factorization.
 pub(crate) fn frequency_with_mass(model: &Model, step: Option<&str>, options: &FrequencyOptions, limits: &Limits) -> Result<(FrequencyResult, Csr)> {
-    let (result, mass, _) = frequency_impl(model, step, options, limits, true, false, false)?;
+    let (result, mass, _) = frequency_impl(model, step, options, limits, true, false, false, None)?;
     Ok((result, mass.ok_or_else(|| Error::Internal("retained modal mass".into()))?))
 }
 
@@ -994,6 +1008,7 @@ fn modal_order_fallback_reason(result: &FrequencyResult) -> Option<&'static str>
     None
 }
 
+#[allow(clippy::too_many_arguments)]
 fn frequency_impl(
     model: &Model,
     step: Option<&str>,
@@ -1002,6 +1017,7 @@ fn frequency_impl(
     retain_mass: bool,
     diagnostics: bool,
     standalone: bool,
+    stored: Option<&StaticResult>,
 ) -> Result<(FrequencyResult, Option<Csr>, Option<crate::convergence::ModalConvergence>)> {
     if model.pretensions().values().any(|p| p.face.is_some()) {
         // A job cancelled before it starts stops here, before any setup work.
@@ -1012,11 +1028,11 @@ fn frequency_impl(
         let resolved = model.resolve()?;
         let prepared = crate::pretension::prepare(model, &resolved, limits.max_dofs)?;
         // Pretension sections are outside the verified scope of the multilevel ordering.
-        let (mut result, mass, convergence) = frequency_impl(prepared.model.as_ref(), step, options, limits, false, diagnostics, false)?;
+        let (mut result, mass, convergence) = frequency_impl(prepared.model.as_ref(), step, options, limits, false, diagnostics, false, stored)?;
         prepared.project_frequency(&mut result);
         return Ok((result, mass, convergence));
     }
-    let first = frequency_once(model, step, options, limits, retain_mass, diagnostics, standalone)?;
+    let first = frequency_once(model, step, options, limits, retain_mass, diagnostics, standalone, stored)?;
     let selected = model.select_step(step, |p| matches!(p, Procedure::Frequency { .. }), "frequency")?;
     if standalone_linear_order(model, selected, standalone)
         && !crate::ordering::legacy_requested()
@@ -1030,7 +1046,7 @@ fn frequency_impl(
         drop(first);
         use std::io::Write;
         let _ = writeln!(std::io::stderr().lock(), "FIELDCRAFT_ORDER_FALLBACK\t{trial_iterations}\t{trial_vectors}\t{reason}");
-        let mut legacy = frequency_once(model, step, options, limits, retain_mass, diagnostics, false)?;
+        let mut legacy = frequency_once(model, step, options, limits, retain_mass, diagnostics, false, stored)?;
         legacy.0.warnings.push(format!(
             "legacy ordering retained: {reason}; discarded trial used {trial_iterations} Lanczos block iterations and {trial_vectors} basis vectors; reported convergence describes the returned legacy solve; full command time includes both attempts"
         ));
@@ -1039,6 +1055,7 @@ fn frequency_impl(
     Ok((first.0, first.1, first.2))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn frequency_once(
     model: &Model,
     step: Option<&str>,
@@ -1047,6 +1064,7 @@ fn frequency_once(
     retain_mass: bool,
     diagnostics: bool,
     standalone: bool,
+    stored: Option<&StaticResult>,
 ) -> Result<(FrequencyResult, Option<Csr>, Option<crate::convergence::ModalConvergence>, usize)> {
     // A job cancelled before it starts stops here, before any setup work.
     fieldcraft_model::progress::check()?;
@@ -1072,7 +1090,10 @@ fn frequency_once(
     ignored_dashpots(&mesh, &mut warnings);
     let setup = Setup { model, resolved: &resolved, mesh: &mesh, step };
     let Assembled { k, m } = assemble_for_step(&setup, &graph, Some(options.mass))?;
-    let terminal = crate::prestress::stiffness(&setup, &graph, k, limits, &mut warnings)?;
+    let terminal = match stored {
+        Some(result) => crate::prestress::stored_stiffness(&setup, k.n, result, limits, &mut warnings)?,
+        None => crate::prestress::stiffness(&setup, &graph, k, limits, &mut warnings)?,
+    };
     let red = reduction_with_frozen(
         &setup,
         false,

@@ -336,6 +336,61 @@ fn neo_axial(l: f64) -> (f64, f64) {
     let (mu, bulk) = (5e5, 1e6 / 3.);
     ((2. * mu / 3.) * (l.powf(1. / 3.) - l.powf(-5. / 3.)) + bulk * (l - 1.), (2. * mu / 9.) * (l.powf(-2. / 3.) + 5. * l.powf(-8. / 3.)) + bulk)
 }
+
+#[test]
+fn stored_fbar_terminal_reuses_identical_modal_and_harmonic_operators() {
+    use fieldcraft_solver::harmonic::{solve_harmonic_from_equilibrium, solve_harmonic_with_mass};
+    use fieldcraft_solver::{equilibrium::StoredEquilibrium, solve_frequency_from_equilibrium, solve_frequency_report};
+    for force in [0., 1000.] {
+        let m = fbar_chain(force, true);
+        let terminal = equilibrium(&m, "Locked", true);
+        let stored = StoredEquilibrium::bind(&m, &terminal).unwrap();
+        let normal_modes = solve_frequency_report(&m, Some("Modes"), &FrequencyOptions::default(), &Limits::default()).unwrap();
+        let normal_harmonic = solve_harmonic_with_mass(&m, Some("Response"), fieldcraft_solver::MassKind::Consistent, &Limits::default()).unwrap();
+        let cap = Limits { max_newton_iterations: 1, ..Limits::default() };
+        if force != 0. {
+            for error in [
+                solve_frequency_report(&m, Some("Modes"), &FrequencyOptions::default(), &cap).unwrap_err(),
+                solve_harmonic_with_mass(&m, Some("Response"), fieldcraft_solver::MassKind::Consistent, &cap).unwrap_err(),
+            ] {
+                assert!(error.to_string().contains("1 Newton iterations"), "{error}");
+            }
+        }
+        for threads in [1, 4] {
+            let (modes, harmonic) = fieldcraft_parallel::with_threads(threads, || {
+                let modes = solve_frequency_from_equilibrium(&m, Some("Modes"), &FrequencyOptions::default(), &cap, &stored).unwrap();
+                let harmonic = solve_harmonic_from_equilibrium(&m, Some("Response"), fieldcraft_solver::MassKind::Consistent, &cap, &stored).unwrap();
+                (modes, harmonic)
+            });
+            // Serialization checks f64 output bit patterns, including signed zero.
+            assert_eq!(serde_json::to_vec(&modes).unwrap(), serde_json::to_vec(&normal_modes).unwrap());
+            assert_eq!(serde_json::to_vec(&harmonic).unwrap(), serde_json::to_vec(&normal_harmonic).unwrap());
+        }
+        println!("stored equilibrium force={force}: default and reuse match; threads=1,4; reuse Newton cap=1");
+    }
+}
+
+#[test]
+fn stored_terminal_rejects_changed_inputs_and_incomplete_or_inconsistent_state() {
+    use fieldcraft_solver::{equilibrium::StoredEquilibrium, solve_frequency_from_equilibrium};
+    let m = fbar_chain(1000., true);
+    let terminal = equilibrium(&m, "Locked", true);
+    let stored = StoredEquilibrium::bind(&m, &terminal).unwrap();
+    let mut changed = m.clone();
+    let mut material = changed.material("Elastic").unwrap().clone();
+    material.density = Some(2.);
+    changed.replace_material("Elastic", material).unwrap();
+    let error = solve_frequency_from_equilibrium(&changed, Some("Modes"), &FrequencyOptions::default(), &Limits::default(), &stored).unwrap_err();
+    assert!(error.to_string().contains("stored_equilibrium.input_changed"), "{error}");
+    let mut incomplete = terminal.clone();
+    incomplete.nonlinear.as_mut().unwrap().increments.last_mut().unwrap().converged = false;
+    assert!(StoredEquilibrium::bind(&m, &incomplete).err().unwrap().to_string().contains("not_converged_at_full_load"));
+    let mut bad = terminal.clone();
+    bad.displacement[4][2] += 0.01;
+    let stored = StoredEquilibrium::bind(&m, &bad).unwrap();
+    let error = solve_frequency_from_equilibrium(&m, Some("Modes"), &FrequencyOptions::default(), &Limits::default(), &stored).unwrap_err();
+    assert!(error.to_string().contains("stored_equilibrium.constraint_mismatch"), "{error}");
+}
 #[test]
 fn fbar_pretension_terminal_and_transients() {
     for force in [0., 0.1, 1000.] {

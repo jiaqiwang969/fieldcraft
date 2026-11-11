@@ -283,3 +283,11 @@ into the requested frames; only one basis stress field is retained at a time.
 Full physical residual and power checks still run at every frequency. Prescribed
 motion and prestressed models retain the scalar recovery path. Default output
 fields and the saved result layout are unchanged.
+
+A current saved, contact-free elastic NLGEOM base can be selected with
+`reuse_base: true`; see [saved equilibrium reuse](frequency.md#reusing-a-saved-elastic-equilibrium)
+for its identity checks and named refusals. The direct complex operator still uses
+the entire terminal stiffness in the global loss term `i η K`, including stress
+stiffness and reference-surface foundations. Explicit contact perturbation policies
+remain limited to the supported frequency procedures; this option does not enable
+their harmonic use.
