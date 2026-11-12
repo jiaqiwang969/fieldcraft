@@ -93,7 +93,6 @@ fn with_run<T>(model: &Model, f: impl FnOnce(&mut Run<'_>) -> T) -> T {
         iterations: 0,
         factor_entries: 0,
         committed: vec![Vec::new(); mesh.elements.len()],
-        path_dependent: false,
         undeformed: None,
         contact: problem.contacts.iter().map(Interface::committed).collect(),
         reference: vec![0.; mesh.dofs()],
@@ -114,11 +113,12 @@ fn solve_increment(
     predictor: Option<&[f64]>,
 ) -> std::result::Result<(Converged, usize), Failure> {
     let mut iterations = Vec::new();
+    let mut failure_iterations = Vec::new();
     run.augmentation = 0;
     let size = (lambda - from).abs();
-    let c = run.increment(q, predictor, None, lambda, size, &mut iterations)?;
+    let c = run.increment(q, predictor, None, lambda, size, &mut iterations, &mut failure_iterations)?;
     let mut augmentations = 0;
-    let c = run.augment(c, q, lambda, size, &mut iterations, &mut augmentations, &mut Vec::new())?;
+    let c = run.augment(c, q, lambda, size, &mut iterations, &mut failure_iterations, &mut augmentations, &mut Vec::new())?;
     Ok((c, augmentations))
 }
 
@@ -152,7 +152,7 @@ fn a_committed_contact_increment_does_not_carry_its_chatter_band_into_the_next()
             // relying on platform rounding to create a small naturally chattering contact patch.
             if seeded {
                 run.band = contact::ENGAGED_BAND;
-                let failed = run.increment(&[0.; 4], None, None, -0.05, 0.05, &mut Vec::new());
+                let failed = run.increment(&[0.; 4], None, None, -0.05, 0.05, &mut Vec::new(), &mut Vec::new());
                 assert!(matches!(failed, Err(Failure::Cutback(_))), "exercise an actual failed retry");
                 assert_eq!(run.band, contact::ENGAGED_BAND, "a failed retry must not clear the band");
             }
@@ -255,7 +255,7 @@ fn preloaded_contact_perturbation_reaction_tangent_and_bonded_constraints() {
                     assert!(trial.contact[0].slipping.iter().all(|s| !s));
                     forces.push(trial.internal);
                     let lambda = 1. - sign * h / 1e-4;
-                    let trial = succeeded(run.increment(&q, None, None, lambda, h / 1e-4, &mut Vec::new()));
+                    let trial = succeeded(run.increment(&q, None, None, lambda, h / 1e-4, &mut Vec::new(), &mut Vec::new()));
                     assert_eq!(trial.evaluation.contact[0].active_set(), active);
                     assert!(trial.evaluation.contact[0].slipping.iter().all(|s| !s));
                     reactions.push(top.iter().map(|d| trial.evaluation.internal[*d]).sum::<f64>());

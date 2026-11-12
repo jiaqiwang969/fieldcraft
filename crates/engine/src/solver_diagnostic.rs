@@ -38,10 +38,18 @@ fn solver_failure(e: &EngineError) -> bool {
     use fieldcraft_solver::Error as S;
     match e {
         EngineError::Context { source, .. } => solver_failure(source),
-        EngineError::Solver(S::NotConverged(_) | S::Singular(_) | S::Internal(_) | S::Element { .. })
+        EngineError::Solver(S::NotConverged(_) | S::NotConvergedWithDiagnostics { .. } | S::Singular(_) | S::Internal(_) | S::Element { .. })
         | EngineError::Explicit(E::Unstable(_))
         | EngineError::Fluid(F::Unstable(_) | F::Backend(_)) => true,
         _ => false,
+    }
+}
+
+fn nonlinear_failure(e: &EngineError) -> Option<Value> {
+    match e {
+        EngineError::Context { source, .. } => nonlinear_failure(source),
+        EngineError::Solver(error) => error.nonlinear_diagnostic().and_then(|diagnostic| serde_json::to_value(diagnostic).ok()),
+        _ => None,
     }
 }
 
@@ -62,6 +70,10 @@ pub(crate) fn finish(
     if id == "solve.run" {
         return result;
     }
+    let nonlinear_failure = match &result {
+        Err(error) => nonlinear_failure(error),
+        Ok(_) => None,
+    };
     let device = progress.backend_diagnostic();
     let (message, summary) = match &result {
         Err(e) if solver_failure(e) && !e.is_cancelled() => (e.to_string(), Value::Null),
@@ -84,7 +96,7 @@ pub(crate) fn finish(
         .into_iter()
         .filter_map(|k| summary.get(k).filter(|v| !v.is_array() && !v.is_object()).map(|v| (k.to_string(), v.clone())))
         .collect();
-    let context = json!({
+    let mut context = json!({
         "requested_step": params.get("step"),
         "parent_command": parent,
         "progress": observed.then_some(&state),
@@ -97,6 +109,9 @@ pub(crate) fn finish(
         "checkpoint_path": null,
         "unavailable": "Fields not observed by this solve remain null; a failed CPU fluid path has no backend identity observation, and no checkpoint is inferred from the open model path.",
     });
+    if let Some(diagnostic) = nonlinear_failure {
+        context["nonlinear_failure"] = diagnostic;
+    }
     let Some(path) = crash::solver_error(&dir, id, params, &context, &message) else { return result };
     log::info!("solver diagnostic of {id}: {}", path.display());
     let shown = crash::without_home(&path.to_string_lossy());
@@ -125,5 +140,33 @@ mod tests {
         assert!(!solver_failure(&EngineError::Fluid(fieldcraft_lbm::Error::Limit("max_cells".into()))));
         assert!(!solver_failure(&EngineError::Params("step `Load`: no such step".into())));
         assert!(solver_failure(&EngineError::context("step `Load`", fieldcraft_solver::Error::NotConverged("increment 3".into()))));
+    }
+
+    #[test]
+    fn nonlinear_failure_keeps_the_iteration_trace_in_the_solver_context() {
+        let diagnostic = fieldcraft_solver::nonlinear::NonlinearFailureDiagnostic {
+            step: "Load".into(),
+            increment: 3,
+            load_factor: 0.25,
+            size: 0.25,
+            reason: "no convergence in 20 iterations".into(),
+            iterations: vec![fieldcraft_solver::nonlinear::NonlinearFailureIteration {
+                force: 1e-4,
+                displacement: 0.5,
+                energy: 0.25,
+                line_search: 0.1,
+                closed_nodes: 81,
+                slipping_nodes: 12,
+            }],
+        };
+        let error = EngineError::context(
+            "step `Load`",
+            fieldcraft_solver::Error::NotConvergedWithDiagnostics { message: "increment 3".into(), diagnostic: Box::new(diagnostic) },
+        );
+        let value = nonlinear_failure(&error).unwrap();
+        assert_eq!(value["step"], "Load");
+        assert_eq!(value["iterations"][0]["closed_nodes"], 81);
+        assert_eq!(value["iterations"][0]["slipping_nodes"], 12);
+        assert!(solver_failure(&error));
     }
 }
