@@ -14,23 +14,30 @@ pub const MAX_DOF: usize = 4096;
 pub const MAX_MATRIX_ENTRIES: usize = 16 * 1024 * 1024;
 pub const MAX_HOLD_STEPS: u32 = 1_000_000;
 
-pub const STATIC_RESIDUAL_MAX: f64 = 1e-6;
-pub const STATIC_VELOCITY_MAX: f64 = 1e-6;
+pub const STATIC_RESIDUAL_MAX: f64 = 1e-6; // unit-factors: SI force residual threshold
+pub const STATIC_VELOCITY_MAX: f64 = 1e-6; // unit-factors: SI velocity threshold
 pub const STATIC_DRIFT_MAX: f64 = 1e-10;
-pub const STATIC_INERTIA_MAX: f64 = 1e-6;
-pub const STATIC_SUPPORT_MAX: f64 = 1e-12;
+pub const STATIC_INERTIA_MAX: f64 = 1e-6; // unit-factors: SI force inertia/internal difference threshold
+pub const STATIC_SUPPORT_MAX: f64 = 1e-12; // unit-factors: SI displacement support threshold
 pub const GAP_MAX: f64 = 1e-10;
 pub const BONDED_TANGENTIAL_MAX: f64 = 1e-10;
 pub const STICK_SLIP_RATIO_MAX: f64 = 0.1;
 pub const STICK_FRICTION_UTILIZATION_MAX: f64 = 0.9;
 pub const TANGENT_ERROR_MAX: f64 = 1e-5;
 pub const TANGENT_SYMMETRY_MAX: f64 = 1e-8;
-pub const MASS_SYMMETRY_MAX: f64 = 1e-12;
+pub const MASS_SYMMETRY_MAX: f64 = 1e-12; // unit-factors: relative mass-matrix symmetry error
 pub const PROJECTION_ERROR_MAX: f64 = 1e-10;
 pub const MODAL_RESIDUAL_MAX: f64 = 1e-8;
 pub const MASS_ORTHOGONALITY_MAX: f64 = 1e-8;
 pub const MAC_MIN: f64 = 0.90;
 pub const MAC_MARGIN_MIN: f64 = 0.05;
+
+const CONTACT_UTILIZATION_DERIVATION_TOLERANCE: f64 = 1e-12; // unit-factors: dimensionless contact utilization comparison
+const MASS_TOTAL_ABSOLUTE_TOLERANCE: f64 = 1e-12; // unit-factors: SI mass absolute total tolerance
+const MASS_TOTAL_RELATIVE_TOLERANCE: f64 = 1e-9; // unit-factors: relative to declared mass total
+const CONSTRAINT_RESIDUAL_ABSOLUTE_TOLERANCE: f64 = 1e-12; // unit-factors: SI coordinate absolute residual tolerance
+const CONSTRAINT_RESIDUAL_RELATIVE_TOLERANCE: f64 = 1e-9; // unit-factors: relative to coordinate scale
+const FULL_COLUMN_RANK_NORM_MIN: f64 = 1e-12; // unit-factors: dimensionless column-norm lower bound
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DenseMatrix {
@@ -247,7 +254,7 @@ impl ContactState {
             return invalid(format!("contact_sliding: item=friction_utilization measured={utilization} threshold<{STICK_FRICTION_UTILIZATION_MAX}"));
         }
         let derived = self.normal_force.iter().zip(&self.tangential_force).map(|(normal, tangent)| tangent.abs() / (mu * normal)).fold(0.0, f64::max);
-        if (derived - utilization).abs() > 1e-12 {
+        if (derived - utilization).abs() > CONTACT_UTILIZATION_DERIVATION_TOLERANCE {
             return invalid(format!("contact_state_unknown: item=friction_utilization measured={} derived={} threshold=1e-12", utilization, derived));
         }
         Ok(())
@@ -369,7 +376,7 @@ impl ExternalStaticBase {
         if n % 3 != 0 {
             return invalid("ExternalStaticBase: mass total requires xyz translational ordering");
         }
-        let tolerance = 1e-12_f64.max(1e-9 * self.mass.declared_total);
+        let tolerance = MASS_TOTAL_ABSOLUTE_TOLERANCE.max(MASS_TOTAL_RELATIVE_TOLERANCE * self.mass.declared_total);
         for axis in 0..3 {
             let direction_indices: Vec<usize> = (axis..n).step_by(3).collect();
             let total =
@@ -423,8 +430,8 @@ impl ExternalStaticBase {
             residual = residual.max((projected - self.constraints.full_coordinates[i]).abs());
         }
         if !self.constraints.constraint_residual.is_finite()
-            || self.constraints.constraint_residual > (1e-12_f64).max(1e-9 * scale)
-            || residual > (1e-12_f64).max(1e-9 * scale)
+            || self.constraints.constraint_residual > CONSTRAINT_RESIDUAL_ABSOLUTE_TOLERANCE.max(CONSTRAINT_RESIDUAL_RELATIVE_TOLERANCE * scale)
+            || residual > CONSTRAINT_RESIDUAL_ABSOLUTE_TOLERANCE.max(CONSTRAINT_RESIDUAL_RELATIVE_TOLERANCE * scale)
         {
             return invalid("ExternalStaticBase: constraint residual");
         }
@@ -831,7 +838,7 @@ fn full_column_rank(t: &DenseMatrix, full: usize, reduced: usize) -> Result<bool
             }
         }
         let norm = dot(&column, &column).sqrt();
-        if !norm.is_finite() || norm <= 1e-12 {
+        if !norm.is_finite() || norm <= FULL_COLUMN_RANK_NORM_MIN {
             return Ok(false);
         }
         for value in &mut column {
