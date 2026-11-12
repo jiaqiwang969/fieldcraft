@@ -154,6 +154,43 @@ fn receive_save_reopen_resave_is_byte_identical_and_apply_creates_native_history
 }
 
 #[test]
+fn applying_expires_source_binding_until_record_is_removed_before_save() {
+    let dir = test_dir("apply-save-source-binding");
+    let bundle_path = dir.join("support-load.json");
+    let project_path = dir.join("received.fieldcraft");
+    let solved_path = dir.join("solved-without-source-record.fieldcraft");
+    let mut session = solvable_session();
+    let bundle = bundle_for(&session.model);
+    fs::write(&bundle_path, serde_json::to_vec(&bundle).unwrap()).unwrap();
+
+    session.execute("results.external.load_transfer.receive", &json!({"path":bundle_path,"name":"support-load","project":project_path})).unwrap();
+    let mut reopened = Session::default();
+    reopened.execute("file.open", &json!({"path":project_path})).unwrap();
+    reopened
+        .execute(
+            "results.external.load_transfer.apply",
+            &json!({"name":"support-load","step":"support-load-transient","boundary_conditions":["clamp"]}),
+        )
+        .unwrap();
+    reopened.execute("solve.transient", &json!({"step":"support-load-transient","mass":"consistent","threads":1})).unwrap();
+    let probe_before_save = reopened.execute("solve.probe", &json!({"step":"support-load-transient","nodes":[1]})).unwrap();
+
+    let save_error = reopened.execute("file.save", &json!({"path":project_path,"results":true})).unwrap_err().to_string();
+    assert!(save_error.contains("ReferenceMeshMismatch"), "{save_error}");
+    let removed = reopened.execute("results.external.remove", &json!({"name":"support-load"})).unwrap();
+    assert_eq!(removed["removed"], "support-load");
+    reopened.execute("file.save_as", &json!({"path":solved_path,"results":true})).unwrap();
+
+    let mut solved = Session::default();
+    solved.execute("file.open", &json!({"path":solved_path})).unwrap();
+    assert_eq!(solved.execute("results.external.list", &json!({})).unwrap(), json!([]));
+    let probe_after_reopen = solved.execute("solve.probe", &json!({"step":"support-load-transient","nodes":[1]})).unwrap();
+    assert_eq!(probe_after_reopen, probe_before_save, "transient probe changed after source-record removal and reopen");
+    solved.execute("file.save", &json!({"path":solved_path,"results":true})).unwrap();
+    let _ = fs::remove_dir_all(dir);
+}
+
+#[test]
 fn product_entry_rejects_missing_backend_terminal_receipt() {
     let dir = test_dir("missing-terminal-receipt");
     let mut session = session_with_node();
@@ -375,6 +412,24 @@ fn write_bundle(dir: &Path, label: &str, bundle: &ArchiveBundle) -> PathBuf {
 fn session_with_node() -> Session {
     let mut session = Session::default();
     session.model.set_node(1, [0.0, 0.0, 0.0]).unwrap();
+    session
+}
+
+fn solvable_session() -> Session {
+    let mut session = Session::default();
+    session
+        .run_script(&json!([
+            {"command":"model.units","params":{"system":"m-kg-s-N-Pa"}},
+            {"command":"mesh.node.add","params":{"label":1,"xyz":[0.0,0.0,0.0]}},
+            {"command":"mesh.node.add","params":{"label":2,"xyz":[1.0,0.0,0.0]}},
+            {"command":"mesh.element.add","params":{"label":1,"kind":"rod2","nodes":[1,2]}},
+            {"command":"model.set.create","params":{"name":"clamp","nodes":[1]}},
+            {"command":"model.set.create","params":{"name":"rod","elements":[1]}},
+            {"command":"model.material.create","params":{"name":"steel","elastic":{"type":"isotropic","young":1000.0,"poisson":0.0},"density":1.0}},
+            {"command":"model.section.create","params":{"name":"section","set":"rod","material":"steel","kind":{"type":"rod","area":1.0}}},
+            {"command":"model.boundary_condition.create","params":{"name":"clamp","type":"fixed","target":{"set":"clamp"}}}
+        ]))
+        .unwrap();
     session
 }
 

@@ -135,3 +135,14 @@ carried prefix. The receive response, persisted admission/context metadata, and
 last completed/persisted/requested frames, and `coverage_through_frame`. Such a record remains a
 failed or cancelled record and `results.external.load_transfer.apply` refuses it with the named
 backend-status reason; a failed prefix is never treated as a successful structural history.
+
+### Saving after application
+
+Receiving a load-transfer result with `project` saves the source record against the model as it
+stood at admission. Applying the record adds generated node sets, loads, amplitudes, and a
+structural step, so that source binding is stale for the edited model. A direct `file.save` after
+application therefore rejects with `ReferenceMeshMismatch`. The supported sequence is: receive
+and save, apply and solve, attempt/save evidence as needed, remove the source record with
+`results.external.remove`, then `file.save_as` to a new project. The solved transient result is
+retained in that new project and is available after `file.open`; the product-entry regression
+test covers this sequence and the rejection text.
