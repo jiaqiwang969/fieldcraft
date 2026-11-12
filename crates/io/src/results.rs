@@ -94,6 +94,8 @@ impl LegacyFrequency {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Solved {
     External(crate::external_results::ArchivedTrajectory),
+    ExternalChunked(crate::external_results::ArchivedChunkedTrajectory),
+    ExternalStaticBase(Box<crate::external_results::ArchivedStaticBase>),
     /// A static, frequency, buckling, heat transfer or harmonic step.
     Implicit(fieldcraft_solver::StepResult),
     Explicit(ExplicitResult),
@@ -105,6 +107,8 @@ pub enum Solved {
 #[derive(Debug, Clone, Copy)]
 pub enum SolvedRef<'a> {
     External(&'a crate::external_results::ArchivedTrajectory),
+    ExternalChunked(&'a crate::external_results::ArchivedChunkedTrajectory),
+    ExternalStaticBase(&'a crate::external_results::ArchivedStaticBase),
     Implicit(&'a fieldcraft_solver::StepResult),
     Explicit(&'a ExplicitResult),
     Fluid(&'a FluidResult),
@@ -119,6 +123,8 @@ impl Solved {
             Solved::Fluid(r) => SolvedRef::Fluid(r),
             Solved::Nonlinear(r) => SolvedRef::Nonlinear(r),
             Solved::External(r) => SolvedRef::External(r),
+            Solved::ExternalChunked(r) => SolvedRef::ExternalChunked(r),
+            Solved::ExternalStaticBase(r) => SolvedRef::ExternalStaticBase(r),
         }
     }
 
@@ -135,6 +141,8 @@ impl<'a> SolvedRef<'a> {
             SolvedRef::Fluid(r) => &r.step,
             SolvedRef::Nonlinear(r) => &r.step,
             SolvedRef::External(r) => &r.archive_key,
+            SolvedRef::ExternalChunked(r) => r.archive_key(),
+            SolvedRef::ExternalStaticBase(r) => r.archive_key(),
         }
     }
 
@@ -167,27 +175,29 @@ impl<'a> SolvedRef<'a> {
             SolvedRef::Explicit(_) => 3,
             SolvedRef::Fluid(_) => 4,
             SolvedRef::Nonlinear(_) => 11,
-            SolvedRef::External(_) => 13,
+            SolvedRef::External(_) | SolvedRef::ExternalChunked(_) | SolvedRef::ExternalStaticBase(_) => 13,
         }
     }
 
-    fn encode_into(&self, out: &mut Vec<u8>) -> std::result::Result<(), codec::CodecError> {
+    fn encode_to(&self, out: &mut dyn std::io::Write) -> std::result::Result<(), codec::CodecError> {
         match self {
             SolvedRef::Implicit(fieldcraft_solver::StepResult::Static(r)) => match &r.fatigue {
-                Some(f) => codec::encode_into(&(r, f), out),
-                None => codec::encode_into(r, out),
+                Some(f) => codec::encode_to(&(r, f), out),
+                None => codec::encode_to(r, out),
             },
-            SolvedRef::Implicit(fieldcraft_solver::StepResult::Frequency(r)) => codec::encode_into(r, out),
-            SolvedRef::Implicit(fieldcraft_solver::StepResult::Heat(r)) => codec::encode_into(r, out),
+            SolvedRef::Implicit(fieldcraft_solver::StepResult::Frequency(r)) => codec::encode_to(r, out),
+            SolvedRef::Implicit(fieldcraft_solver::StepResult::Heat(r)) => codec::encode_to(r, out),
             SolvedRef::Implicit(fieldcraft_solver::StepResult::Harmonic(r)) => match &r.fatigue {
-                Some(f) => codec::encode_into(&(r, f), out),
-                None => codec::encode_into(r, out),
+                Some(f) => codec::encode_to(&(r, f), out),
+                None => codec::encode_to(r, out),
             },
-            SolvedRef::Implicit(fieldcraft_solver::StepResult::Dynamics(r)) => codec::encode_into(r, out),
-            SolvedRef::Explicit(r) => codec::encode_into(r, out),
-            SolvedRef::Fluid(r) => codec::encode_into(r, out),
-            SolvedRef::Nonlinear(r) => codec::encode_into(r, out),
-            SolvedRef::External(r) => codec::encode_into(r, out),
+            SolvedRef::Implicit(fieldcraft_solver::StepResult::Dynamics(r)) => codec::encode_to(r, out),
+            SolvedRef::Explicit(r) => codec::encode_to(r, out),
+            SolvedRef::Fluid(r) => codec::encode_to(r, out),
+            SolvedRef::Nonlinear(r) => codec::encode_to(r, out),
+            SolvedRef::External(r) => codec::encode_to(r, out),
+            SolvedRef::ExternalChunked(r) => codec::encode_to(r.record.as_ref(), out),
+            SolvedRef::ExternalStaticBase(r) => codec::encode_to(r, out),
         }
     }
 }
@@ -245,19 +255,29 @@ pub fn definition_hash(model: &Model, step: &str, geometry: &Geometry) -> Option
 
 /// The results part holding `results` (in step name order; names must be unique).
 pub fn encode(results: &[(&str, StoredRef<'_>)]) -> Result<Vec<u8>> {
+    let mut out = Vec::new();
+    encode_to(results, &mut out)?;
+    Ok(out)
+}
+/// Deterministic result stream; two passes count payload bytes without retaining them.
+pub fn encode_to(results: &[(&str, StoredRef<'_>)], out: &mut dyn std::io::Write) -> Result<()> {
     if results.len() > MAX_STEPS {
         return Err(Error::Limit(format!("{PART}: at most {MAX_STEPS} steps' results")));
     }
     let mut sorted: Vec<&(&str, StoredRef<'_>)> = results.iter().collect();
     sorted.sort_by(|a, b| a.0.cmp(b.0));
     if sorted.windows(2).any(|w| w.first().map(|a| a.0) == w.get(1).map(|b| b.0)) {
-        if results.iter().any(|(_, r)| matches!(r.result, SolvedRef::External(_))) {
+        if results.iter().any(|(_, r)| matches!(r.result, SolvedRef::External(_) | SolvedRef::ExternalChunked(_) | SolvedRef::ExternalStaticBase(_)))
+        {
             return invalid("ExternalArchiveDuplicateKey");
         }
         return invalid(format!("{PART}: a step's result is listed twice"));
     }
-    let mut out = MAGIC.to_vec();
-    out.extend_from_slice(&u32::try_from(sorted.len()).unwrap_or(u32::MAX).to_le_bytes());
+
+    let write = |w: &mut dyn std::io::Write, b: &[u8]| w.write_all(b).map_err(|e| Error::Io(e.to_string()));
+    write(out, MAGIC)?;
+    write(out, &(sorted.len() as u32).to_le_bytes())?;
+    let mut total = 12u64;
     for (name, stored) in sorted {
         if stored.result.step() != *name {
             return invalid(format!("{PART}: the result of step `{name}` is step `{}`'s", stored.result.step()));
@@ -267,29 +287,47 @@ pub fn encode(results: &[(&str, StoredRef<'_>)]) -> Result<Vec<u8>> {
         {
             return invalid("ExternalArchiveDefinitionMismatch");
         }
+        if let SolvedRef::ExternalChunked(r) = stored.result
+            && r.definition()? != stored.definition
+        {
+            return invalid("ExternalArchiveDefinitionMismatch");
+        }
+        if let SolvedRef::ExternalStaticBase(r) = stored.result
+            && r.definition()? != stored.definition
+        {
+            return invalid("ExternalArchiveDefinitionMismatch");
+        }
         if let SolvedRef::Nonlinear(r) = stored.result {
             r.validate().map_err(|e| Error::Invalid(format!("{PART}: nonlinear step `{name}`: {e}")))?;
         }
-        out.extend_from_slice(&(name.len() as u64).to_le_bytes());
-        out.extend_from_slice(name.as_bytes());
-        out.extend_from_slice(&stored.definition);
-        out.push(stored.result.kind());
-        // The payload is encoded in place, its length written before it once known.
-        let at = out.len();
-        out.extend_from_slice(&[0; 8]);
-        stored.result.encode_into(&mut out).map_err(|e| Error::Invalid(format!("{PART}: step `{name}`: {e}")))?;
-        let len = (out.len() - at - 8) as u64;
-        if let Some(slot) = out.get_mut(at..at + 8) {
-            slot.copy_from_slice(&len.to_le_bytes());
+
+        let mut count = Count(0);
+        stored.result.encode_to(&mut count).map_err(|e| Error::Invalid(e.to_string()))?;
+        total = total
+            .checked_add(8 + name.len() as u64 + 32 + 1 + 8)
+            .and_then(|n| n.checked_add(count.0))
+            .ok_or_else(|| Error::Invalid("results size overflow".into()))?;
+        if total > MAX_BYTES {
+            return invalid("results size limit");
         }
-        if out.len() as u64 > MAX_BYTES {
-            return Err(Error::Limit(format!(
-                "the results are more than {} MB (at most that in a file): save without them (`results: false`)",
-                MAX_BYTES >> 20
-            )));
-        }
+        write(out, &(name.len() as u64).to_le_bytes())?;
+        write(out, name.as_bytes())?;
+        write(out, &stored.definition)?;
+        write(out, &[stored.result.kind()])?;
+        write(out, &count.0.to_le_bytes())?;
+        stored.result.encode_to(out).map_err(|e| Error::Invalid(e.to_string()))?;
     }
-    Ok(out)
+    Ok(())
+}
+struct Count(u64);
+impl std::io::Write for Count {
+    fn write(&mut self, b: &[u8]) -> std::io::Result<usize> {
+        self.0 = self.0.checked_add(b.len() as u64).ok_or_else(|| std::io::Error::other("size overflow"))?;
+        Ok(b.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
 }
 
 /// Reads the part's fields in order, each length checked against the bytes left.
@@ -395,7 +433,28 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded> {
                 Solved::Implicit(fieldcraft_solver::StepResult::Harmonic(r))
             }
             11 => Solved::Nonlinear(codec::decode(payload).map_err(damaged)?),
-            13 => Solved::External(codec::decode(payload).map_err(damaged)?),
+            13 => {
+                // The codec struct begins with a presence byte and length-prefixed schema.
+                let mut prefix = Reader { bytes: payload };
+                if prefix.array::<1>("schema presence")? != [1] {
+                    return invalid("ExternalArchiveSchemaUnsupported");
+                }
+                let n = u64::from_le_bytes(prefix.array("schema length")?);
+                let schema = prefix.take(n, "schema")?;
+                if schema == crate::external_results::SCHEMA.as_bytes() {
+                    Solved::External(codec::decode(payload).map_err(damaged)?)
+                } else if schema == crate::external_results::CHUNKED_SCHEMA.as_bytes() {
+                    let record = codec::decode(payload).map_err(damaged)?;
+                    Solved::ExternalChunked(crate::external_results::ArchivedChunkedTrajectory {
+                        record: std::sync::Arc::new(record),
+                        source: std::sync::Arc::new(crate::external_chunked::MissingSource),
+                    })
+                } else if schema == crate::external_results::STATIC_BASE_SCHEMA.as_bytes() {
+                    Solved::ExternalStaticBase(Box::new(codec::decode(payload).map_err(damaged)?))
+                } else {
+                    return invalid("ExternalArchiveSchemaUnsupported");
+                }
+            }
             k => return invalid(format!("{PART}: step `{name}` has a result of unknown kind {k}")),
         };
         if result.step() != name {
@@ -411,6 +470,16 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded> {
             if out.iter().any(|prior: &Stored| prior.result.step() == name) {
                 return invalid("ExternalArchiveDuplicateKey");
             }
+        }
+        if let Solved::ExternalChunked(value) = &result
+            && value.definition()? != definition
+        {
+            return invalid("ExternalArchiveDefinitionMismatch");
+        }
+        if let Solved::ExternalStaticBase(value) = &result
+            && value.definition()? != definition
+        {
+            return invalid("ExternalArchiveDefinitionMismatch");
         }
         check(&result).map_err(|why| Error::Invalid(format!("{PART}: the result of step `{name}`: {why}")))?;
         out.push(Stored { definition, result });
@@ -595,6 +664,8 @@ pub fn check(r: &Solved) -> std::result::Result<(), String> {
         Solved::Fluid(f) => check_fluid(f),
         Solved::Nonlinear(r) => r.validate(),
         Solved::External(r) => r.validate().map_err(|e| e.to_string()),
+        Solved::ExternalChunked(r) => r.validate().map_err(|e| e.to_string()),
+        Solved::ExternalStaticBase(r) => r.validate().map_err(|e| e.to_string()),
     }
 }
 
@@ -790,5 +861,142 @@ impl LegacyStatic {
             nonlinear: self.nonlinear,
             contacts: self.contacts,
         }
+    }
+}
+
+/// Stream the results part; external metadata is decoded directly and blobs remain out of line.
+pub(crate) fn decode_stream(reader: &mut dyn std::io::Read, size: u64) -> Result<Decoded> {
+    decode_stream_inner(reader, size).map_err(|e| Error::Invalid(format!("{PART}: {e}")))
+}
+
+fn decode_stream_inner(reader: &mut dyn std::io::Read, size: u64) -> Result<Decoded> {
+    use std::io::Read;
+    fn exact<const N: usize>(r: &mut dyn Read) -> Result<[u8; N]> {
+        let mut b = [0; N];
+        r.read_exact(&mut b).map_err(|e| Error::Invalid(e.to_string()))?;
+        Ok(b)
+    }
+    let mut r = reader.take(size);
+    let magic = exact::<8>(&mut r)?;
+    if &magic != MAGIC {
+        let mut bytes = magic.to_vec();
+        r.read_to_end(&mut bytes).map_err(|e| Error::Invalid(e.to_string()))?;
+        return decode(&bytes);
+    }
+    let count = u32::from_le_bytes(exact(&mut r)?) as usize;
+    if count > MAX_STEPS {
+        return invalid("results step limit");
+    }
+    let mut out = Vec::new();
+    let mut external_metadata = 0u64;
+    for _ in 0..count {
+        let n = u64::from_le_bytes(exact(&mut r)?);
+        if n > 1024 || n > r.limit() {
+            return invalid("results name limit");
+        }
+        let mut name = vec![0; n as usize];
+        r.read_exact(&mut name).map_err(|e| Error::Invalid(e.to_string()))?;
+        let name = String::from_utf8(name).map_err(|e| Error::Invalid(e.to_string()))?;
+        let definition = exact(&mut r)?;
+        let kind = exact::<1>(&mut r)?[0];
+        let len = u64::from_le_bytes(exact(&mut r)?);
+        if len > r.limit() {
+            return invalid("results payload length");
+        }
+        let result = if kind == 13 {
+            let presence = exact::<1>(&mut r)?;
+            let sn = exact::<8>(&mut r)?;
+            let snum = u64::from_le_bytes(sn);
+            if snum > 128 || snum + 9 > len {
+                return invalid("ExternalArchiveSchemaUnsupported");
+            }
+            let mut schema = vec![0; snum as usize];
+            r.read_exact(&mut schema).map_err(|e| Error::Invalid(e.to_string()))?;
+            let mut prefix = Vec::from(presence);
+            prefix.extend_from_slice(&sn);
+            prefix.extend_from_slice(&schema);
+            let mut payload = std::io::Cursor::new(prefix).chain((&mut r).take(len - 9 - snum));
+            if schema == crate::external_results::CHUNKED_SCHEMA.as_bytes() {
+                external_metadata =
+                    external_metadata.checked_add(len).ok_or_else(|| Error::Invalid("ExternalArchiveLimit: metadata overflow".into()))?;
+                if external_metadata > crate::external_chunked::MAX_RECORD_BYTES {
+                    return invalid("ExternalArchiveLimit: result metadata");
+                }
+                let record = codec::decode_from(&mut payload, len as usize).map_err(|e| Error::Invalid(e.to_string()))?;
+                Solved::ExternalChunked(crate::external_results::ArchivedChunkedTrajectory {
+                    record: std::sync::Arc::new(record),
+                    source: std::sync::Arc::new(crate::external_chunked::MissingSource),
+                })
+            } else if schema == crate::external_results::SCHEMA.as_bytes() {
+                Solved::External(codec::decode_from(&mut payload, len as usize).map_err(|e| Error::Invalid(e.to_string()))?)
+            } else if schema == crate::external_results::STATIC_BASE_SCHEMA.as_bytes() {
+                Solved::ExternalStaticBase(Box::new(codec::decode_from(&mut payload, len as usize).map_err(|e| Error::Invalid(e.to_string()))?))
+            } else {
+                return invalid("ExternalArchiveSchemaUnsupported");
+            }
+        } else {
+            let mut bytes = MAGIC.to_vec();
+            bytes.extend_from_slice(&1u32.to_le_bytes());
+            bytes.extend_from_slice(&n.to_le_bytes());
+            bytes.extend_from_slice(name.as_bytes());
+            bytes.extend_from_slice(&definition);
+            bytes.push(kind);
+            bytes.extend_from_slice(&len.to_le_bytes());
+            (&mut r).take(len).read_to_end(&mut bytes).map_err(|e| Error::Invalid(e.to_string()))?;
+            let Decoded::Results(mut one) = decode(&bytes)? else { return invalid("results version") };
+            one.pop().ok_or_else(|| Error::Invalid("missing result".into()))?.result
+        };
+        if result.step() != name || out.iter().any(|p: &Stored| p.result.step() == name) {
+            return invalid("ExternalArchiveDuplicateKey or name mismatch");
+        }
+        match &result {
+            Solved::External(a) if a.definition()? != definition => return invalid("ExternalArchiveDefinitionMismatch"),
+            Solved::ExternalChunked(a) if a.definition()? != definition => return invalid("ExternalArchiveDefinitionMismatch"),
+            Solved::ExternalStaticBase(a) if a.definition()? != definition => return invalid("ExternalArchiveDefinitionMismatch"),
+            _ => {}
+        }
+        check(&result).map_err(Error::Invalid)?;
+        out.push(Stored { definition, result });
+    }
+    if r.limit() != 0 {
+        return invalid("results trailing bytes");
+    };
+    Ok(Decoded::Results(out))
+}
+
+#[cfg(test)]
+mod streaming_diagnostics_tests {
+    use super::*;
+    use std::io::Cursor;
+
+    fn error(bytes: &[u8]) -> String {
+        match decode_stream(&mut Cursor::new(bytes), bytes.len() as u64) {
+            Err(e) => e.to_string(),
+            Ok(_) => panic!("damaged results must be rejected"),
+        }
+    }
+
+    #[test]
+    fn truncated_payload_keeps_part_and_reason() {
+        let mut bytes = MAGIC.to_vec();
+        bytes.extend_from_slice(&1u32.to_le_bytes());
+        bytes.extend_from_slice(&1u64.to_le_bytes());
+        bytes.push(b's');
+        bytes.extend_from_slice(&[0; 32]);
+        bytes.push(0);
+        bytes.extend_from_slice(&3u64.to_le_bytes());
+        let message = error(&bytes);
+        assert!(message.contains(PART), "{message}");
+        assert!(message.contains("results payload length"), "{message}");
+    }
+
+    #[test]
+    fn short_header_and_step_limit_keep_part_context() {
+        assert!(error(b"MCR").contains(PART));
+        let mut bytes = MAGIC.to_vec();
+        bytes.extend_from_slice(&u32::MAX.to_le_bytes());
+        let message = error(&bytes);
+        assert!(message.contains(PART), "{message}");
+        assert!(message.contains("results step limit"), "{message}");
     }
 }

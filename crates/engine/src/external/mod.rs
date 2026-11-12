@@ -7,18 +7,26 @@
 //! run identifiers.
 
 pub mod archive;
+pub(crate) mod atomic_file;
+pub mod chunked;
+pub mod chunked_archive;
+pub(crate) mod chunked_store;
 pub mod context;
 pub mod control;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod native;
 pub mod package;
 pub mod production;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) mod program_identity;
 pub mod receive;
 pub mod run;
-mod session;
+pub(crate) mod session;
 pub mod transaction;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod worker;
+#[rustfmt::skip]
+pub mod load_transfer;
 
 use fieldcraft_io::identity::digest_valid;
 use serde::{Deserialize, Serialize};

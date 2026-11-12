@@ -38,7 +38,11 @@ pub mod capabilities;
 pub mod checkpoint;
 pub mod codec;
 pub mod contact_policy;
+mod external_chunked;
 pub mod external_results;
+pub mod external_static_base;
+mod external_stream;
+pub use external_stream::read_path_streamed;
 pub mod fs;
 pub mod gmsh;
 pub mod identity;
@@ -567,6 +571,22 @@ pub fn write_with(
     view: &View,
     extras: &Extras,
 ) -> Result<Vec<u8>> {
+    if extras.results.iter().any(|(_, r)| matches!(r.result, results::SolvedRef::ExternalChunked(_))) {
+        return invalid("ExternalArchiveLimit: use write_with_to for chunked results");
+    }
+    Ok(write_with_to(Cursor::new(Vec::new()), model, geometry, journal, header, view, extras)?.into_inner())
+}
+
+/// Write directly to a seekable destination. The caller owns atomic publication and flushing.
+pub fn write_with_to<W: Write + std::io::Seek>(
+    writer: W,
+    model: &Model,
+    geometry: &Geometry,
+    journal: &[JournalEntry],
+    header: &JournalHeader,
+    view: &View,
+    extras: &Extras<'_>,
+) -> Result<W> {
     if geometry.meshes.len() > MAX_MESH_SOURCES {
         return Err(Error::Limit(format!("a model refers to at most {MAX_MESH_SOURCES} imported meshes")));
     }
@@ -580,6 +600,7 @@ pub fn write_with(
             }
         }
     }
+    let blobs = external_stream::collect(extras, model, geometry)?;
     let mut model_json = serde_json::to_vec_pretty(&model.without_mesh()).map_err(|e| json_error(MODEL, e))?;
     model_json.push(b'\n');
     let mesh = mesh::encode(model)?;
@@ -592,7 +613,7 @@ pub fn write_with(
         parts.push((deck_source::PART.into(), bytes.into()));
     }
     if !extras.results.is_empty() {
-        parts.push((results::PART.into(), results::encode(&extras.results)?.into()));
+        parts.push((results::PART.into(), Vec::new().into()));
     }
     // Each embedded file once, by its content, under a name from its path.
     let mut geometry = geometry.clone();
@@ -626,7 +647,7 @@ pub fn write_with(
         };
         source.embedded = Some(name);
     }
-    let manifest = Manifest {
+    let mut manifest = Manifest {
         capabilities: Some(capabilities::report(model)?),
         identity: Some(identity::snapshot(model, &geometry, &extras.run)?),
         format: FORMAT.into(),
@@ -636,18 +657,31 @@ pub fn write_with(
         run: extras.run.clone(),
         parts: parts.iter().map(|(name, bytes)| (name.clone(), Part { bytes: bytes.len() as u64, sha256: sha256_hex(bytes) })).collect(),
     };
+    if !extras.results.is_empty() {
+        let mut h = external_stream::DigestWriter::default();
+        results::encode_to(&extras.results, &mut h)?;
+        manifest.parts.insert(results::PART.into(), h.part());
+    }
+    for (name, (archive, index)) in &blobs {
+        let d = &archive.blobs()[*index as usize];
+        manifest.parts.insert(name.clone(), Part { bytes: d.bytes, sha256: d.sha256.clone() });
+    }
     let mut manifest_json = serde_json::to_vec_pretty(&manifest).map_err(|e| json_error(MANIFEST, e))?;
     manifest_json.push(b'\n');
 
-    let total: usize = parts.iter().map(|(_, b)| b.len()).sum::<usize>() + manifest_json.len();
-    if total as u64 > MAX_FILE_BYTES {
+    let total: u64 = manifest
+        .parts
+        .values()
+        .try_fold(manifest_json.len() as u64, |a, p| a.checked_add(p.bytes))
+        .ok_or_else(|| Error::Invalid("ExternalArchiveLimit: size overflow".into()))?;
+    if total > MAX_FILE_BYTES {
         return Err(Error::Limit(format!(
             "the file would be {} MB (at most {} MB): save without the results or the embedded geometry",
             total >> 20,
             MAX_FILE_BYTES >> 20
         )));
     }
-    let mut zip = zip::ZipWriter::new(Cursor::new(Vec::with_capacity(total.saturating_add(1024))));
+    let mut zip = zip::ZipWriter::new(std::io::BufWriter::with_capacity(external_results::COPY_BUFFER_BYTES, writer));
     let zip_error = |e: zip::result::ZipError| Error::Io(format!("cannot build the package: {e}"));
     for (name, bytes) in std::iter::once((MANIFEST, manifest_json.as_slice())).chain(parts.iter().map(|(n, b)| (n.as_str(), b.as_ref()))) {
         // Fixed time and permissions: the bytes depend on the model only.
@@ -655,15 +689,27 @@ pub fn write_with(
             .compression_method(zip::CompressionMethod::Stored)
             .last_modified_time(zip::DateTime::default())
             .unix_permissions(0o644)
-            .large_file(bytes.len() as u64 >= u64::from(u32::MAX));
+            .large_file(manifest.parts.get(name).map_or(bytes.len() as u64, |p| p.bytes) >= u64::from(u32::MAX));
         zip.start_file(name, options).map_err(zip_error)?;
-        zip.write_all(bytes).map_err(|e| Error::Io(format!("cannot build the package: {e}")))?;
+        if name == results::PART {
+            results::encode_to(&extras.results, &mut zip)?;
+        } else {
+            zip.write_all(bytes).map_err(|e| Error::Io(format!("cannot build the package: {e}")))?;
+        }
     }
-    Ok(zip.finish().map_err(zip_error)?.into_inner())
+    for (name, (archive, index)) in &blobs {
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Stored)
+            .last_modified_time(zip::DateTime::default())
+            .unix_permissions(0o644);
+        zip.start_file(name, options).map_err(zip_error)?;
+        external_chunked::copy_blob(archive, *index, &mut zip)?;
+    }
+    zip.finish().map_err(zip_error)?.into_inner().map_err(|e| Error::Io(e.to_string()))
 }
 
 /// Read a part of at most `cap` bytes, checking its size and ZIP checksum.
-fn read_part(zip: &mut zip::ZipArchive<Cursor<&[u8]>>, name: &str, cap: u64, file_len: usize) -> Result<Vec<u8>> {
+fn read_part<R: Read + std::io::Seek>(zip: &mut zip::ZipArchive<R>, name: &str, cap: u64, file_len: usize) -> Result<Vec<u8>> {
     let mut f = zip.by_name(name).map_err(|e| Error::Invalid(format!("no `{name}` part: {e}")))?;
     let size = f.size();
     if size > cap {
@@ -686,17 +732,20 @@ pub fn read(bytes: &[u8]) -> Result<ModelFile> {
 /// Read a `.fieldcraft` file, with the format it was written in: one older than
 /// [`FORMAT_VERSION`] was migrated, and saving it again writes the current format.
 pub fn read_versioned(bytes: &[u8]) -> Result<(ModelFile, u32)> {
-    if bytes.len() as u64 > MAX_FILE_BYTES {
-        return Err(Error::Limit(format!("the file is {} MB (at most {} MB)", bytes.len() >> 20, MAX_FILE_BYTES >> 20)));
+    read_archive(Cursor::new(bytes), bytes.len(), None)
+}
+fn read_archive<R: Read + std::io::Seek>(
+    reader: R,
+    file_len: usize,
+    source: Option<std::sync::Arc<std::sync::Mutex<std::fs::File>>>,
+) -> Result<(ModelFile, u32)> {
+    if file_len as u64 > MAX_FILE_BYTES {
+        return invalid("ExternalArchiveLimit: file");
     }
-    if !bytes.starts_with(b"PK\x03\x04") {
-        return invalid("not a FieldCraft file (not a ZIP package)");
-    }
-    let mut zip = zip::ZipArchive::new(Cursor::new(bytes)).map_err(|e| Error::Invalid(format!("not a FieldCraft file: {e}")))?;
-
+    let mut zip = zip::ZipArchive::new(reader).map_err(|e| Error::Invalid(format!("not a FieldCraft file: {e}")))?;
     // The version first: a later format may have parts and fields this version does not know,
     // and its reader is told to update FieldCraft, not that a field is unknown.
-    let manifest_bytes = read_part(&mut zip, MANIFEST, MAX_TEXT_PART_BYTES, bytes.len())?;
+    let manifest_bytes = read_part(&mut zip, MANIFEST, MAX_TEXT_PART_BYTES, file_len)?;
     let manifest: Value = serde_json::from_slice(&manifest_bytes).map_err(|e| json_error(MANIFEST, e))?;
     let format = migrate::version(&manifest)?;
 
@@ -708,7 +757,10 @@ pub fn read_versioned(bytes: &[u8]) -> Result<(ModelFile, u32)> {
         return invalid(format!("`{MANIFEST}` must list the parts {MODEL}, {MESH} and {JOURNAL}"));
     }
     // Format 3 may also hold results and embedded geometry, each listed.
-    let optional = |name: &str| format == FORMAT_VERSION && (name == results::PART || name == deck_source::PART || check_geometry_part(name).is_ok());
+    let optional = |name: &str| {
+        format == FORMAT_VERSION
+            && (external_stream::blob_name_valid(name) || name == results::PART || name == deck_source::PART || check_geometry_part(name).is_ok())
+    };
     if let Some(extra) = listed.keys().find(|n| !required.contains(&n.as_str()) && !optional(n)) {
         return invalid(if format == FORMAT_VERSION {
             format!("`{MANIFEST}` lists an unexpected part `{}`", extra.chars().filter(|c| !c.is_control()).take(80).collect::<String>())
@@ -716,7 +768,7 @@ pub fn read_versioned(bytes: &[u8]) -> Result<(ModelFile, u32)> {
             format!("`{MANIFEST}` must list exactly the parts {MODEL}, {MESH} and {JOURNAL}")
         });
     }
-    if listed.len() > 4 + 2 + MAX_MESH_SOURCES {
+    if listed.len() > 4 + 2 + MAX_MESH_SOURCES + external_chunked::MAX_BLOBS {
         return Err(Error::Limit(format!("`{MANIFEST}` lists {} parts", listed.len())));
     }
     let mut seen = BTreeSet::new();
@@ -726,12 +778,15 @@ pub fn read_versioned(bytes: &[u8]) -> Result<(ModelFile, u32)> {
             return invalid(format!("unexpected part `{}`", name.chars().filter(|c| !c.is_control()).take(80).collect::<String>()));
         }
         if !seen.insert(name.to_string()) {
+            if external_stream::blob_name_valid(name.as_ref()) {
+                return invalid("ExternalArchiveDuplicateBlob");
+            }
             return invalid(format!("part `{name}` appears twice"));
         }
     }
     let mut part = |name: &str, cap: u64| -> Result<Vec<u8>> {
         let entry = listed.get(name).ok_or_else(|| Error::Invalid(format!("`{MANIFEST}` does not list `{name}`")))?;
-        let data = read_part(&mut zip, name, cap, bytes.len())?;
+        let data = read_part(&mut zip, name, cap, file_len)?;
         if data.len() as u64 != entry.bytes || sha256_hex(&data) != entry.sha256 {
             return invalid(format!("part `{name}` is damaged: its size or SHA-256 differs from the manifest"));
         }
@@ -754,7 +809,18 @@ pub fn read_versioned(bytes: &[u8]) -> Result<(ModelFile, u32)> {
         embedded.insert(entry.sha256.clone(), data);
     }
     // Decoded at once, so the part's bytes are not kept beside the results.
-    let decoded = if listed.contains_key(results::PART) { Some(results::decode(&part(results::PART, results::MAX_BYTES)?)?) } else { None };
+    let decoded =
+        if listed.contains_key(results::PART) && source.is_none() { Some(results::decode(&part(results::PART, results::MAX_BYTES)?)?) } else { None };
+    drop(part);
+    let decoded = if source.is_some() { external_stream::read_results(&mut zip, &listed)? } else { decoded };
+    let mut part = |name: &str, cap: u64| -> Result<Vec<u8>> {
+        let entry = listed.get(name).ok_or_else(|| Error::Invalid(format!("missing part {name}")))?;
+        let data = read_part(&mut zip, name, cap, file_len)?;
+        if data.len() as u64 != entry.bytes || sha256_hex(&data) != entry.sha256 {
+            return invalid("part is damaged: digest mismatch");
+        };
+        Ok(data)
+    };
     let model_json = part(MODEL, MAX_TEXT_PART_BYTES)?;
     let mesh = part(MESH, mesh::MAX_BYTES)?;
     let journal_json = part(JOURNAL, MAX_TEXT_PART_BYTES)?;
@@ -807,7 +873,7 @@ pub fn read_versioned(bytes: &[u8]) -> Result<(ModelFile, u32)> {
     if let Some(orphan) = embedded_parts.keys().find(|n| !sources.iter().any(|s| s.embedded() == Some(n.as_str()))) {
         return invalid(format!("part `{orphan}` is a copy of no geometry file the model names"));
     }
-    let (results, results_note) = match decoded {
+    let (mut results, results_note) = match decoded {
         None => (Vec::new(), None),
         Some(results::Decoded::Results(r)) => (r, None),
         Some(results::Decoded::OtherVersion(magic)) => (
@@ -837,6 +903,7 @@ pub fn read_versioned(bytes: &[u8]) -> Result<(ModelFile, u32)> {
             }
         }
     }
+    external_stream::attach(&mut results, &mut zip, &listed, source, &model, &manifest.geometry, &manifest.run)?;
     let journal_header = JournalHeader { units: journal.units, model_units: journal.model_units };
     let journal = read_journal(journal.commands)?;
     Ok((

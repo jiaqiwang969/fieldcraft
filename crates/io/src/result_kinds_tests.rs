@@ -125,6 +125,8 @@ fn original_zero_through_five_read_version_05() {
             Solved::Explicit(x) => codec::encode_into(x, &mut payload).unwrap(),
             Solved::Fluid(x) => codec::encode_into(x, &mut payload).unwrap(),
             Solved::External(x) => codec::encode_into(x, &mut payload).unwrap(),
+            Solved::ExternalChunked(x) => codec::encode_into(x.record.as_ref(), &mut payload).unwrap(),
+            Solved::ExternalStaticBase(_) => panic!("not an original kind"),
         }
         let old = record(LEGACY_MAGIC, kind as u8, &payload);
         assert_eq!(decoded(&old), r);
@@ -234,5 +236,45 @@ fn frequency_mass_metadata_uses_kind12_and_legacy_missing_metadata_is_kind1() {
     assert_eq!(Solved::Implicit(StepResult::Frequency(result.clone())).as_ref().kind(), 1);
     result.mass_kind = Some(fieldcraft_model::MassKind::Lumped);
     result.section_mass_policy = Some("declared section area and density".into());
+    round_trip(&Solved::Implicit(StepResult::Frequency(result.clone())), 12);
     assert_eq!(Solved::Implicit(StepResult::Frequency(result)).as_ref().kind(), 12);
+}
+#[test]
+fn eleven_preserves_nonlinear_accepted_state() {
+    use fieldcraft_solver::transient::nonlinear::{AcceptedStep, Frame, History, RodIdentity, recover_rod};
+    let settings = serde_json::from_value(json!({"time_step":0.1,"increments":1})).unwrap();
+    let coordinates = vec![[0., 0., 0.], [1., 0., 0.]];
+    let recovered = recover_rod(&coordinates, &[0.; 6], 1000., 0.01).unwrap();
+    let frames = [0., 0.1]
+        .into_iter()
+        .map(|time| Frame {
+            time,
+            displacement: vec![[0.; 3]; 2],
+            velocity: vec![[0.; 3]; 2],
+            acceleration: vec![[0.; 3]; 2],
+            internal_force: vec![[0.; 3]; 2],
+            external_force: vec![[0.; 3]; 2],
+            rods: vec![recovered.clone()],
+            kinetic_energy: 0.,
+            strain_energy: 0.,
+            external_work: 0.,
+            physical_dissipation: 0.,
+            energy_balance: 0.,
+            newton_corrections: 0,
+            relative_residual: 0.,
+        })
+        .collect();
+    let history = History {
+        step: "H".into(),
+        mass: MassKind::Consistent,
+        settings,
+        max_iterations: 10,
+        tolerance: 1e-6,
+        nodes: vec![1, 2],
+        elements: vec![RodIdentity { label: 1, nodes: vec![1, 2], reference_coordinates: coordinates, reference_area: 0.01, young: 1000. }],
+        frames,
+        accepted_steps: [0., 0.1].into_iter().map(|time| AcceptedStep { time, newton_corrections: 0, relative_residual: 0. }).collect(),
+        warnings: vec![],
+    };
+    round_trip(&Solved::Nonlinear(history), 11);
 }
