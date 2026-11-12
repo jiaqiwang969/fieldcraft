@@ -386,6 +386,10 @@ impl Session {
                     session.keep_external_chunked(record)?;
                     continue;
                 }
+                fieldcraft_io::results::Solved::ExternalStaticBase(record) => {
+                    session.keep_external_static_base(*record)?;
+                    continue;
+                }
                 native => StepResult::try_from(native)?,
             };
             let step = result.step().to_string();
@@ -522,8 +526,11 @@ fn contents(s: &Session, keep: Keep) -> Vec<String> {
         out.push(format!("the original Abaqus input source ({} files)", source.files.len()));
     }
     let steps: Vec<&str> = s.result_steps().map(|(n, _)| n).collect();
-    if keep.results && (!s.external_results.is_empty() || !s.external_chunked_results.is_empty()) {
-        out.push(format!("{} external trajectories (kind 13)", s.external_results.len() + s.external_chunked_results.len()));
+    if keep.results && (!s.external_results.is_empty() || !s.external_chunked_results.is_empty() || !s.external_static_base_results.is_empty()) {
+        out.push(format!(
+            "{} external kind-13 records",
+            s.external_results.len() + s.external_chunked_results.len() + s.external_static_base_results.len()
+        ));
     }
     if keep.results && !steps.is_empty() {
         let count = if steps.len() == 1 { "1 step".to_string() } else { format!("{} steps", steps.len()) };

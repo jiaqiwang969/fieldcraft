@@ -19,6 +19,15 @@ pub const RECEIVE: CommandSpec = CommandSpec {
     requires: &[],
     run: receive,
 };
+pub const STATIC_BASE_RECEIVE: CommandSpec = CommandSpec {
+    id: "results.external.static_base.receive",
+    label: "Receive External Static Base",
+    params: r#"{"path":"incoming/static-base.json","profile":"static-base-profile.json","name":"closed-base"} — receive a dense kind-13 static base, verify its frozen model/mesh/backend binding, then recompute the modal package from K, M and the constraint map inside the product. Producer modal values are never trusted; runtime qualification remains unverified and frequency response stays not_run until damping evidence is supplied."#,
+    form: Some(super::forms::EXTERNAL_STATIC_BASE_RECEIVE),
+    kind: CommandKind::Session,
+    requires: &[],
+    run: receive_static_base,
+};
 pub const LIST: CommandSpec = CommandSpec {
     id: "results.external.list",
     label: "External Results",
@@ -37,7 +46,10 @@ pub const REMOVE: CommandSpec = CommandSpec {
     requires: &[],
     run: |s, p| {
         let name: String = super::req(p, "name")?;
-        if s.external_results.remove(&name).is_none() && s.external_chunked_results.remove(&name).is_none() {
+        if s.external_results.remove(&name).is_none()
+            && s.external_chunked_results.remove(&name).is_none()
+            && s.external_static_base_results.remove(&name).is_none()
+        {
             return Err(EngineError::Params(format!("no external result `{}`", name.chars().take(80).collect::<String>())));
         }
         s.results_stored = s.results_stored.wrapping_add(1);
@@ -105,6 +117,119 @@ fn receive(s: &mut Session, p: &Value) -> Result<Value> {
     s.results_stored = s.results_stored.wrapping_add(1);
     Ok(json!({"archive_key":name,"result_id":id,"admission":admission,"publication":publication,"session_installed":true,"project_saved":false,
         "runtime_qualification":"unverified","timings_seconds":{"parse_and_check":parse_seconds,"publish_and_archive":publication_seconds,"total":total.elapsed().as_secs_f64()}}))
+}
+
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct StaticBaseReceiveProfile {
+    schema: String,
+    archive_key: String,
+    binding: fieldcraft_io::identity::Binding,
+    reference_shapes: Vec<Vec<f64>>,
+    mode_count: usize,
+}
+
+/// Receive the kind-13 static-base extension through a product-owned path.
+///
+/// The profile is frozen independently of the producer package.  After exact
+/// binding checks and the normal session identity check, only the profile's
+/// reference shapes are used; all producer modal modes, residuals, MAC values
+/// and pairing records are discarded before the product recomputes them.
+fn receive_static_base(s: &mut Session, p: &Value) -> Result<Value> {
+    let total = Instant::now();
+    let name: String = super::req(p, "name")?;
+    s.check_external_name(&name)?;
+    let profile_path = super::file_param(s, p, "profile", Access::Read)?;
+    let profile_bytes = fieldcraft_io::fs::read_capped(Path::new(&profile_path), MAX_BYTES)?;
+    let profile: StaticBaseReceiveProfile = serde_json::from_slice(&profile_bytes).map_err(error)?;
+    if profile.schema != "fieldcraft-external-static-base/receive-profile/1" {
+        return Err(error("ExternalStaticBaseProfile: unsupported schema"));
+    }
+    if profile.archive_key != name || profile.binding.backend_version != fieldcraft_io::identity::BACKEND_VERSION {
+        return Err(error("ExternalStaticBaseProfile: archive or backend binding mismatch"));
+    }
+    if profile.mode_count == 0 || profile.reference_shapes.is_empty() || profile.reference_shapes.len() < profile.mode_count {
+        return Err(error("ExternalStaticBaseProfile: mode count or reference shapes"));
+    }
+    if profile.binding.artifacts.is_empty() || profile.binding.artifacts.values().any(|digest| !fieldcraft_io::identity::digest_valid(digest)) {
+        return Err(error("ExternalStaticBaseProfile: artifact identity"));
+    }
+    let path = super::file_param(s, p, "path", Access::Read)?;
+    let bytes = fieldcraft_io::fs::read_capped(Path::new(&path), MAX_BYTES)?;
+    let incoming: fieldcraft_io::external_results::ArchivedStaticBase = serde_json::from_slice(&bytes).map_err(error)?;
+    if incoming.archive_key() != name || incoming.binding() != &profile.binding {
+        return Err(error("ExternalStaticBaseProfile: package binding differs from frozen expectation"));
+    }
+    let receiver = receiver_identity();
+    let receiver_sha256 = receiver
+        .program
+        .as_ref()
+        .map(|program| program.sha256.clone())
+        .ok_or_else(|| error("ExternalStaticBaseProfile: receiving executable identity unavailable"))?;
+    if profile.binding.artifacts.get("receiver") != Some(&receiver_sha256) {
+        return Err(error(format!(
+            "ExternalStaticBaseProfile: receiver artifact mismatch measured={} expected={}",
+            receiver_sha256,
+            profile.binding.artifacts.get("receiver").map(String::as_str).unwrap_or("missing")
+        )));
+    }
+    // Validate the producer package and the current model/mesh before deriving
+    // any product result.  This is the authoritative identity gate.
+    incoming.validate_binding(&s.model, &s.sources, &s.run).map_err(error)?;
+    let producer_payload_sha256 = incoming.payload_sha256().to_string();
+    let mut base = incoming.external_static_base().clone();
+    // Qualification is an independent decision.  A producer claim is
+    // never propagated through the product-owned receive path.
+    base.runtime_qualification = "unverified".into();
+    let modal = base.compute_modal_with_count(profile.reference_shapes, profile.mode_count).map_err(error)?;
+    let mode_count = modal.modes.len();
+    let max_residual = modal.modes.iter().map(|mode| mode.residual).fold(0.0, f64::max);
+    let mass_off_diagonal =
+        modal.mass_gram.values.iter().enumerate().filter(|(i, _)| i / mode_count != i % mode_count).map(|(_, value)| value.abs()).fold(0.0, f64::max);
+    let min_mac = modal.pairs.iter().map(|pair| pair.mac).fold(1.0, f64::min);
+    let min_mac_margin = modal.pairs.iter().map(|pair| pair.margin).fold(1.0, f64::min);
+    base.modal = Some(modal);
+    // Re-archive the product-owned payload so the result id and record digest
+    // describe what the product actually computed, while retaining the original
+    // source/admission/context evidence byte-for-byte.
+    let product = fieldcraft_io::external_results::ArchivedStaticBase::from_payload(
+        incoming.archive_key().to_string(),
+        incoming.binding().clone(),
+        incoming.entity_map().clone(),
+        base,
+        incoming.admission_json().to_vec(),
+        incoming.context_json().to_vec(),
+        incoming.source_json().to_vec(),
+    )
+    .map_err(error)?;
+    let product_payload_sha256 = product.payload_sha256().to_string();
+    let modal_package = product
+        .external_static_base()
+        .modal
+        .as_ref()
+        .map(crate::external::session::static_base_modal_summary)
+        .ok_or_else(|| error("ExternalStaticBase: product modal package missing"))?;
+    s.keep_external_static_base(product).map_err(error)?;
+    Ok(json!({
+        "archive_key": name,
+        "kind": 13,
+        "schema": fieldcraft_io::external_results::STATIC_BASE_SCHEMA,
+        "producer_payload_sha256": producer_payload_sha256,
+        "product_payload_sha256": product_payload_sha256,
+        "modal_source": "product_recomputed_from_K_M_T",
+        "modal_package": modal_package,
+        "modal_mode_count": mode_count,
+        "modal_max_residual": max_residual,
+        "modal_max_mass_off_diagonal": mass_off_diagonal,
+        "modal_min_mac": min_mac,
+        "modal_min_pair_margin": min_mac_margin,
+        "receiver_program_sha256": receiver_sha256,
+        "runtime_qualification": "unverified",
+        "frequency_response": "not_run",
+        "session_installed": true,
+        "project_saved": false,
+        "timings_seconds": {"receive_and_recompute": total.elapsed().as_secs_f64()}
+    }))
 }
 fn receive_chunked(s: &mut Session, p: &Value, name: String, expected_bytes: &[u8], total: Instant) -> Result<Value> {
     #[cfg(target_arch = "wasm32")]

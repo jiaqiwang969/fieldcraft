@@ -10,6 +10,35 @@ use fieldcraft_io::external_results::ArchivedTrajectory;
 use serde_json::{Value, json};
 use std::sync::Arc;
 
+pub(crate) fn static_base_modal_summary(modal: &fieldcraft_io::external_results::ModalPackage) -> Value {
+    let mode_count = modal.modes.len();
+    let mass_orthogonality_max_off_diagonal = modal
+        .mass_gram
+        .values
+        .iter()
+        .enumerate()
+        .filter(|(index, _)| index / mode_count != index % mode_count)
+        .map(|(_, value)| value.abs())
+        .fold(0.0, f64::max);
+    json!({
+        "source_backend": modal.source_backend,
+        "modes": modal.modes.iter().enumerate().map(|(index, mode)| json!({
+            "mode": index + 1,
+            "frequency_hz": mode.frequency_hz,
+            "eigenvalue": mode.eigenvalue,
+            "residual": mode.residual,
+        })).collect::<Vec<_>>(),
+        "pairs": modal.pairs.iter().map(|pair| json!({
+            "mode": pair.mode + 1,
+            "reference": pair.reference + 1,
+            "mac": pair.mac,
+            "margin": pair.margin,
+        })).collect::<Vec<_>>(),
+        "mass_orthogonality_max_off_diagonal": mass_orthogonality_max_off_diagonal,
+        "shape_storage": "stored_in_kind_13_record; omitted_from_command_response",
+    })
+}
+
 impl Session {
     pub(crate) fn check_external_name(&self, name: &str) -> Result<()> {
         if name.trim().is_empty() || name.len() > 1024 {
@@ -17,6 +46,7 @@ impl Session {
         }
         if self.external_results.contains_key(name)
             || self.external_chunked_results.contains_key(name)
+            || self.external_static_base_results.contains_key(name)
             || self.results.contains_key(name)
             || self.model.step(name).is_some()
         {
@@ -40,11 +70,23 @@ impl Session {
         self.results_stored = self.results_stored.wrapping_add(1);
         Ok(())
     }
+    pub(crate) fn keep_external_static_base(&mut self, record: fieldcraft_io::external_results::ArchivedStaticBase) -> Result<()> {
+        self.check_external_name(record.archive_key())?;
+        record.validate_binding(&self.model, &self.sources, &self.run).map_err(|e| EngineError::Params(e.to_string()))?;
+        self.external_static_base_results.insert(record.archive_key().into(), Arc::new(record));
+        self.results_stored = self.results_stored.wrapping_add(1);
+        Ok(())
+    }
     /// Raw diagnostic blobs can contain a failed frame. Only the admission's qualified
     /// prefix is eligible numerical data; persistence never changes that boundary.
     pub fn external_chunked_result(&self, name: &str) -> Result<&fieldcraft_io::external_results::ArchivedChunkedTrajectory> {
         let r = self.external_chunked_results.get(name).ok_or_else(|| EngineError::Params("external chunked result not found".into()))?;
         r.validate_binding(&self.model, &self.sources, &self.run)?;
+        Ok(r)
+    }
+    pub fn external_static_base_result(&self, name: &str) -> Result<&fieldcraft_io::external_results::ArchivedStaticBase> {
+        let r = self.external_static_base_results.get(name).ok_or_else(|| EngineError::Params("external static base result not found".into()))?;
+        r.validate_binding(&self.model, &self.sources, &self.run).map_err(|e| EngineError::Params(e.to_string()))?;
         Ok(r)
     }
     /// Check current model binding before exposing stored external fields to a caller.
@@ -88,6 +130,23 @@ impl Session {
                     "native_postprocessing":"unsupported","stale":current.is_err(),"binding_error":current.err().map(|e|e.to_string())}),
                 _ => json!({"archive_key":record.archive_key(),"stale":true,"error":"ExternalArchiveContext: metadata"}),
             });
+        }
+        for record in self.external_static_base_results.values() {
+            let current = record.validate_binding(&self.model, &self.sources, &self.run);
+            let modal_package = record.external_static_base().modal.as_ref().map(static_base_modal_summary);
+            rows.push(json!({
+                "kind":13,
+                "schema":fieldcraft_io::external_results::STATIC_BASE_SCHEMA,
+                "archive_key":record.archive_key(),
+                "result_id":record.result_id(),
+                "source_backend":record.external_static_base().source_backend,
+                "runtime_qualification":record.external_static_base().runtime_qualification,
+                "frequency_response":record.external_static_base().frequency_response,
+                "modal_package":modal_package,
+                "native_postprocessing":"unsupported",
+                "stale":current.is_err(),
+                "binding_error":current.err().map(|e| e.to_string()),
+            }));
         }
         rows.sort_by(|a, b| a["archive_key"].as_str().cmp(&b["archive_key"].as_str()));
         json!(rows)

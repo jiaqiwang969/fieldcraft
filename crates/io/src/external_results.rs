@@ -134,3 +134,7 @@ impl ArchivedTrajectory {
 pub use crate::external_chunked::{
     ArchivedChunkedTrajectory, ArchivedChunkedTrajectoryParts, BlobDescriptor, BlobSource, CHUNKED_SCHEMA, COPY_BUFFER_BYTES,
 };
+pub use crate::external_static_base::{
+    ArchivedStaticBase, ArchivedStaticBaseParts, ConstraintMapping, ContactState, DenseMatrix, ExternalStaticBase, HoldWindow, MassField, ModalMode,
+    ModalPackage, ModalPair, STATIC_BASE_NAME, STATIC_BASE_SCHEMA, StaticBaseState, StiffnessField,
+};

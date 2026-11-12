@@ -1,5 +1,52 @@
 # External trajectories
 
+## Dense external static-base packages (kind 13)
+
+`results.external.static_base.receive` receives the explicitly named
+`fieldcraft-external-static-base/1` payload through an independently frozen
+`fieldcraft-external-static-base/receive-profile/1`.  The profile contains the
+mesh/model binding, actual SHA-256 identities for the producer, adapter and
+receiving executable, reference shapes and the requested leading mode count.
+Freeze it before reading a producer package; packaging then uses that profile
+without changing its binding.  The package carries a static state and hold
+window, measured contact state, dense K and M, the full-to-reduced constraint
+map, source/admission/context JSON and optional producer modes.  Producer modes
+are discarded.  The product recomputes the modal eigenproblem from K, M and T,
+then checks residuals, mass orthogonality, paired MAC and the minimum paired
+MAC margin.
+
+The bounded contract is for dense packages with at most 4096 degrees of
+freedom and a positive-definite reduced mass.  A hold has at least ten
+consecutive no-reset frames and uses the recorded residual, velocity, drift,
+inertia/internal difference and support thresholds in the kind-13 schema.
+Reference shapes are required and must cover the requested modes.  Contact is
+accepted only for the frozen closed bonded or closed sticking policies; every
+contact refusal retains the pair/item, measured value and threshold.  Negative
+tangential increments and slip ratios are format errors, and mass is checked
+per translational axis by summing every entry whose row and column belong to
+that direction, not just the diagonal.  The friction-utilization contract for
+this package is the resultant tangential force divided by the friction
+coefficient times the resultant normal force on each contact face; pointwise
+maxima are not present in the package and remain a separate assessor
+observation.
+
+The receiver always writes `runtime_qualification: unverified`, even if a
+producer claims verification.  Qualification is an independent decision made
+by the designated independent assessor.  Frequency response remains `not_run` until a complete damping source
+is supplied.  The external K/M reconstruction is not a native contact tangent;
+open contact, switching and sustained sliding are rejected.  These checks are
+contract and integrity checks for the bounded small example and do not by
+themselves establish physical validation or a third-party reference.
+
+`results.external.static_base.receive` returns the product-recomputed modal
+package: each mode's one-based index, frequency, eigenvalue and residual, the
+one-based mode/reference pairing with MAC and best-versus-second-best margin,
+the maximum off-diagonal mass Gram entry, and the modal source backend.  The
+large mode shapes remain in the kind-13 record and are intentionally omitted
+from the command reply.  `results.external.list` returns the same
+`modal_package` object for a stored kind-13 record, so it remains readable
+after save and reopen.
+
 `results.external.receive` receives a trajectory for the currently open model. The command
 appears under **Results → Files → Receive External Results**, with fields for the package
 manifest, independently frozen receive profile, unique result name and publication directory.
