@@ -2421,6 +2421,49 @@ pub const LOAD_TRANSFER_RECEIVE: &[Field] = &[
     text("name", "Archive name").help("The archive key frozen into the bundle.").req(),
     path("project", "Project", true).help("Optional project file to save with the accepted type-13 result."),
 ];
+const LOAD_TRANSFER_INTEGRATION: Field = variants(
+    "integration",
+    "Integration",
+    &[
+        variant("average_acceleration", "Newmark average acceleration", &[]),
+        variant("linear_acceleration", "Newmark linear acceleration", &[]),
+        variant(
+            "hht",
+            "HHT",
+            &[num("alpha", "Alpha (-1/3 to 0)", D::None).help("HHT numerical damping parameter; zero gives average acceleration.").req()],
+        ),
+    ],
+)
+.help("The time-integration rule for a new structural transient step; an existing step keeps its rule.");
+const LOAD_TRANSFER_METHOD: Field = variants(
+    "method",
+    "Method",
+    &[
+        variant("direct", "Direct", &[]),
+        variant("modal", "Modal", &[int("modes", "Modes", 1, 4096).help("Number of mass-normalized modes retained.").req()]),
+    ],
+)
+.help("Integrate physical degrees of freedom directly or through a retained modal basis.");
+const LOAD_TRANSFER_DAMPING: Field = group(
+    "damping",
+    "Damping",
+    &[
+        num("alpha", "Rayleigh alpha", D::StrainRate).help("Nonnegative mass-proportional viscous coefficient."),
+        num("beta", "Rayleigh beta", D::Time).help("Nonnegative stiffness-proportional viscous coefficient."),
+        num("loss_factor", "Structural loss factor", D::None).help("Nonnegative structural stiffness loss factor."),
+    ],
+)
+.help("Optional damping settings for a new structural transient step; an existing step keeps its settings.");
+pub const LOAD_TRANSFER_APPLY: &[Field] = &[
+    text("name", "Load-transfer result").help("The received result to map into native structural loads.").req(),
+    text("step", "Structural step").help("The transient step to reuse or create; defaults to the result name plus `-transient`."),
+    references("boundary_conditions", "Boundary conditions", C::BoundaryCondition)
+        .help("Boundary conditions for a new step; an existing step keeps its conditions."),
+    LOAD_TRANSFER_INTEGRATION,
+    LOAD_TRANSFER_METHOD,
+    LOAD_TRANSFER_DAMPING,
+    int("output_every", "Output every", 1, 1_000_000).help("Store every nth increment in the new structural step.").def("1"),
+];
 pub const RECOVERY_LIST: &[Field] =
     &[path("dir", "Folder", false).help("The recovery folder; the default one when empty.").hint("the recovery folder")];
 pub const CRASH_REPORTS: &[Field] = &[
