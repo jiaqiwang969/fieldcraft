@@ -281,6 +281,9 @@ pub(crate) fn independent_block(op: &(impl Operator + ?Sized), x: &[Vec<f64>], m
 pub struct Eigenpairs {
     pub values: Vec<f64>,
     pub vectors: Vec<Vec<f64>>,
+    /// The next converged eigenvalue after `values`, when the Lanczos projection
+    /// resolved one without changing the requested basis.
+    pub next_value: Option<f64>,
     /// Converged eigenvalues of negative Ritz values θ (outside what the transformation looks
     /// for: negative buckling load factors), largest |θ| first.
     pub negative: Vec<f64>,
@@ -557,6 +560,7 @@ pub fn lanczos(op: &impl Operator, shift: f64, wanted: Wanted, block: usize, max
             let mut done = false;
             let mut accepted = Vec::new();
             let mut found = 0;
+            let mut next_value = None;
             for &i in &idx {
                 let th = theta[i];
                 if !(th > 0.0) {
@@ -577,10 +581,14 @@ pub fn lanczos(op: &impl Operator, shift: f64, wanted: Wanted, block: usize, max
                     break;
                 }
                 if lambda >= wanted.min {
-                    accepted.push(i);
-                    found += 1;
-                    if found == wanted.count {
-                        done = true;
+                    if found < wanted.count {
+                        accepted.push(i);
+                        found += 1;
+                        if found == wanted.count {
+                            done = true;
+                        }
+                    } else {
+                        next_value = Some(lambda);
                         break;
                     }
                 }
@@ -633,6 +641,7 @@ pub fn lanczos(op: &impl Operator, shift: f64, wanted: Wanted, block: usize, max
                 return Ok(Eigenpairs {
                     values,
                     vectors,
+                    next_value,
                     negative,
                     basis: m,
                     iterations,

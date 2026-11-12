@@ -438,6 +438,11 @@ fn solve_harmonic_impl(
         }
     };
     drop(basis_timing);
+    if let Some(modal) = modal.as_ref()
+        && let Some(warning) = super::modal_truncation_warning(modal.eigenvalues(), modal.next_eigenvalue())
+    {
+        warnings.push(warning);
+    }
     let mut frames = Vec::with_capacity(frequencies.len());
     let mut stats = Stats { dofs: mesh.dofs(), equations: red.neq(), factor_entries: 0, lanczos_vectors: 0 };
     if let Some(m) = &modal {

@@ -1319,6 +1319,7 @@ mod tests {
         let mut pairs = crate::eigen::Eigenpairs {
             values: vec![0.5],
             vectors: vec![vec![0.5_f64.sqrt(), 1e-7]],
+            next_value: None,
             negative: vec![],
             basis: 2,
             iterations: 1,
