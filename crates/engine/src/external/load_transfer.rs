@@ -631,6 +631,10 @@ pub enum BackendState {
     Completed,
     Failed,
     Cancelled,
+    /// Receiver-side placeholder used only while reporting an invalid archive
+    /// that has no terminal receipt. It is never admissible as an incoming
+    /// terminal state and can never authorize application.
+    Unknown,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -661,6 +665,9 @@ impl CrashReceipt {
         if !is_digest(&self.stdout_sha256) || !is_digest(&self.stderr_sha256) {
             return Err(LoadTransferError::Invalid("crash log digest"));
         }
+        if matches!(self.state, BackendState::Running | BackendState::Unknown) {
+            return Err(LoadTransferError::Invalid("non-terminal crash receipt"));
+        }
         if self.exit_code == Some(0) && self.signal.is_some() {
             return Err(LoadTransferError::Invalid("exit code and signal"));
         }
@@ -668,6 +675,8 @@ impl CrashReceipt {
             && (self.exit_code != Some(0)
                 || self.signal.is_some()
                 || self.first_error.is_some()
+                || self.last_completed_frame.is_none()
+                || self.last_persisted_frame != self.last_completed_frame
                 || self.last_completed_frame != self.requested_last_frame)
         {
             return Err(LoadTransferError::Invalid("completed crash receipt"));
@@ -680,10 +689,9 @@ impl CrashReceipt {
     }
 }
 
-/// The receiver-owned admission view of the backend terminal state.  A missing receipt is
-/// the legacy/normal-success representation; it is reported as a completed run whose coverage
-/// is the last frame carried by the archive.  A failed or cancelled receipt remains visible and
-/// is never promoted to a solver-success claim.
+/// The receiver-owned admission view of the backend terminal state. A terminal receipt is
+/// required before admission; `Unknown` is only a defensive report for code that inspects an
+/// unadmitted archive and can never authorize application.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct BackendStatus {
@@ -739,11 +747,9 @@ pub fn validate_receive_status(archive: &LoadTransferArchive) -> Result<(), Stri
     }
 
     let Some(receipt) = &archive.crash else {
-        return Ok(());
+        return Err("load-transfer receive rejected: missing backend terminal receipt".into());
     };
-    if receipt.state == BackendState::Running {
-        return Err("load-transfer backend status is running; a terminal receipt is required".into());
-    }
+    receipt.validate().map_err(|error| error.to_string())?;
     let last_received = archive.frames.last().map(|frame| frame.frame_index);
     let last_completed = receipt
         .last_completed_frame
@@ -794,7 +800,9 @@ pub fn validate_receive_status(archive: &LoadTransferArchive) -> Result<(), Stri
                 ));
             }
         }
-        BackendState::Running => return Err("load-transfer backend status is running; a terminal receipt is required".into()),
+        BackendState::Running | BackendState::Unknown => {
+            return Err("load-transfer backend status is not terminal".into());
+        }
     }
     Ok(())
 }
@@ -816,17 +824,17 @@ pub fn backend_status(archive: &LoadTransferArchive) -> BackendStatus {
             apply_allowed: receipt.solver_success(),
         },
         None => BackendStatus {
-            state: BackendState::Completed,
-            solver_success: true,
-            exit_code: Some(0),
+            state: BackendState::Unknown,
+            solver_success: false,
+            exit_code: None,
             signal: None,
             first_error: None,
-            last_completed_frame: last_received_frame,
-            last_persisted_frame: last_received_frame,
-            requested_last_frame: last_received_frame,
+            last_completed_frame: None,
+            last_persisted_frame: None,
+            requested_last_frame: None,
             last_received_frame,
             coverage_through_frame: last_received_frame,
-            apply_allowed: true,
+            apply_allowed: false,
         },
     }
 }

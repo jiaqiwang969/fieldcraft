@@ -27,6 +27,20 @@ fn facts() -> FrameFacts {
     }
 }
 
+fn completed_receipt(last_frame: u64) -> CrashReceipt {
+    CrashReceipt {
+        state: BackendState::Completed,
+        exit_code: Some(0),
+        signal: None,
+        first_error: None,
+        last_completed_frame: Some(last_frame),
+        last_persisted_frame: Some(last_frame),
+        requested_last_frame: Some(last_frame),
+        stdout_sha256: "c".repeat(64),
+        stderr_sha256: "d".repeat(64),
+    }
+}
+
 fn mapping() -> MappingSpec {
     MappingSpec {
         origin_m: [0.0, 0.0, 0.0],
@@ -253,7 +267,15 @@ fn archive_round_trip_is_reversible_and_tamper_evident() {
     };
     let qualification = RuntimeQualification::Verified { source: "independent".to_string() };
     let applicability = evaluate_applicability(&activation.applicability_input().unwrap(), &qualification).unwrap();
-    let archive = LoadTransferArchive { identity: identity(), mapping: spec, frames, activation, qualification, applicability, crash: None };
+    let archive = LoadTransferArchive {
+        identity: identity(),
+        mapping: spec,
+        frames,
+        activation,
+        qualification,
+        applicability,
+        crash: Some(completed_receipt(1)),
+    };
     let bundle = archive.encode().unwrap();
     let decoded = LoadTransferArchive::decode(&bundle).unwrap();
     assert_eq!(decoded.archive, archive);

@@ -116,6 +116,12 @@ geometry result marked `inapplicable` is refused by `apply`.
 
 ## Backend failure admission
 
+Every incoming archive must carry an explicit terminal backend receipt. The receiver never
+infers `completed` or exit code 0 from the presence of frames or from an outer process exit. A
+normal receipt states `completed`, exit code 0, the requested final frame as the last completed
+and persisted frame, and SHA256 summaries of the captured standard-output and standard-error
+logs. An archive without this receipt is rejected with `missing backend terminal receipt`.
+
 The product entry validates the four per-frame solver facts before it installs a load-transfer
 record. Every received frame must be completed and converged, with both the Newton and line-search
 limits clear. The first failing frame is named in the rejection and is outside the qualified
