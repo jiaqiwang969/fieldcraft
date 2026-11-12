@@ -1,5 +1,7 @@
 //! Protocol fixtures only. Solver labels exercise gates, not numerical qualification.
 mod external_support;
+#[path = "common/manifest.rs"]
+mod manifest;
 use external_support::Fixture;
 use fieldcraft_engine::{
     Session,
@@ -122,6 +124,8 @@ fn formal_v2_partial_project_is_self_contained_and_resaves_identically() {
     let target = f.root.join("received.fieldcraft");
     s.execute("file.save_as", &json!({"path":target})).unwrap();
     let original = std::fs::read(&target).unwrap();
+    manifest::remove_derived_metadata(&target);
+    let stripped = std::fs::read(&target).unwrap();
     drop(s);
     std::fs::rename(f.root.join("source.json"), f.root.join("source-unavailable")).unwrap();
     let mut reopened = Session::default();
@@ -130,8 +134,9 @@ fn formal_v2_partial_project_is_self_contained_and_resaves_identically() {
     assert_eq!(list[0]["admission"]["solve"], "failed");
     assert_eq!(list[0]["qualified_coverage"]["last"], 1);
     reopened.execute("file.save", &json!({})).unwrap();
+    assert_eq!(std::fs::read(&target).unwrap(), original, "external results must reopen without derived manifest blocks");
     assert_eq!(std::fs::read(&target).unwrap(), original);
-    assert_eq!(std::fs::read(fieldcraft_io::fs::backup_path(&target)).unwrap(), original);
+    assert_eq!(std::fs::read(fieldcraft_io::fs::backup_path(&target)).unwrap(), stripped);
     let second = f.root.join("resaved.fieldcraft");
     reopened.execute("file.save_as", &json!({"path":second})).unwrap();
     assert_eq!(std::fs::read(second).unwrap(), original);

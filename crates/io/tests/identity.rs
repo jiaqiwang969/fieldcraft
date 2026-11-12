@@ -20,6 +20,13 @@ fn persistent_snapshot_and_binding_reopen() {
     let run = Run::default();
     let binding = Binding::freeze(&model, &g, &run, &map, artifacts(), "0.0.29").unwrap();
     let bytes = fieldcraft_io::write(&model, &g, &[], &JournalHeader::default(), &View::default()).unwrap();
+    let mut archive = zip::ZipArchive::new(std::io::Cursor::new(&bytes)).unwrap();
+    let mut manifest = String::new();
+    use std::io::Read;
+    archive.by_name("fieldcraft.json").unwrap().read_to_string(&mut manifest).unwrap();
+    let manifest: serde_json::Value = serde_json::from_str(&manifest).unwrap();
+    assert!(manifest.get("identity").is_none(), "ordinary projects must not carry identity metadata");
+    assert!(manifest.get("capabilities").is_none(), "ordinary projects must not carry capability metadata");
     let dir = std::env::var_os("FIELDCRAFT_IDENTITY_EVIDENCE")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| std::env::temp_dir().join(format!("fieldcraft-identity-{}", std::process::id())));
@@ -103,6 +110,7 @@ fn archive_manifest_identity_is_checked_not_trusted() {
         file.read_to_end(&mut data).unwrap();
         if name == "fieldcraft.json" {
             let mut j: serde_json::Value = serde_json::from_slice(&data).unwrap();
+            j["identity"] = serde_json::to_value(snapshot(&m, &Geometry::default(), &Run::default()).unwrap()).unwrap();
             j["identity"]["model_revision"] = "forged".into();
             data = serde_json::to_vec(&j).unwrap();
         }
@@ -158,7 +166,8 @@ fn legacy_manifest_without_identity_can_be_read_then_upgraded() {
     let mut manifest = String::new();
     zip.by_name("fieldcraft.json").unwrap().read_to_string(&mut manifest).unwrap();
     let value: serde_json::Value = serde_json::from_str(&manifest).unwrap();
-    assert_eq!(value["identity"]["scheme"], SCHEME);
+    assert!(value.get("identity").is_none());
+    assert!(value.get("capabilities").is_none());
 }
 
 #[test]
