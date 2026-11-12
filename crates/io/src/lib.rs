@@ -647,9 +647,22 @@ pub fn write_with_to<W: Write + std::io::Seek>(
         };
         source.embedded = Some(name);
     }
+    // These two derived blocks describe the identity and backend capability contract used by
+    // external results.  Ordinary projects deliberately omit them: older readers reject
+    // unknown manifest fields, and the reader can recompute the same values from the model when
+    // an external record needs them.  Keep the old bytes for projects that actually carry a
+    // kind-13 result, including streamed archives.
+    let has_external_results = extras.results.iter().any(|(_, stored)| {
+        matches!(stored.result, results::SolvedRef::External(_) | results::SolvedRef::ExternalChunked(_) | results::SolvedRef::ExternalStaticBase(_))
+    });
+    let (capabilities, identity) = if has_external_results {
+        (Some(capabilities::report(model)?), Some(identity::snapshot(model, &geometry, &extras.run)?))
+    } else {
+        (None, None)
+    };
     let mut manifest = Manifest {
-        capabilities: Some(capabilities::report(model)?),
-        identity: Some(identity::snapshot(model, &geometry, &extras.run)?),
+        capabilities,
+        identity,
         format: FORMAT.into(),
         generator: format!("FieldCraft {}", env!("CARGO_PKG_VERSION")),
         geometry,

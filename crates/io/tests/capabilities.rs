@@ -106,7 +106,8 @@ fn sourced_controls_preserve_requested_effective_and_clipping_separately() {
 #[test]
 fn tampered_archive_capabilities_are_rejected() {
     use std::io::{Cursor, Read, Write};
-    let bytes = fieldcraft_io::write(&model(), &Default::default(), &[], &Default::default(), &Default::default()).unwrap();
+    let m = model();
+    let bytes = fieldcraft_io::write(&m, &Default::default(), &[], &Default::default(), &Default::default()).unwrap();
     let mut src = zip::ZipArchive::new(Cursor::new(bytes)).unwrap();
     let mut dst = zip::ZipWriter::new(Cursor::new(Vec::new()));
     for i in 0..src.len() {
@@ -116,6 +117,7 @@ fn tampered_archive_capabilities_are_rejected() {
         file.read_to_end(&mut data).unwrap();
         if name == "fieldcraft.json" {
             let mut j: serde_json::Value = serde_json::from_slice(&data).unwrap();
+            j["capabilities"] = serde_json::to_value(report(&m).unwrap()).unwrap();
             j["capabilities"]["contacts"]["pair"]["numerical"]["penalty_scale"] = json!(1.0);
             data = serde_json::to_vec(&j).unwrap();
         }

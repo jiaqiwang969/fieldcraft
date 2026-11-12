@@ -1,3 +1,5 @@
+#[path = "common/manifest.rs"]
+mod manifest;
 use fieldcraft_engine::Session;
 use fieldcraft_engine::external::load_transfer::*;
 use fieldcraft_io::identity;
@@ -135,6 +137,7 @@ fn receive_save_reopen_resave_is_byte_identical_and_apply_creates_native_history
     assert_eq!(reply["program_identity"]["adapter_sha256"], fieldcraft_io::sha256_hex(b"entry-test-adapter-artifact"));
     assert_eq!(reply["program_identity"]["receiver_sha256"].as_str().unwrap().len(), 64);
     let first = fs::read(&project_path).unwrap();
+    manifest::remove_derived_metadata(&project_path);
 
     let mut reopened = Session::default();
     reopened.execute("file.open", &json!({"path":project_path})).unwrap();
