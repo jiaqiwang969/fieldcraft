@@ -88,6 +88,8 @@ pub enum Error {
     Limit(String),
     #[error("did not converge: {0}")]
     NotConverged(String),
+    #[error("did not converge: {message}")]
+    NotConvergedWithDiagnostics { message: String, diagnostic: Box<nonlinear::NonlinearFailureDiagnostic> },
     /// A broken internal invariant (a bug), reported instead of a panic.
     #[error("internal error: {0}")]
     Internal(String),
@@ -96,6 +98,14 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 impl Error {
+    /// The iteration trace of a nonlinear failure, when the failed solve retained one.
+    pub fn nonlinear_diagnostic(&self) -> Option<&nonlinear::NonlinearFailureDiagnostic> {
+        match self {
+            Self::NotConvergedWithDiagnostics { diagnostic, .. } => Some(diagnostic),
+            _ => None,
+        }
+    }
+
     /// Factor-value bytes alone; indices and numeric workspace need additional memory.
     pub(crate) fn factor_limit(entries: usize, limit: usize) -> Error {
         let bytes = entries as u128 * std::mem::size_of::<f64>() as u128;
