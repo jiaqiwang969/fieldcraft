@@ -1,0 +1,10005 @@
+{
+"note": "IEEE-754 double bit patterns (hex). hypot = the correction formula evaluated with +, -, *, /, sqrt only; it equals glibc 2.35's hypot (x86-64) bit for bit on 600000 inputs of the same generator (2026-11-12).",
+"rows": [
+{
+"x": "3ff1c0d57f10c894",
+"y": "3ff29ca109ead3fe",
+"hypot": "3ff9b89e6f4e016a"
+},
+{
+"x": "3ffe2b8410510668",
+"y": "3ff52ff3205f11a2",
+"hypot": "40026ee571ccd644"
+},
+{
+"x": "3ff535c8ea8a4e06",
+"y": "3fff9da7ce34979e",
+"hypot": "40030922d899b0f1"
+},
+{
+"x": "3ffcb3af63658795",
+"y": "3fff2f7b56ed04cf",
+"hypot": "4005310b8cbdbf11"
+},
+{
+"x": "3ffd0af9825c659f",
+"y": "3ffa248aaaa789be",
+"hypot": "400389b947c3115a"
+},
+{
+"x": "3fffd70522e931f8",
+"y": "3ffc06b4e214cba2",
+"hypot": "4005357237b0e8da"
+},
+{
+"x": "3ff29616ccb5e001",
+"y": "3ff2846ba3796be4",
+"hypot": "3ffa3c78dc938127"
+},
+{
+"x": "3ff7a5b1baa844c0",
+"y": "3ff8a7e707a9a6ba",
+"hypot": "400114da06d5b159"
+},
+{
+"x": "3ffa92e8eaf3493e",
+"y": "3ff7d8bf3f40bf56",
+"hypot": "4001da3772ba4264"
+},
+{
+"x": "3ff618d3e487ffb5",
+"y": "3ff1095ffba0d41a",
+"hypot": "3ffbe6eb3fbd54c0"
+},
+{
+"x": "3ff07727df42b81c",
+"y": "3ffb7677a89c3962",
+"hypot": "400002a0ccef39e7"
+},
+{
+"x": "3ff38c4ac26c8470",
+"y": "3ff34ff2dac99d66",
+"hypot": "3ffb7a990d00330d"
+},
+{
+"x": "3ffa7e5b8ad61158",
+"y": "3ff2847a7718fb98",
+"hypot": "40002967e7d81d63"
+},
+{
+"x": "3ffdab33022a4b9c",
+"y": "3ff4e240c419ca2a",
+"hypot": "400224116ca423d9"
+},
+{
+"x": "3ff4b0e14fa2fee1",
+"y": "3ff1a9e770bbd00c",
+"hypot": "3ffb34856c9ab605"
+},
+{
+"x": "3fff33082c146e3d",
+"y": "3fff9d4da40cb613",
+"hypot": "4006356195804f10"
+},
+{
+"x": "3ff0c996e223db1a",
+"y": "3ff584a89355a996",
+"hypot": "3ffb4abe7cc570a5"
+},
+{
+"x": "3ffc360b934d02e7",
+"y": "3ff2c71ab0f74b34",
+"hypot": "4000f1cdee022c0a"
+},
+{
+"x": "3ff7c5b2a840d01a",
+"y": "3ff4017506cfa814",
+"hypot": "3fff11eeb6e8d323"
+},
+{
+"x": "3ff2f32df6d0cf03",
+"y": "3ffe7c0cf0d72044",
+"hypot": "4001f27c025086f5"
+},
+{
+"x": "3ffd75f5767c6aec",
+"y": "3ff2e8de03dee0a3",
+"hypot": "400180ef89be8f27"
+},
+{
+"x": "3ff2a0254f4b8c0f",
+"y": "3ff21247cd06fadb",
+"hypot": "3ff9f39eaf02af03"
+},
+{
+"x": "3ffcc8f347b2e2d1",
+"y": "3ff12567411429ea",
+"hypot": "4000c09914e3fab9"
+},
+{
+"x": "3ffda3685c1600dc",
+"y": "3ff2a3bb5a66f5ba",
+"hypot": "4001819411e715ec"
+},
+{
+"x": "3ff849d7a22f547a",
+"y": "3ff6bc5d5f002c4f",
+"hypot": "4000a277e1d58d4a"
+},
+{
+"x": "3ffeb7d555532ece",
+"y": "3ff8451678ea8b00",
+"hypot": "4003930bd12ab22b"
+},
+{
+"x": "3ff37774f28e3150",
+"y": "3ff51a699727f640",
+"hypot": "3ffcb5e42d469981"
+},
+{
+"x": "3ff597820df5d320",
+"y": "3ffd051f6822c277",
+"hypot": "400215ef79291184"
+},
+{
+"x": "3ff7b3c5add822ac",
+"y": "3ff31f7064ca546e",
+"hypot": "3ffe745b651a24ed"
+},
+{
+"x": "3ff532b85a8b7c1e",
+"y": "3ffa167d4b3ec3c6",
+"hypot": "4000cea8cff41528"
+},
+{
+"x": "3ff28a233c74a120",
+"y": "3ffc9e92fdfa2e0a",
+"hypot": "40010cc2811d3642"
+},
+{
+"x": "3ffe9b5194fe726b",
+"y": "3ff4707bfa210cbe",
+"hypot": "400266ebcd808445"
+},
+{
+"x": "3ff8b3557b077fad",
+"y": "3ffa394383562510",
+"hypot": "40020331cf7bad05"
+},
+{
+"x": "3ff828b4a613b63a",
+"y": "3fffa05d4a8b8b90",
+"hypot": "4003e627eec83989"
+},
+{
+"x": "3ff192113900ab0c",
+"y": "3ff578f050a9ba7a",
+"hypot": "3ffbbebdf6feb635"
+},
+{
+"x": "3fff8b096f3e5096",
+"y": "3ff38769d808dd11",
+"hypot": "40028cb180fd63f0"
+},
+{
+"x": "3ffdc622fa995ce7",
+"y": "3ffb1c6a95083688",
+"hypot": "40042247493dda19"
+},
+{
+"x": "3ff66a5e5675389c",
+"y": "3ff72c8b9f1ceefc",
+"hypot": "40001edcbc2da595"
+},
+{
+"x": "3ffe69fb192e031e",
+"y": "3ffde5ca51759500",
+"hypot": "400552fbc75c62a4"
+},
+{
+"x": "3ff9dfade60d0cbc",
+"y": "3ff69db1246b4631",
+"hypot": "40012eaeef207985"
+},
+{
+"x": "3ff464aa1d581b04",
+"y": "3ff9384955f5b568",
+"hypot": "400037798e1e6871"
+},
+{
+"x": "3ff6c93d002adffc",
+"y": "3ff48c4d3ee528f0",
+"hypot": "3ffeaec5a23fc047"
+},
+{
+"x": "3ffaeed00ddf40a0",
+"y": "3ff3bea751de0f4f",
+"hypot": "4000b29332570639"
+},
+{
+"x": "3ff830f964395b35",
+"y": "3ff4dd4918b5ed21",
+"hypot": "3ffff2285330008f"
+},
+{
+"x": "3fffaae2e18cb1ed",
+"y": "3ff1edda518a2a83",
+"hypot": "400232036afdf89e"
+},
+{
+"x": "3fff76acc8dd7256",
+"y": "3ff4e560f987aa8d",
+"hypot": "4002e29b0327381e"
+},
+{
+"x": "3ff3bd21fc20861c",
+"y": "3ffdb7c515171b5a",
+"hypot": "4001d6845efbc2fd"
+},
+{
+"x": "3ffd60bc6a3bed9e",
+"y": "3ffe186c91de9122",
+"hypot": "4005074c793c5273"
+},
+{
+"x": "3ffb15f4941bd8ce",
+"y": "3ffbf6cbcd8e42ea",
+"hypot": "4003772c95f34d25"
+},
+{
+"x": "3ffc9b76b6f506e2",
+"y": "3ffef5b6aead2334",
+"hypot": "40051399f430ff64"
+},
+{
+"x": "3ff9ec2c43c7295a",
+"y": "3ff68e8883eb9350",
+"hypot": "40012e68d66ba81e"
+},
+{
+"x": "3ffb4b19120f5ace",
+"y": "3ff6791299e793b8",
+"hypot": "4001ad693df2baca"
+},
+{
+"x": "3ffc6ffc4fd02e0e",
+"y": "3ffaf4b37baf97ee",
+"hypot": "4003976c40c35fc7"
+},
+{
+"x": "3ff2c814011f6e1c",
+"y": "3ff49b155cc08888",
+"hypot": "3ffbe183d8f04030"
+},
+{
+"x": "3fff7a510d0e5b68",
+"y": "3ffcc0364d3181a7",
+"hypot": "400550db99d4c667"
+},
+{
+"x": "3ff0792b684d06e0",
+"y": "3ff638a33e5d80a2",
+"hypot": "3ffba9525dd3b25e"
+},
+{
+"x": "3ff4e38c39715f5a",
+"y": "3ffd373f7ea97723",
+"hypot": "4001f5283f86330b"
+},
+{
+"x": "3ffca72ebd6b99be",
+"y": "3ff0f0c51a351e6a",
+"hypot": "4000a4a5d2ba3b57"
+},
+{
+"x": "3ff8764545d0d08d",
+"y": "3ff3fb4191ef690e",
+"hypot": "3fff95e7f9b52eaf"
+},
+{
+"x": "3ff5510fb42f0b30",
+"y": "3ff1c902a7ed95e4",
+"hypot": "3ffbc2ff8367581c"
+},
+{
+"x": "3ff4fb04eb48519b",
+"y": "3ff169dd942eaa5a",
+"hypot": "3ffb44003b2a1509"
+},
+{
+"x": "3ffdb6a7639a04c2",
+"y": "3ff83765ef757efc",
+"hypot": "40032a77dc111f25"
+},
+{
+"x": "3ff60976aaff6854",
+"y": "3ffc0eac40528c7a",
+"hypot": "4001d6a4849ac4c9"
+},
+{
+"x": "3ffe91161c171e55",
+"y": "3ff526968b354bc0",
+"hypot": "400295e1a172c146"
+},
+{
+"x": "3ffce708f6b048fa",
+"y": "3ff0cb5ff8b43fa5",
+"hypot": "4000b6bc8a2b7d16"
+},
+{
+"x": "3ff0b6822a421b60",
+"y": "3ff08100eb9ba2a1",
+"hypot": "3ff77d02936151e7"
+},
+{
+"x": "3fffd354eef4d586",
+"y": "3ff16b67c4963719",
+"hypot": "400223f4bf645260"
+},
+{
+"x": "3ff4e09fe83a7c2a",
+"y": "3ff7394caeeadcb7",
+"hypot": "3fff3a7919204721"
+},
+{
+"x": "3ff897db565510e3",
+"y": "3ff50ec2de3d5156",
+"hypot": "4000303767768768"
+},
+{
+"x": "3ff8f1f15a6ca313",
+"y": "3ff96da5b211e7fb",
+"hypot": "4001cf7d461a18b8"
+},
+{
+"x": "3ff97bdf4146462f",
+"y": "3ff5166c3afc0460",
+"hypot": "400089e8342d10fd"
+},
+{
+"x": "3ff1d5edf912cdca",
+"y": "3ff34a74677ecd8c",
+"hypot": "3ffa45c65ee6e30a"
+},
+{
+"x": "3ff3f64d1fbe23fe",
+"y": "3ff8576d1347cdff",
+"hypot": "3fff7ae6181fceb2"
+},
+{
+"x": "3ff9b88a49432296",
+"y": "3ffb2e1c233d1beb",
+"hypot": "4002b5df04633c7d"
+},
+{
+"x": "3ff9c9fa30b10b98",
+"y": "3ff71c6851f52800",
+"hypot": "4001508caf5003ce"
+},
+{
+"x": "3ffac561db34118f",
+"y": "3ffb3a008c567540",
+"hypot": "4003177a748bf940"
+},
+{
+"x": "3ffb3ac4b6c6d436",
+"y": "3ffc8b2abafa4072",
+"hypot": "4003b969d1230c8f"
+},
+{
+"x": "3ff7f9e1bb7449e2",
+"y": "3ff42ee7a64f8194",
+"hypot": "3fff571f6c6ed74b"
+},
+{
+"x": "3ff2ad6f13c5424a",
+"y": "3ff3908c8f9cb5ea",
+"hypot": "3ffb0c6d06d81af3"
+},
+{
+"x": "3ff5e6ab36278312",
+"y": "3ffd9d138ebf8516",
+"hypot": "40026a8997ca0fc6"
+},
+{
+"x": "3ff00eb139a372b4",
+"y": "3ff5a0c1bbb297c1",
+"hypot": "3ffaefe6f3f68a0f"
+},
+{
+"x": "3ff963a209ed5a32",
+"y": "3ff7cc9ffe64da58",
+"hypot": "4001665c45dee214"
+},
+{
+"x": "3fffa4ddd8ed7a10",
+"y": "3ff5f019b1a2ea52",
+"hypot": "4003409b1995f309"
+},
+{
+"x": "3ff5136227eb832c",
+"y": "3ffda11bfebc9090",
+"hypot": "40022e23a19cddfd"
+},
+{
+"x": "3ff4c337d01377e4",
+"y": "3ff2a56ccd15ef3e",
+"hypot": "3ffbe80709f4e1f8"
+},
+{
+"x": "3ff802f973888dfe",
+"y": "3ffff40a79076dd8",
+"hypot": "4003fc1c65425d27"
+},
+{
+"x": "3ffa572c52735df3",
+"y": "3ff36f1362c971a9",
+"hypot": "40005debdb10ae4c"
+},
+{
+"x": "3fff6ef472b87ffa",
+"y": "3ff60bd4edca956e",
+"hypot": "4003326cfa517311"
+},
+{
+"x": "3ff695e5fc60ab6e",
+"y": "3ff301d3d2c1567c",
+"hypot": "3ffd84e480625218"
+},
+{
+"x": "3ffad9519b508103",
+"y": "3ff8a6f5a83e11f6",
+"hypot": "40023995ae5671e5"
+},
+{
+"x": "3fff89eac7215c3e",
+"y": "3ff76cd68510b0a1",
+"hypot": "4003a4ac409c5510"
+},
+{
+"x": "3ff159df36aadcd4",
+"y": "3ffe14c343bf83b5",
+"hypot": "40015cff164d0461"
+},
+{
+"x": "3ffd428400cb4c3e",
+"y": "3ff3764e74bb994a",
+"hypot": "40019216aaed7704"
+},
+{
+"x": "3ffa26ea46f89838",
+"y": "3ff6bf31be4332d5",
+"hypot": "40015489c0087e96"
+},
+{
+"x": "3ff2488cc4214e7c",
+"y": "3ff6c064d3b60c2c",
+"hypot": "3ffd3005995e3288"
+},
+{
+"x": "3ff1f44144f1da53",
+"y": "3ff3fdd73de1c5a5",
+"hypot": "3ffadecc23d8c2fc"
+},
+{
+"x": "3ffa3294e003387c",
+"y": "3ff14e70aac807be",
+"hypot": "3fff65d9a5710932"
+},
+{
+"x": "3ff73381052a69d9",
+"y": "3ff789a80504dad7",
+"hypot": "4000866ec266f701"
+},
+{
+"x": "3ff2d306e0b82175",
+"y": "3ffb0d0ea423317c",
+"hypot": "40007a6535258da6"
+},
+{
+"x": "3ff74a32ee237e54",
+"y": "3ff31e3ff458c7c1",
+"hypot": "3ffe21b8aca5df53"
+},
+{
+"x": "3fff9476734e1592",
+"y": "3ffe372033ba3e28",
+"hypot": "4005da6ec429054b"
+},
+{
+"x": "3ff8def57748255f",
+"y": "3ff4ad1ccf8dba9d",
+"hypot": "40002be74ea016bb"
+},
+{
+"x": "3ff20f2e587e7d34",
+"y": "3fff2bcf10ee5e04",
+"hypot": "40020328b96e7ed2"
+},
+{
+"x": "3ff1cd4f81557bee",
+"y": "3ff7a5cde61680ca",
+"hypot": "3ffd99712181ad78"
+},
+{
+"x": "3ff3cc3b84fa782c",
+"y": "3ff6cccdb5eaed19",
+"hypot": "3ffe322704e95dad"
+},
+{
+"x": "3fff45268e43fb84",
+"y": "3ff85d20a777310a",
+"hypot": "4003d20e75137d0b"
+},
+{
+"x": "3fffd2ee14b66d03",
+"y": "3ffd693ede0ba774",
+"hypot": "4005aaaa73fc6db4"
+},
+{
+"x": "3ff192ca859b1b7c",
+"y": "3ff35c092f59f9c3",
+"hypot": "3ffa2562c184665c"
+},
+{
+"x": "3ffcb813d1c00c33",
+"y": "3fff8ef489eda164",
+"hypot": "400555be49a15175"
+},
+{
+"x": "3ff2be681e2c8644",
+"y": "3ff9d6af5c845340",
+"hypot": "3fffebd3d7001204"
+},
+{
+"x": "3ffc8bd5f15e076c",
+"y": "3ff8d286e94f43bf",
+"hypot": "4002ea1e88a0f6c9"
+},
+{
+"x": "3ffe9e970b88229a",
+"y": "3ff369f032ead5ee",
+"hypot": "400220af057aedcc"
+},
+{
+"x": "3ff4843247acbcd0",
+"y": "3ff52ac8f4a78c1c",
+"hypot": "3ffd7a7156577c36"
+},
+{
+"x": "3ffab839c00e30d6",
+"y": "3ff02f860085f4a0",
+"hypot": "3fff3d5772e905a3"
+},
+{
+"x": "3ff5f284be9f1638",
+"y": "3ff9ae43fe60d118",
+"hypot": "4000e4060778952b"
+},
+{
+"x": "3ff75ee24858bc1f",
+"y": "3ff73fbc222ddacc",
+"hypot": "40007b8a10c43c8f"
+},
+{
+"x": "3ff28b70cd3edc6e",
+"y": "3ff7930dd9e74a92",
+"hypot": "3ffdfe8bcef2a12f"
+},
+{
+"x": "3ff179a80dc99fb4",
+"y": "3ff45be3bda7aecc",
+"hypot": "3ffad4948f200741"
+},
+{
+"x": "3ff48fc3b33bbe72",
+"y": "3ff51beb693f9def",
+"hypot": "3ffd77d7bc89bb92"
+},
+{
+"x": "3ffc05bc005e6027",
+"y": "3ffd8a99f432781f",
+"hypot": "40045be52933b12d"
+},
+{
+"x": "3fff71424f4c4cb7",
+"y": "3ffcc278b49dae58",
+"hypot": "40054e46f4292757"
+},
+{
+"x": "3ff34f47d77f189c",
+"y": "3ff01ac4d945e9a7",
+"hypot": "3ff924ddc2ab1654"
+},
+{
+"x": "3ff399aab8982864",
+"y": "3ff07201a677f0f8",
+"hypot": "3ff995e55423ae55"
+},
+{
+"x": "3ff7298f1a51bc0b",
+"y": "3ff41c8fffd94fea",
+"hypot": "3ffeacdb6f3db26b"
+},
+{
+"x": "3ff317a7c856a694",
+"y": "3ffe46e4e5d78540",
+"hypot": "4001e5a2afab553d"
+},
+{
+"x": "3ff1b958062eea84",
+"y": "3ffbfb43196ce352",
+"hypot": "40008fb018b1ec19"
+},
+{
+"x": "3ff4dea02d012798",
+"y": "3ff7886b14295123",
+"hypot": "3fff7428b52f2508"
+},
+{
+"x": "3ff39a5309299a66",
+"y": "3ff7905a9133be6e",
+"hypot": "3ffea6d69b853a0a"
+},
+{
+"x": "3ff8d3a367ec6231",
+"y": "3ff255ee2f98615b",
+"hypot": "3ffedd156261d89a"
+},
+{
+"x": "3ffeaa9a732ed5a6",
+"y": "3ff78d332720b830",
+"hypot": "40035552e23cba59"
+},
+{
+"x": "3ff9224c6ccfe2d8",
+"y": "3ffc91598afdcda4",
+"hypot": "400306742f267d6e"
+},
+{
+"x": "3ffc9d738e16cb10",
+"y": "3ff54374763c622f",
+"hypot": "4001d343111c6ba3"
+},
+{
+"x": "3ff1b8ddf4b6fef6",
+"y": "3ff9896d74b660fd",
+"hypot": "3fff1574fc0c9744"
+},
+{
+"x": "3ffb492e1014737f",
+"y": "3ffdd3e36b8e6ae4",
+"hypot": "40043671f43d4ea2"
+},
+{
+"x": "3ffb1779a70a7c2d",
+"y": "3ff153e94a3245ec",
+"hypot": "4000145fa1e6aa10"
+},
+{
+"x": "3ffe539fa8450b25",
+"y": "3fff2b53a308a3ec",
+"hypot": "4005be7ef4389ea9"
+},
+{
+"x": "3ff898adf7d62b8e",
+"y": "3ff1e7d29ad6f6b7",
+"hypot": "3ffe6c6d747b1a9f"
+},
+{
+"x": "3ffec7754eb49ec7",
+"y": "3ffa669e4a45ec4d",
+"hypot": "4004467dac6c69ac"
+},
+{
+"x": "3ffa65233621b8e2",
+"y": "3ffb9473a5cfb1ac",
+"hypot": "4003166eb243a309"
+},
+{
+"x": "3ff852525c00ecfe",
+"y": "3ffbc3adb1933eaa",
+"hypot": "40027491703f5c86"
+},
+{
+"x": "3ffc623e3427ede4",
+"y": "3ff84782afacb15b",
+"hypot": "4002acf9662977c7"
+},
+{
+"x": "3fff1f2accd7db78",
+"y": "3ff81bcf7e9d238e",
+"hypot": "4003af05ce2e046f"
+},
+{
+"x": "3ffc527ce96ba982",
+"y": "3ffeb7066a3568d8",
+"hypot": "4004e3d20f53ccda"
+},
+{
+"x": "3ff4f9484ee2c036",
+"y": "3ffb4fec253fc7a9",
+"hypot": "400137d6bf444992"
+},
+{
+"x": "3ff29c01601dcb20",
+"y": "3ffdbd4a369603fb",
+"hypot": "40018a7cee230692"
+},
+{
+"x": "3ff6c383db43becd",
+"y": "3ff757fac65bf60b",
+"hypot": "40004d7ee324ecfc"
+},
+{
+"x": "3ff0854a5ffb51d4",
+"y": "3ff7615bec146ba1",
+"hypot": "3ffca0cec2278dc6"
+},
+{
+"x": "3ffa9e840a9e79a6",
+"y": "3ff76164fe37366c",
+"hypot": "4001b6ef9417e424"
+},
+{
+"x": "3ffc46c40cbeefac",
+"y": "3ff8bea8c7bd0dea",
+"hypot": "4002c9907cc084ee"
+},
+{
+"x": "3ffec1f48bb9573e",
+"y": "3ffcf1a0e7d14f64",
+"hypot": "40051e0e56d91c5a"
+},
+{
+"x": "3ffcf148c97550e5",
+"y": "3ffe36313ffbaa79",
+"hypot": "4004eb427bfc10b4"
+},
+{
+"x": "3ff8c8500c189b68",
+"y": "3ffec0014cbd6cb4",
+"hypot": "4003bf2a34cbf201"
+},
+{
+"x": "3ff35f5318775734",
+"y": "3ff4254cedd862b8",
+"hypot": "3ffbf2e761c98d21"
+},
+{
+"x": "3ffb7f2385889488",
+"y": "3ff4414f8571297c",
+"hypot": "4001136919c0eb83"
+},
+{
+"x": "3ff6ba82158188fe",
+"y": "3fff08fe18954e12",
+"hypot": "40033bde76ed66c8"
+},
+{
+"x": "3ff3a42998601cd6",
+"y": "3ff1af49189fbe83",
+"hypot": "3ffa6dff8cdd4e8b"
+},
+{
+"x": "3ffd8da50053f4a0",
+"y": "3ff2d79573acd238",
+"hypot": "400186414bad4da9"
+},
+{
+"x": "3ff3fc2cf458afa2",
+"y": "3ffb3df8151b9474",
+"hypot": "4000e4ae97358415"
+},
+{
+"x": "3ff274efce79c7a8",
+"y": "3ff3e5ec4eb4ff5e",
+"hypot": "3ffb23e212b3d246"
+},
+{
+"x": "3ff825f9a52d528c",
+"y": "3ff513e214dc7a1c",
+"hypot": "400006d0b41c89b9"
+},
+{
+"x": "3ff7328ed64bda1a",
+"y": "3ff19a681670307c",
+"hypot": "3ffd1eceff3540ee"
+},
+{
+"x": "3ffbc6cb78c592c8",
+"y": "3ffb27dab52cbeae",
+"hypot": "40036c36ff628ea2"
+},
+{
+"x": "3ff639ad8ff56dae",
+"y": "3ff0778c1a572f8f",
+"hypot": "3ffba9310c0cdfef"
+},
+{
+"x": "3ffb80c9f685d660",
+"y": "3ffd34fd3ba37001",
+"hypot": "40040f20413b35b3"
+},
+{
+"x": "3ffcac1a9736610e",
+"y": "3ff46534d62d1dd6",
+"hypot": "400197d5c68b09f5"
+},
+{
+"x": "3ff5ceac16724173",
+"y": "3fff18627d75fcce",
+"hypot": "4002fd6dbc06c41e"
+},
+{
+"x": "3ffd66ef3dd2171a",
+"y": "3ffc1d3587b16018",
+"hypot": "400457137585fe3c"
+},
+{
+"x": "3ff8578be7256f70",
+"y": "3ffefb8692cf7af3",
+"hypot": "4003b3580ab0b77c"
+},
+{
+"x": "3ff73b640f0e5225",
+"y": "3ff775a0e147ced9",
+"hypot": "40008214a5ff0d74"
+},
+{
+"x": "3ffef666af30405e",
+"y": "3ff50dd24e3fd1b4",
+"hypot": "4002b8a6a11cb352"
+},
+{
+"x": "3ff63fcdd4594336",
+"y": "3ff9075fb7736aa8",
+"hypot": "4000be82331ea0c7"
+},
+{
+"x": "3fff51dc254bfa14",
+"y": "3ffc69b9fcf907f5",
+"hypot": "400524ca331ea023"
+},
+{
+"x": "3ffcc6436e220d48",
+"y": "3ff3a3245c43d456",
+"hypot": "40016b1776950ed8"
+},
+{
+"x": "3ffd749faedbfd81",
+"y": "3ff293230374f682",
+"hypot": "4001695ce04bfab1"
+},
+{
+"x": "3ff9c196de22fc8c",
+"y": "3ffef982fd59c935",
+"hypot": "4004245e87a565c3"
+},
+{
+"x": "3ff6004301904fe6",
+"y": "3ff416981f419e48",
+"hypot": "3ffdcad65b865646"
+},
+{
+"x": "3ffeb5d125d0b1a2",
+"y": "3ff1f3f30aeae35e",
+"hypot": "4001c952186482c7"
+},
+{
+"x": "3ff0d1091f8e3818",
+"y": "3ff2b5865616629b",
+"hypot": "3ff927f1ac53b234"
+},
+{
+"x": "3ff4ed6e505580e5",
+"y": "3ff3a46bf430ddee",
+"hypot": "3ffcb3973f6a433e"
+},
+{
+"x": "3ffbd993c1582fc0",
+"y": "3ff5492707f86770",
+"hypot": "400186c312d58f67"
+},
+{
+"x": "3ff055c59774459e",
+"y": "3ff4e5e123f49d45",
+"hypot": "3ffa86518c118290"
+},
+{
+"x": "3ff14aa171c2689c",
+"y": "3ffe72349a1853a0",
+"hypot": "400181c29c42bdfa"
+},
+{
+"x": "3ffd0890c1e1e94c",
+"y": "3ff49b4b22693b47",
+"hypot": "4001cd2f6e927895"
+},
+{
+"x": "3ffbde0eba9525be",
+"y": "3ff2a9036637b72c",
+"hypot": "4000c4dc7e8bffef"
+},
+{
+"x": "3ff666b09418dee4",
+"y": "3ff303ab5c4f579c",
+"hypot": "3ffd6206996607b3"
+},
+{
+"x": "3ff2cbfcd81228c8",
+"y": "3ff86b0eeac85574",
+"hypot": "3ffed0a8ee828b19"
+},
+{
+"x": "3ff34f2ca65dd20c",
+"y": "3ff49656ce5cebf0",
+"hypot": "3ffc39bfb8d39c5a"
+},
+{
+"x": "3ff63519d2667336",
+"y": "3ffca818c69b9380",
+"hypot": "4002208be86af7ee"
+},
+{
+"x": "3fff86d09fa0ca5e",
+"y": "3ffb4f2b7b29e434",
+"hypot": "4004dae0fc6c6701"
+},
+{
+"x": "3ff8c4eb2a259b95",
+"y": "3ffa63c33bdc4a39",
+"hypot": "400218b2c9da2384"
+},
+{
+"x": "3ff9ab6c691a02ac",
+"y": "3ffd5e932565badd",
+"hypot": "400380cf256281fe"
+},
+{
+"x": "3ff322114c3ff6c6",
+"y": "3ff5d9f16d313cae",
+"hypot": "3ffd0b458d151113"
+},
+{
+"x": "3ff7cdc05df5b438",
+"y": "3ff26ba18bde5922",
+"hypot": "3ffe1941bee2c37e"
+},
+{
+"x": "3ffb8db7d678d53e",
+"y": "3ffb9214294a7250",
+"hypot": "40037d461c4ec3d5"
+},
+{
+"x": "3ff1e3b8f91615f9",
+"y": "3ff16857dce47b3e",
+"hypot": "3ff8f60f17dd91df"
+},
+{
+"x": "3fff882fab361446",
+"y": "3ff66f8108bfb537",
+"hypot": "4003597bfe54048b"
+},
+{
+"x": "3ff1831184e6cfda",
+"y": "3ff9c26506ddd8b4",
+"hypot": "3fff25f43ca8fca8"
+},
+{
+"x": "3ff198e37e96433b",
+"y": "3ff0133b440a745c",
+"hypot": "3ff7d591d41eb52f"
+},
+{
+"x": "3ff69a448a7121fc",
+"y": "3ffdc881f8595087",
+"hypot": "4002b1c2ac278d6d"
+},
+{
+"x": "3ffc1326bb0e9cd0",
+"y": "3ff854289f8949de",
+"hypot": "40029321ad5bc48d"
+},
+{
+"x": "3ff86e102153fff0",
+"y": "3ff7a4190ebd5980",
+"hypot": "4000ff788712d65b"
+},
+{
+"x": "3ff21fdf6d661448",
+"y": "3ff128a1fddf653e",
+"hypot": "3ff8f5569102cee1"
+},
+{
+"x": "3ff2686005f75ffe",
+"y": "3ff2fffc63acf669",
+"hypot": "3ffa745bbdaa6b12"
+},
+{
+"x": "3ffb020daab6b6be",
+"y": "3ffbc585b9a619a4",
+"hypot": "40035e907a980ada"
+},
+{
+"x": "3ffa7e1ef245fe62",
+"y": "3ff986f322836e54",
+"hypot": "4002651b3c310e61"
+},
+{
+"x": "3ff813522b32a05e",
+"y": "3ff623f33a4ad019",
+"hypot": "40005aa6a2f01254"
+},
+{
+"x": "3ff767cad36cd48a",
+"y": "3ff7b17a94cb08d6",
+"hypot": "4000a6f7fc3fc5b6"
+},
+{
+"x": "3ff1a71075bdc5aa",
+"y": "3ff148faf1179dcc",
+"hypot": "3ff8b4be93baa3c4"
+},
+{
+"x": "3ffac2361093845a",
+"y": "3ff667d46a570e46",
+"hypot": "4001733ee5974fe2"
+},
+{
+"x": "3ff08f120701d0b8",
+"y": "3ff5f45deec8be4e",
+"hypot": "3ffb7fc2f3969253"
+},
+{
+"x": "3ff6f2e45f34f76a",
+"y": "3ffd06f56bad4c00",
+"hypot": "4002806374225ef4"
+},
+{
+"x": "3fff6c23ae755270",
+"y": "3ff42f54b3b531d8",
+"hypot": "4002ac6a5981ed62"
+},
+{
+"x": "3ffb07d80db37244",
+"y": "3fff41f307af5ca4",
+"hypot": "4004a9812a468824"
+},
+{
+"x": "3ff0869e80e387ce",
+"y": "3ff205582074bf80",
+"hypot": "3ff8737ac03543dd"
+},
+{
+"x": "3ff42c38eff75ba8",
+"y": "3ff59ac40bf7f458",
+"hypot": "3ffd8ef0585e2ab5"
+},
+{
+"x": "3ff8aa350e55f326",
+"y": "3ffb420a27119b88",
+"hypot": "400261603d20b6e0"
+},
+{
+"x": "3ff1651f285bf7c8",
+"y": "3ff4dbaa96247104",
+"hypot": "3ffb28dd674d7341"
+},
+{
+"x": "3ff6abc414d5095c",
+"y": "3ffde4d8f137f191",
+"hypot": "4002c2565727134f"
+},
+{
+"x": "3ffca22014e1578d",
+"y": "3ffc98186f46ee92",
+"hypot": "40043ba2eda7a567"
+},
+{
+"x": "3fffcd350649332a",
+"y": "3ff919efc27992e1",
+"hypot": "400441d813deaca6"
+},
+{
+"x": "3ff12f24298ebbd1",
+"y": "3ffd74d14e011f35",
+"hypot": "40010d19777254ab"
+},
+{
+"x": "3ffb0b8ef9d9625c",
+"y": "3ffbe86852a008a2",
+"hypot": "40036e63d2e942bb"
+},
+{
+"x": "3ff7d9da2924aca4",
+"y": "3ffe5f49f34c27a0",
+"hypot": "40034f16fe9656f3"
+},
+{
+"x": "3ff42637dc787b14",
+"y": "3ffd1a4f572b4a23",
+"hypot": "4001b2d91413eeea"
+},
+{
+"x": "3ff4e0c2f0b20489",
+"y": "3ff16bb1fdb5bf4a",
+"hypot": "3ffb30fcfd6a3a8e"
+},
+{
+"x": "3ff69510fce6d107",
+"y": "3ffa9c1b587f5716",
+"hypot": "40017341b32e0c2e"
+},
+{
+"x": "3ff0b69c1d532fb8",
+"y": "3ffce4bf2aded4b2",
+"hypot": "4000b08a084027ff"
+},
+{
+"x": "3ff2d21db940f8be",
+"y": "3ffa3ccfe2e6f5d1",
+"hypot": "400025179f5b44c0"
+},
+{
+"x": "3ff49a75a956df5a",
+"y": "3ffdbb9a534bf596",
+"hypot": "4002163cf880b276"
+},
+{
+"x": "3ff2bb14b3492cd7",
+"y": "3ff9252d0975d58e",
+"hypot": "3fff5ad507c162d0"
+},
+{
+"x": "3ff71614eb3770d0",
+"y": "3ff2c883bd1bbb3b",
+"hypot": "3ffdc31cdae7ddf9"
+},
+{
+"x": "3ffe3d0058ec8742",
+"y": "3ffc23f6acf854ac",
+"hypot": "4004a740dd855023"
+},
+{
+"x": "3ff8b177194c48ee",
+"y": "3ff766d8b2fb7aaa",
+"hypot": "400102a0f203e712"
+},
+{
+"x": "3ffee8f4d4194e86",
+"y": "3ffb45ecef832aed",
+"hypot": "40049c69e2916699"
+},
+{
+"x": "3ff0f0feccca6339",
+"y": "3fff85b721b678ee",
+"hypot": "4001e4a94f76a4eb"
+},
+{
+"x": "3fffe162ebcf96fc",
+"y": "3ff32ee2d1d937b7",
+"hypot": "40029a7bffd5a884"
+},
+{
+"x": "3fff2b66699f552e",
+"y": "3ff7dc1d1bffe357",
+"hypot": "4003a06feece93d6"
+},
+{
+"x": "3ffb50c19c69780f",
+"y": "3ff156c68ec1b454",
+"hypot": "40002d4c1465e7d4"
+},
+{
+"x": "3ff0310f82e6057c",
+"y": "3ff043158d9bcbba",
+"hypot": "3ff6f2c2640e3021"
+},
+{
+"x": "3ff7e01d026c1582",
+"y": "3ff12ec4858d0a34",
+"hypot": "3ffd6a69275b9706"
+},
+{
+"x": "3ff39f1341285746",
+"y": "3ffc348560cf68b0",
+"hypot": "40012dee7b18227c"
+},
+{
+"x": "3fff24f7b5c6bcab",
+"y": "3ffc2ebf4c6a8d26",
+"hypot": "4005005afd2ca7e6"
+},
+{
+"x": "3ff2e5e6ac550962",
+"y": "3ff3a1f56704d9d5",
+"hypot": "3ffb4011cf335308"
+},
+{
+"x": "3ff43f84373955b2",
+"y": "3ffd8d09f8d559a4",
+"hypot": "4001e94418e135ef"
+},
+{
+"x": "3ff747b7fb45099e",
+"y": "3fff963e3bd2b008",
+"hypot": "40039e969ce6f015"
+},
+{
+"x": "3ff90b9c2aaf68d4",
+"y": "3ff39d8334429705",
+"hypot": "3fffcff9a2c536b0"
+},
+{
+"x": "3ff5c23f61df7bf6",
+"y": "3ff03a411c1b79ae",
+"hypot": "3ffb24c6a4f14b59"
+},
+{
+"x": "3ff3ebc19bb0f7a4",
+"y": "3fff11dcf15f5dc9",
+"hypot": "4002742db51796a6"
+},
+{
+"x": "3ff5d489395fb5e0",
+"y": "3ff3fba08dbd92f0",
+"hypot": "3ffd985e9dce1e1b"
+},
+{
+"x": "3fff2ee7889e6a45",
+"y": "3ff524846e9081d2",
+"hypot": "4002d6660002c064"
+},
+{
+"x": "3ff8cd7afff46d82",
+"y": "3fff45473b4f79f9",
+"hypot": "4003f4d3441673f6"
+},
+{
+"x": "3ff3b7d7c240d0b2",
+"y": "3ffd78e5c90a80a6",
+"hypot": "4001bae4984524cd"
+},
+{
+"x": "3ffabbf601e35cf8",
+"y": "3ff84e1c56a8e73a",
+"hypot": "400210c8649b058a"
+},
+{
+"x": "3ffbe617634bb7f7",
+"y": "3ffe105d1cbbd3b0",
+"hypot": "400481d8479a5b21"
+},
+{
+"x": "3ff801663a909990",
+"y": "3ffec5c1307ce9a6",
+"hypot": "4003839f326e8afe"
+},
+{
+"x": "3ff478f492c1d376",
+"y": "3ffecbeaac67e67c",
+"hypot": "40027d7dbeed6dd3"
+},
+{
+"x": "3fff5b0a133cdf0e",
+"y": "3ff3f729bf0d46f8",
+"hypot": "40029614ccde8a92"
+},
+{
+"x": "3ff866d100c1ba24",
+"y": "3ff4d61fb6b4f100",
+"hypot": "40000b2d2a956c2a"
+},
+{
+"x": "3ffc70af4c020eea",
+"y": "3ffd6a3c0e035fea",
+"hypot": "40047531a9271efd"
+},
+{
+"x": "3ff8188eeb13f7cb",
+"y": "3ff63f5c9492f5cf",
+"hypot": "400065dd3c50ac4a"
+},
+{
+"x": "3ff49aed0589238e",
+"y": "3ff859ebc9bed87c",
+"hypot": "3fffe62ff0dadcf0"
+},
+{
+"x": "3ff61e0a09e7b247",
+"y": "3ffbb21ee7462464",
+"hypot": "4001b8c0b0338c28"
+},
+{
+"x": "3ff469b44328d79a",
+"y": "3ff1932e4cee4433",
+"hypot": "3ffaefb1f89802f0"
+},
+{
+"x": "3ff4f3d3617f22ca",
+"y": "3ff97dc69c82df5e",
+"hypot": "40007fa29ac539af"
+},
+{
+"x": "3ff70f4449904120",
+"y": "3ffac2400c0a1658",
+"hypot": "4001a9765a4a1bd8"
+},
+{
+"x": "3ff249fcaf212319",
+"y": "3fff6183496da6c0",
+"hypot": "400229260b678f39"
+},
+{
+"x": "3ff976eb29d4a0e8",
+"y": "3ff59c89734e1636",
+"hypot": "4000b314b17f5eb9"
+},
+{
+"x": "3ffab85552790ecd",
+"y": "3ff8dfeff5f5262e",
+"hypot": "400240d08a5dbcfa"
+},
+{
+"x": "3ff0c11c07ada5af",
+"y": "3ff537b30d11975e",
+"hypot": "3ffb08f83114d77d"
+},
+{
+"x": "3ff3c293c4a23894",
+"y": "3fff7a534ce0a734",
+"hypot": "40029540ae8766d9"
+},
+{
+"x": "3ff6cffaefdf6362",
+"y": "3ff58a8f13e2b5e4",
+"hypot": "3fff602b1abc31d5"
+},
+{
+"x": "3ff1e929b770336f",
+"y": "3ff9b5e4e611277f",
+"hypot": "3fff55895fe56a8a"
+},
+{
+"x": "3ff80dbb55453e64",
+"y": "3ffbdc49b18cd6a0",
+"hypot": "40026759069870da"
+},
+{
+"x": "3ffbd248ee192ff2",
+"y": "3ff94cefebd75322",
+"hypot": "4002cd76376b2652"
+},
+{
+"x": "3ff6bc7bbba50ace",
+"y": "3ff3f42d9e36ab6e",
+"hypot": "3ffe4020a3a90c82"
+},
+{
+"x": "3ffc70d0183bad88",
+"y": "3ffc3897d5e4a2d4",
+"hypot": "400408795702020a"
+},
+{
+"x": "3ffffc3b2b659fac",
+"y": "3ff672555d07fb70",
+"hypot": "400389afc7f86ada"
+},
+{
+"x": "3ff2d7f3054cbfae",
+"y": "3fff6f07c041de2d",
+"hypot": "400253163b70b9bb"
+},
+{
+"x": "3ffa150f74781e3a",
+"y": "3ffadd3afa4b6f48",
+"hypot": "4002b8b02086b5ff"
+},
+{
+"x": "3ff9d1eb3cd02735",
+"y": "3ff9f5f0a6d941ee",
+"hypot": "40024eabd24e9918"
+},
+{
+"x": "3ffd2eacfd372d2c",
+"y": "3ffbc5aa35c4a160",
+"hypot": "400424823eb0569b"
+},
+{
+"x": "3ffa9dcd7b4f7f82",
+"y": "3ff885316a868a36",
+"hypot": "40021840aec97407"
+},
+{
+"x": "3ff1c4e80fb367ec",
+"y": "3ff5bd98eef6b224",
+"hypot": "3ffc14133e3ecdb2"
+},
+{
+"x": "3ff43b1718d9bfce",
+"y": "3ffd057e1f4320cf",
+"hypot": "4001b041057c0d98"
+},
+{
+"x": "3ff384e5c0d841d3",
+"y": "3ff6c99d3c5ba042",
+"hypot": "3ffe0125f63645cd"
+},
+{
+"x": "3ffed86287e85066",
+"y": "3ff3aa4e1fe8af61",
+"hypot": "40024a564c2aa034"
+},
+{
+"x": "3ff842b05d089d70",
+"y": "3ff036b9d610a4f2",
+"hypot": "3ffd2e04d764fba7"
+},
+{
+"x": "3ff1a373bedaf3ec",
+"y": "3ffc5023672855ba",
+"hypot": "4000adcd29d96be1"
+},
+{
+"x": "3ff2ba6cb14657c8",
+"y": "3ffd9e3aac3fd429",
+"hypot": "40018570c5c680a8"
+},
+{
+"x": "3ff6c8498ecfc496",
+"y": "3ff4e9159ab8c40e",
+"hypot": "3ffeec81df68a68b"
+},
+{
+"x": "3ff70bf5c2ac0790",
+"y": "3ff4b02b259340e4",
+"hypot": "3ffef85cc1b5be8e"
+},
+{
+"x": "3ff42a15fc70856c",
+"y": "3ff8f09a31617931",
+"hypot": "40000930276d7027"
+},
+{
+"x": "3ff8bb6a03f43076",
+"y": "3ffa863c5e41e566",
+"hypot": "4002220a00fe7974"
+},
+{
+"x": "3ffc2d293662878b",
+"y": "3ffcb54d8a6d64df",
+"hypot": "40041cd55e542342"
+},
+{
+"x": "3ff96b758dfd2a56",
+"y": "3ff2e8ced8ca8f6f",
+"hypot": "3fffae83bd9145b4"
+},
+{
+"x": "3ffdd8c5955a6365",
+"y": "3ff4af0951332df5",
+"hypot": "40022815f33a4e68"
+},
+{
+"x": "3ff9449140acfc86",
+"y": "3ff2607baa35108a",
+"hypot": "3fff3e685c2a3ec1"
+},
+{
+"x": "3ffb7a713f68c600",
+"y": "3ff3a9c005c55cb6",
+"hypot": "4000e4fc71cdf294"
+},
+{
+"x": "3ff52cdf314c6d0c",
+"y": "3ff45a54c8b5f242",
+"hypot": "3ffd5edea96850f3"
+},
+{
+"x": "3ff91a96e6e99233",
+"y": "3ff9dacf2080a909",
+"hypot": "400204bedc0fbf46"
+},
+{
+"x": "3ffa30b4de6483e4",
+"y": "3ff700fa88d4ee68",
+"hypot": "40016ddee3626a55"
+},
+{
+"x": "3ffdec1b419295ed",
+"y": "3ffd22966512acb7",
+"hypot": "4004e1bd85abbf6c"
+},
+{
+"x": "3ffd5585fb5dc23c",
+"y": "3fff666186ba6b50",
+"hypot": "40057c318291d13f"
+},
+{
+"x": "3ffe43521173136f",
+"y": "3ff310873eb739ae",
+"hypot": "4001e2394af18ce9"
+},
+{
+"x": "3ffcd6c53b944db8",
+"y": "3ffcef3c7b0c3c13",
+"hypot": "40046d106d49fd1c"
+},
+{
+"x": "3ffdcac304495e8e",
+"y": "3ffe97e04ece9442",
+"hypot": "400559ef59dca764"
+},
+{
+"x": "3ffed0f089484fb0",
+"y": "3fffa9b150c5e4cc",
+"hypot": "40061779c6c42660"
+},
+{
+"x": "3ff4598c9967cdf4",
+"y": "3ffb96d3d492d168",
+"hypot": "40012422b41a68ff"
+},
+{
+"x": "3ffc3143fcc5c86d",
+"y": "3ff28b90ffbca2dc",
+"hypot": "4000df624754e3e7"
+},
+{
+"x": "3ffef3df3f76405c",
+"y": "3ffe0251a49698fa",
+"hypot": "40058e4859f38e31"
+},
+{
+"x": "3ff50c0267531670",
+"y": "3ff7747b3a037926",
+"hypot": "3fff837e2df2209f"
+},
+{
+"x": "3ff1792bc5b175da",
+"y": "3ff2f41bacdb8bf6",
+"hypot": "3ff9c768f2bcf3ec"
+},
+{
+"x": "3ff4837e4fe971ad",
+"y": "3ffd6f3725278054",
+"hypot": "4001f05237148be8"
+},
+{
+"x": "3ff2e02223dd7d12",
+"y": "3ff4973562b28ec0",
+"hypot": "3ffbeee27ce08283"
+},
+{
+"x": "3fff5575096e9aca",
+"y": "3ffb6d72a740bb12",
+"hypot": "4004d23576dec7ab"
+},
+{
+"x": "3ff8f705d4f4747d",
+"y": "3ff4bdd0163c375c",
+"hypot": "40003a7e7caca8f4"
+},
+{
+"x": "3ffc89fc871afe62",
+"y": "3ff559f40717ae4f",
+"hypot": "4001d22f0abfdb5b"
+},
+{
+"x": "3ff4ac5e1eaedfa9",
+"y": "3ffeecc768439fb6",
+"hypot": "4002996bf08b69ab"
+},
+{
+"x": "3ff62c4877eb8c44",
+"y": "3ff66513c223fd80",
+"hypot": "3fff83bc68105844"
+},
+{
+"x": "3ff56ad67756d076",
+"y": "3fffb477a651dbdc",
+"hypot": "400321694fc4c207"
+},
+{
+"x": "3ffb5d53f17282b5",
+"y": "3ffa12e4ceec4ade",
+"hypot": "4002e619770c4bd0"
+},
+{
+"x": "3ff89806dfeb245c",
+"y": "3ff5242b823c5440",
+"hypot": "400037403e3953ca"
+},
+{
+"x": "3ff75c91c10e6dab",
+"y": "3ff2a27a8a539ba4",
+"hypot": "3ffde2246aeda91a"
+},
+{
+"x": "3ff9bf07ce6c15a0",
+"y": "3ff9563d9a1443f7",
+"hypot": "40020fa977ac280f"
+},
+{
+"x": "3ffa55b8cc829a12",
+"y": "3ffc04100ea48053",
+"hypot": "4003399e3978a9c2"
+},
+{
+"x": "3ffa78d8bf3e60a3",
+"y": "3ff3329cf7419afd",
+"hypot": "400059a987ca991a"
+},
+{
+"x": "3ff1626574203d08",
+"y": "3ffbb4ebafae40ef",
+"hypot": "40005ac05e97da5e"
+},
+{
+"x": "3ff6cc3c88e63d14",
+"y": "3ff8bdb0b3b78470",
+"hypot": "4000d24fd796cd34"
+},
+{
+"x": "3fffe9219d238f20",
+"y": "3ffbd492140c4d40",
+"hypot": "40052bbcc476089d"
+},
+{
+"x": "3ff680a92eef6b3a",
+"y": "3ff85ac73694d0d2",
+"hypot": "40009456ec3d1389"
+},
+{
+"x": "3ff0455f1e9c1ba4",
+"y": "3ff6828264b43112",
+"hypot": "3ffbc6553a44cc12"
+},
+{
+"x": "3ffa216183ab952c",
+"y": "3ff1f7401a268448",
+"hypot": "3fffb5f0307a7d9b"
+},
+{
+"x": "3ffe8e53322b83cc",
+"y": "3ffafa44152a4c77",
+"hypot": "40046167c9fa31cd"
+},
+{
+"x": "3ff68e320084441a",
+"y": "3ff0860e3026c8de",
+"hypot": "3ffbf5d785e0cce9"
+},
+{
+"x": "3fff4b43f819f60a",
+"y": "3ff5c436dc419002",
+"hypot": "40030f4aa82458bf"
+},
+{
+"x": "3ff9caa5adf1a983",
+"y": "3ffacb70e23684c2",
+"hypot": "4002986ec8f9264c"
+},
+{
+"x": "3ff5af9507b39940",
+"y": "3ffad97edb0e7d0a",
+"hypot": "400141b85b7e29a2"
+},
+{
+"x": "3ffd031ed2bb7c7e",
+"y": "3ff182733ff3d486",
+"hypot": "4000f1778841d2f4"
+},
+{
+"x": "3fff15469d962c04",
+"y": "3ff2f2b629b9a9ed",
+"hypot": "4002339aa685bc47"
+},
+{
+"x": "3ff4ee5dc1fd2af2",
+"y": "3ff2254b8db3a960",
+"hypot": "3ffbb39ac643b53a"
+},
+{
+"x": "3ff41ce8b58a17e3",
+"y": "3ff81226d4220a4b",
+"hypot": "3fff5e277d3d6096"
+},
+{
+"x": "3ff0a210147a9ede",
+"y": "3ff2654a7ac8cb6a",
+"hypot": "3ff8cce62cb9a877"
+},
+{
+"x": "3ffa1b53f0b6389c",
+"y": "3ffd595dbec33b48",
+"hypot": "4003a3dc67bb1b8c"
+},
+{
+"x": "3ffd44deb826d794",
+"y": "3ffad5adf0667fe2",
+"hypot": "4003dab4b5037432"
+},
+{
+"x": "3ff8d63c87719762",
+"y": "3ff8a0993b1813cc",
+"hypot": "40017d07460ac73a"
+},
+{
+"x": "3ffb61f99c5196f6",
+"y": "3ff607ab8e91136c",
+"hypot": "4001927d4cc24e0c"
+},
+{
+"x": "3fffef5de3aa5a1b",
+"y": "3ffc4a2ac5b5b8c4",
+"hypot": "400554e5c1e7ddab"
+},
+{
+"x": "3ff0f80dadc562c1",
+"y": "3ffb18938f32884d",
+"hypot": "3ffff88d53d77788"
+},
+{
+"x": "3ff17b0151cd26a4",
+"y": "3ffc6568439f7560",
+"hypot": "4000ac31e9d96535"
+},
+{
+"x": "3ffe068be83319c0",
+"y": "3ffaf4014c4da8b0",
+"hypot": "40042c9de761502e"
+},
+{
+"x": "3ff635a02e4c3a0c",
+"y": "3ff36da01bd79754",
+"hypot": "3ffd8206545a8e77"
+},
+{
+"x": "3fffa3164d9c5d15",
+"y": "3ff24e94b16dbce2",
+"hypot": "400246a7b0fffd6c"
+},
+{
+"x": "3ff0e09e095973d6",
+"y": "3ffdf02701f58f17",
+"hypot": "40012f0fb99dde29"
+},
+{
+"x": "3ffff686ad020d74",
+"y": "3ff042e355d52595",
+"hypot": "4001ee4c799bd2e9"
+},
+{
+"x": "3ff20e2c9d1a953a",
+"y": "3ff9bd9cb28d9428",
+"hypot": "3fff71113358754b"
+},
+{
+"x": "3ffe9eb99b701c69",
+"y": "3ff3326300911a21",
+"hypot": "400211ed57e6e52c"
+},
+{
+"x": "3ff1e1409892f462",
+"y": "3ff559e5067a0d44",
+"hypot": "3ffbd952a03e1fab"
+},
+{
+"x": "3ff282397193f18f",
+"y": "3ff0090e4d7ccac0",
+"hypot": "3ff87d26a6e07d47"
+},
+{
+"x": "3fff9178deb1e3ac",
+"y": "3ff1ace7a29afcb2",
+"hypot": "40021702277a0bb5"
+},
+{
+"x": "3ff2c146585ea3d8",
+"y": "3ff91179b66226ce",
+"hypot": "3fff4ec0353b6de2"
+},
+{
+"x": "3ff92752e1690cef",
+"y": "3ff7ef756a63b07a",
+"hypot": "40015c657f16c83b"
+},
+{
+"x": "3ffe196384c846c8",
+"y": "3ff6b36849ca8710",
+"hypot": "4002d99856fbb14b"
+},
+{
+"x": "3ff090fe686200b0",
+"y": "3ff44be74092f6a7",
+"hypot": "3ffa32f8300ddf2c"
+},
+{
+"x": "3ff352da099d8bba",
+"y": "3ff45c1efdb57beb",
+"hypot": "3ffc11ed540b9273"
+},
+{
+"x": "3ffbc034cdde396a",
+"y": "3ff810454eb6158a",
+"hypot": "40025d8f78cbc596"
+},
+{
+"x": "3ffecd67b254f71b",
+"y": "3ff43d19334fffaa",
+"hypot": "40026d9c47910539"
+},
+{
+"x": "3ffca40e3e80d2cc",
+"y": "3fff549d059ac7f6",
+"hypot": "40053971ce04dd3b"
+},
+{
+"x": "3ff46155ff3ce9ac",
+"y": "3ffe20c44dea4cba",
+"hypot": "40022fd6e9fb616f"
+},
+{
+"x": "3ffe7598c63534fa",
+"y": "3ffb3c6a92987d85",
+"hypot": "40046e21addde15b"
+},
+{
+"x": "3fffa2b1ade7bdc1",
+"y": "3ff7ad6916ce97ee",
+"hypot": "4003c1e73e08630f"
+},
+{
+"x": "3ff58f962119f3cc",
+"y": "3ff90da9239d1ed2",
+"hypot": "400086dd775e3bea"
+},
+{
+"x": "3ff267ce8c8f3885",
+"y": "3ff2a15c2d3eeebc",
+"hypot": "3ffa3052281acaf7"
+},
+{
+"x": "3ff114ced74b220c",
+"y": "3ffee5c4ca2d95bf",
+"hypot": "4001a703299c697a"
+},
+{
+"x": "3ffa538b403c8f34",
+"y": "3ff1ffe159c4797e",
+"hypot": "3fffe430dfba6f0f"
+},
+{
+"x": "3ff8bf8ad19b58ba",
+"y": "3ff3f8d6200e59ae",
+"hypot": "3fffcd43c80107b9"
+},
+{
+"x": "3ffb8973f7d64060",
+"y": "3ffb4fecea1e61b3",
+"hypot": "4003646b2ae478fe"
+},
+{
+"x": "3ffcd53c47beb24a",
+"y": "3ffd5898430c3fc8",
+"hypot": "400491f80f36ec7b"
+},
+{
+"x": "3ffa2ac5d5c9012f",
+"y": "3ff923a923829c3d",
+"hypot": "400224a7b765552a"
+},
+{
+"x": "3ffa0dcbda1ef9e0",
+"y": "3ff38a8ed461cf3a",
+"hypot": "400048af9704d3da"
+},
+{
+"x": "3ff6705c7ad4fe98",
+"y": "3ff6ce117f86d7a2",
+"hypot": "3ffffe48552ffe7f"
+},
+{
+"x": "3fff54014e844e9c",
+"y": "3ff56e0527795974",
+"hypot": "4002fa6afcde714e"
+},
+{
+"x": "3ff2eada229cb2ab",
+"y": "3ff463d130ebce4c",
+"hypot": "3ffbd05f69b1bbfb"
+},
+{
+"x": "3ffeba7072f17ac8",
+"y": "3ff46bb7b750166a",
+"hypot": "4002728cb17e398a"
+},
+{
+"x": "3ffa4f7d01e68dc7",
+"y": "3fff76cbfca93ccb",
+"hypot": "400481eaffe7fb04"
+},
+{
+"x": "3ffa1d3511873f2c",
+"y": "3ff4be33958284d4",
+"hypot": "4000acc9f902adb9"
+},
+{
+"x": "3fff6dc32316b3e2",
+"y": "3ff66fcfacfcbc0f",
+"hypot": "40034ed07e1d5df0"
+},
+{
+"x": "3ff5d452d6f5d23c",
+"y": "3ff56fbf560e4e6f",
+"hypot": "3ffe9849ad3cacf5"
+},
+{
+"x": "3ff508d32b3a0dc6",
+"y": "3ff4f2976be1bfaf",
+"hypot": "3ffdaf965664b217"
+},
+{
+"x": "3ff367f906f7d365",
+"y": "3ffc8b10c319f03a",
+"hypot": "400141f9370d3415"
+},
+{
+"x": "3fffe433d50fee4f",
+"y": "3ff8aa598c3cf826",
+"hypot": "4004288d7b95cd36"
+},
+{
+"x": "3ff8782f8b85f246",
+"y": "3ff7d069689666ba",
+"hypot": "40011288a00dff67"
+},
+{
+"x": "3ff81b965bd38bae",
+"y": "3ffd0c9a59295911",
+"hypot": "4002dff71ba5f8c2"
+},
+{
+"x": "3ff498c047e689f2",
+"y": "3ffe8b190c531e38",
+"hypot": "40026b67cd4ebb44"
+},
+{
+"x": "3ff1ab27991a8caa",
+"y": "3ffd07a44d390373",
+"hypot": "4000fdf2f733e711"
+},
+{
+"x": "3ff52498d470702f",
+"y": "3ff8f4ebf0206700",
+"hypot": "40005ab88977f3b0"
+},
+{
+"x": "3ff9aa8793f1e9dc",
+"y": "3ffaa8c6bc2053f2",
+"hypot": "400280cf0e520829"
+},
+{
+"x": "3ff5cd5556cc38ba",
+"y": "3ffe53f70ce0ada0",
+"hypot": "4002acf69209be47"
+},
+{
+"x": "3ffb62843f7662f0",
+"y": "3ff6e778e4255519",
+"hypot": "4001d9ac5143e95a"
+},
+{
+"x": "3ff7d723c0b32c82",
+"y": "3ff8097e52ecb72f",
+"hypot": "4000ed6927c803e4"
+},
+{
+"x": "3ff3a2780079c7e8",
+"y": "3ffe4b282dd1d595",
+"hypot": "40020cd17cddbff1"
+},
+{
+"x": "3ff45339509f34ea",
+"y": "3ffe36c8a9f32184",
+"hypot": "400235050d698023"
+},
+{
+"x": "3ffdcde2585a5658",
+"y": "3fff29eefbca6279",
+"hypot": "40058f91980f6ee5"
+},
+{
+"x": "3ff6f363f092fb09",
+"y": "3ff6a8876c7f677c",
+"hypot": "400020254f045557"
+},
+{
+"x": "3ffc292d1b056aac",
+"y": "3ff3102df650657c",
+"hypot": "400100d36f0f8b96"
+},
+{
+"x": "3ffe87ba73157aea",
+"y": "3ff08db03598a936",
+"hypot": "40015d52de70a880"
+},
+{
+"x": "3ffa92e47332c55e",
+"y": "3ff18fb699d9a736",
+"hypot": "3fffda3023e0d4a1"
+},
+{
+"x": "3ff0d85569b04ace",
+"y": "3ffd72390d6c7858",
+"hypot": "4000f64393326811"
+},
+{
+"x": "3ffefb367e39a442",
+"y": "3ff27df3a24b7568",
+"hypot": "40020a4a6ba287b2"
+},
+{
+"x": "3ff4806556b3d666",
+"y": "3ff0780998bde848",
+"hypot": "3ffa4c0f58b44c26"
+},
+{
+"x": "3ff2da208c74efbc",
+"y": "3ffafb1598cbad32",
+"hypot": "4000750dfce1e953"
+},
+{
+"x": "3ff4108881b8ce1a",
+"y": "3ff27fad69d52275",
+"hypot": "3ffb4a7596df4072"
+},
+{
+"x": "3ffe0c6567ffbc04",
+"y": "3ff4f2f874bde95b",
+"hypot": "400250aadffb083e"
+},
+{
+"x": "3ff3a30c2f4a0a46",
+"y": "3ff4d639b4efbe8d",
+"hypot": "3ffca1bed5b57a56"
+},
+{
+"x": "3ff065cffda75e6a",
+"y": "3ff5b1be4d67148e",
+"hypot": "3ffb31bb11bd824b"
+},
+{
+"x": "3ff2ca931c562278",
+"y": "3ffe6a9579b61ec5",
+"hypot": "4001e05dcb58e84f"
+},
+{
+"x": "3ff484b03744568d",
+"y": "3ff824ec2cd59f98",
+"hypot": "3fffaf621dd32605"
+},
+{
+"x": "3ff45959d97bf8b5",
+"y": "3ff697a8f2fe1016",
+"hypot": "3ffe67d54ff6dbbe"
+},
+{
+"x": "3ff5cb91d73f4ba4",
+"y": "3fff87f512109bac",
+"hypot": "40032a5326f82583"
+},
+{
+"x": "3ff5a1c42cf978b3",
+"y": "3ffb23465226ee7a",
+"hypot": "40015a2b67d3865c"
+},
+{
+"x": "3ff856b506db5db6",
+"y": "3ff0a1c63c33f8a1",
+"hypot": "3ffd7a8bbb26f476"
+},
+{
+"x": "3ffa89936ff7cb1d",
+"y": "3fff8721379f8d34",
+"hypot": "40049ad769706370"
+},
+{
+"x": "3ff40dd99ff30ae2",
+"y": "3ff23bab56042730",
+"hypot": "3ffb1a8e398b7c0d"
+},
+{
+"x": "3ff61caaa1243cd3",
+"y": "3ff3ef8702aa2306",
+"hypot": "3ffdc59f7d400946"
+},
+{
+"x": "3ffa0c15db28e89a",
+"y": "3ff357d3ada75f38",
+"hypot": "400038d4339d6d8c"
+},
+{
+"x": "3ffedb9a96f91a28",
+"y": "3ffb2f8b3b367a7a",
+"hypot": "4004900143eed6ec"
+},
+{
+"x": "3ffff979092170e1",
+"y": "3ff9f4d83296c9fa",
+"hypot": "4004978685f4523e"
+},
+{
+"x": "3ff6db7f8bcdbe22",
+"y": "3ff5c9f885aea61c",
+"hypot": "3fff942b487f2d71"
+},
+{
+"x": "3ff2b6deac2f2392",
+"y": "3ff51257a07dd05d",
+"hypot": "3ffc2ea9bb0bd594"
+},
+{
+"x": "3ff7df44a0b915bf",
+"y": "3ff202f785d678bb",
+"hypot": "3ffde7a0514fe5d8"
+},
+{
+"x": "3ffa095e3bee3b99",
+"y": "3ff63bf86ca1cd2c",
+"hypot": "40011e832b5bcad4"
+},
+{
+"x": "3ffd79bc9e85d72c",
+"y": "3ff1835dd76201ac",
+"hypot": "40012495ce622f64"
+},
+{
+"x": "3ffa1059e9a13838",
+"y": "3ff59d5260906354",
+"hypot": "4000ee1b4b81e25c"
+},
+{
+"x": "3ff2627f216bad0e",
+"y": "3ff5000c14ab4d08",
+"hypot": "3ffbe92344891d13"
+},
+{
+"x": "3ff17d71f6b37a44",
+"y": "3ffdfed22c36b829",
+"hypot": "40015c6de63b5e0b"
+},
+{
+"x": "3ffa2bebb0f495ba",
+"y": "3ff4bd7b49f3a7ea",
+"hypot": "4000b2540f8f9705"
+},
+{
+"x": "3ff6d97aea9b3566",
+"y": "3ffceb93c727d1a0",
+"hypot": "40026dc4d79e95f4"
+},
+{
+"x": "3ff60f517d69b67c",
+"y": "3ff2d868f1e0a8b2",
+"hypot": "3ffd03754d586467"
+},
+{
+"x": "3ff91ac8c667f55c",
+"y": "3ff6ceeb98bc5892",
+"hypot": "4000f58f2a1cca16"
+},
+{
+"x": "3ff236da4b56e2d5",
+"y": "3ff44dc9b2693b46",
+"hypot": "3ffb46c745834cde"
+},
+{
+"x": "3ffa55a70e9ef737",
+"y": "3ffa6ff6b4d9ff00",
+"hypot": "4002a86133a58574"
+},
+{
+"x": "3ff75264702817b6",
+"y": "3ff0596bcc2af14d",
+"hypot": "3ffc7b51b0e9a535"
+},
+{
+"x": "3ffe3e693b9a969c",
+"y": "3ff02726eb94ca4a",
+"hypot": "400124bf4f075159"
+},
+{
+"x": "3ff45ba4dc982ac8",
+"y": "3ffb31e40d23d674",
+"hypot": "4000fc4054393298"
+},
+{
+"x": "3fffd67629760f04",
+"y": "3ffaa91518808178",
+"hypot": "4004c3598bf719a1"
+},
+{
+"x": "3ffb8b247e9beda5",
+"y": "3ff625fcdf1108aa",
+"hypot": "4001ac078f4e52ec"
+},
+{
+"x": "3ff18e0e0ea2d0fd",
+"y": "3fff9b3a6f6c7f73",
+"hypot": "400213c18caec61e"
+},
+{
+"x": "3ffd225078a9051d",
+"y": "3fffd774bd365464",
+"hypot": "40059453527fb758"
+},
+{
+"x": "3ff480512798ab68",
+"y": "3ff0337e1b68294a",
+"hypot": "3ffa2148d13df07e"
+},
+{
+"x": "3ffb41a2bbabb472",
+"y": "3ff3d3ce411714da",
+"hypot": "4000da416a14a8bf"
+},
+{
+"x": "3ff062d6baa608b9",
+"y": "3ff7a2cf4652486e",
+"hypot": "3ffcc2ac92847a4a"
+},
+{
+"x": "3fffbab7afb2dc9e",
+"y": "3ff2968a8dac984a",
+"hypot": "400262f83d7670c7"
+},
+{
+"x": "3fffc8f2acb9803b",
+"y": "3ff5210aaed988f7",
+"hypot": "40031560a5a76bf0"
+},
+{
+"x": "3ffa20d8394d6f89",
+"y": "3ffb32c1f0ea4832",
+"hypot": "4002db8aad048d62"
+},
+{
+"x": "3ff9c21b2b11fb4a",
+"y": "3ffea386b4b85bde",
+"hypot": "4004038d4d4ab0ce"
+},
+{
+"x": "3ff4b33742c89754",
+"y": "3ff25ab51fe3d596",
+"hypot": "3ffbaa570fe62994"
+},
+{
+"x": "3ff26008c216ae99",
+"y": "3ffea5e7db1a7d42",
+"hypot": "4001de01e36959f1"
+},
+{
+"x": "3fff74b3f4f1d192",
+"y": "3ff1f612beada940",
+"hypot": "40021c7e6f6142be"
+},
+{
+"x": "3ffb4bdfab2c276c",
+"y": "3ffcbb8b137e5ea4",
+"hypot": "4003d0d458b1ed0a"
+},
+{
+"x": "3ff5899a2eb43e8a",
+"y": "3ff042247613d7fc",
+"hypot": "3ffafc336df6e736"
+},
+{
+"x": "3ff5bfe07e2facdc",
+"y": "3ff9b8e1d408b52c",
+"hypot": "4000d7ab06cfc8d6"
+},
+{
+"x": "3ffc0b3101dc6478",
+"y": "3ff182707287dada",
+"hypot": "400087d0c7a081e1"
+},
+{
+"x": "3ffc62055b563516",
+"y": "3ff006376f246be4",
+"hypot": "40004c06f04684c8"
+},
+{
+"x": "3fffab11b981a6ca",
+"y": "3ff39157cd294b6d",
+"hypot": "40029ced1eac8490"
+},
+{
+"x": "3ffd326ce3802e9c",
+"y": "3ff821f6fb6d39f8",
+"hypot": "4002f090540ab15c"
+},
+{
+"x": "3ff9616b2808b164",
+"y": "3fff3a905591e40e",
+"hypot": "40041ef567d6712e"
+},
+{
+"x": "3ffc169903a75d84",
+"y": "3ff7f4573e471cfc",
+"hypot": "40027534d164de3c"
+},
+{
+"x": "3ffbab5de36617de",
+"y": "3ffa8ebcfd11041b",
+"hypot": "40032d18c8d6a830"
+},
+{
+"x": "3ffda27107e00cb5",
+"y": "3ffdb7ce9d28f728",
+"hypot": "4004fbfbc1c1faa9"
+},
+{
+"x": "3ff4ae13223c68c2",
+"y": "3ff006d08646f832",
+"hypot": "3ffa29c8c82b8081"
+},
+{
+"x": "3ff84bde2f7ad32e",
+"y": "3ff24a167d849192",
+"hypot": "3ffe6928c0363ab2"
+},
+{
+"x": "3ffeb37ccfa4f4d0",
+"y": "3ff36f0b1a944678",
+"hypot": "40022ae0547953f0"
+},
+{
+"x": "3ffeaf6aea282d40",
+"y": "3ff093ec555a427c",
+"hypot": "4001704290c70625"
+},
+{
+"x": "3ffd809119e68a3a",
+"y": "3ffad88645953ed5",
+"hypot": "4003f1b4414584aa"
+},
+{
+"x": "3ffd3937119329d0",
+"y": "3ff93881e2ea7788",
+"hypot": "40034d0766f82e7e"
+},
+{
+"x": "3fff91146e1163ea",
+"y": "3ffe663119e60f36",
+"hypot": "4005e98246c03f57"
+},
+{
+"x": "3ffb9d602fbc6b98",
+"y": "3ff2a9eeb49b63f9",
+"hypot": "4000aa48aa85d578"
+},
+{
+"x": "3ffd9863f36b8cb8",
+"y": "3ffcb475adaf9bca",
+"hypot": "40049d58bfa62d7e"
+},
+{
+"x": "3ffd1222c472be64",
+"y": "3ffa4bfebf0d12fc",
+"hypot": "40039998fd94b244"
+},
+{
+"x": "3fff9f20e1ccf6b5",
+"y": "3ffe9873b5015b47",
+"hypot": "400600040c79ad4b"
+},
+{
+"x": "3ff56a30579a8056",
+"y": "3ff20d65da7a1de0",
+"hypot": "3ffc023236258d4f"
+},
+{
+"x": "3ff33dae717e8664",
+"y": "3ff919d407c07724",
+"hypot": "3fffa084a5162989"
+},
+{
+"x": "3ff7678b0e891f22",
+"y": "3ff6e2fa85e74654",
+"hypot": "40005e0de6860c97"
+},
+{
+"x": "3ff47613d5e351fc",
+"y": "3ff624dcdcf86fdd",
+"hypot": "3ffe266273f4a9f9"
+},
+{
+"x": "3ffe74e0c48de954",
+"y": "3ff8eb65624834b1",
+"hypot": "4003ad100954e0c4"
+},
+{
+"x": "3ff79f382a2754a8",
+"y": "3ff1ee25399d8533",
+"hypot": "3ffda7fd306860c5"
+},
+{
+"x": "3ffe90d0e5d57386",
+"y": "3ff108cadda39a30",
+"hypot": "40017ef53a68f874"
+},
+{
+"x": "3ff8f74d2462d5c9",
+"y": "3ff0e07a8155226a",
+"hypot": "3ffe229d283d87af"
+},
+{
+"x": "3ff536c65428d1ac",
+"y": "3ff1b2742264f730",
+"hypot": "3ffba05d091f1b99"
+},
+{
+"x": "3ff7923fbc15c430",
+"y": "3ff00e50889c8e8a",
+"hypot": "3ffc85275e37cd9a"
+},
+{
+"x": "3fffbcc3829de44a",
+"y": "3ff4c2e0756e4573",
+"hypot": "4002f65f2b936132"
+},
+{
+"x": "3ff1b17be8924566",
+"y": "3ffcd62a7caa20a0",
+"hypot": "4000ea7da060ad09"
+},
+{
+"x": "3ff8eace0c21f9b9",
+"y": "3ff57873e21fc65f",
+"hypot": "4000721c744274dd"
+},
+{
+"x": "3ffef625a6e1b8e4",
+"y": "3ffa308132a937fc",
+"hypot": "400446b7aaa88bb2"
+},
+{
+"x": "3ffb7840e4dc0366",
+"y": "3ff79698ca70353e",
+"hypot": "40021a93e29cba56"
+},
+{
+"x": "3ff3a6d848e36f5c",
+"y": "3ff6e7e5f9753872",
+"hypot": "3ffe2e3c19f9a2d0"
+},
+{
+"x": "3ff916c2bbb79f14",
+"y": "3ffe881b4e539d80",
+"hypot": "4003c23ec58eb3d0"
+},
+{
+"x": "3ffe0c039cd855f0",
+"y": "3ff360dc22bbca9a",
+"hypot": "4001e07e9f8a20e2"
+},
+{
+"x": "3fff77f843fe3417",
+"y": "3ffdaab5651314f4",
+"hypot": "40059fc0c832983b"
+},
+{
+"x": "3ff55311f942d577",
+"y": "3ff965b7a672a010",
+"hypot": "400094d0549f97cf"
+},
+{
+"x": "3ffb899842b76498",
+"y": "3ff3463518db9a14",
+"hypot": "4000ce6ae87d3ec4"
+},
+{
+"x": "3ffb4d8318f625bc",
+"y": "3ff166d549d0fbb6",
+"hypot": "4000303cccda9fbf"
+},
+{
+"x": "3ff335f6f49e12d4",
+"y": "3ff8e959fcae5637",
+"hypot": "3fff75623947170a"
+},
+{
+"x": "3ffa1f15aa6454bf",
+"y": "3ff366d595813dee",
+"hypot": "400044ede5ee2de1"
+},
+{
+"x": "3fffeece83cb3a5e",
+"y": "3ff4bb98530083dd",
+"hypot": "40030958bc98df54"
+},
+{
+"x": "3ff0e58777ae41f3",
+"y": "3ffa2e0ce982b4e1",
+"hypot": "3fff28b23bd65953"
+},
+{
+"x": "3ff9a59ee3cbdd58",
+"y": "3ff0d0fe53bd38e8",
+"hypot": "3ffeab22eddd948c"
+},
+{
+"x": "3ffeb83c4eaccd7f",
+"y": "3ff0afc9a437f0bc",
+"hypot": "40017ac5de9628a7"
+},
+{
+"x": "3ffed235dbab45c0",
+"y": "3ffaef47b6ff54de",
+"hypot": "4004774838414f0e"
+},
+{
+"x": "3ffd7953c51e7b7e",
+"y": "3ffe9a276161dbef",
+"hypot": "40053e6d2c171a47"
+},
+{
+"x": "3ff486b2db8eda9e",
+"y": "3fffb88c82bdd32a",
+"hypot": "4002e432357f4e9b"
+},
+{
+"x": "3fff84e25158cb41",
+"y": "3ffeec39d14bd76e",
+"hypot": "400613d8f71a1afc"
+},
+{
+"x": "3ff933154ad4c958",
+"y": "3ff989e7b8c8c159",
+"hypot": "4001f06748ed9df4"
+},
+{
+"x": "3ffbb48ae7508289",
+"y": "3ff24118d4311af1",
+"hypot": "400096d27d04d065"
+},
+{
+"x": "3ffc1998583ac2e0",
+"y": "3ff99380cbd9195e",
+"hypot": "4002ff9441262abe"
+},
+{
+"x": "3ff3819a90802cce",
+"y": "3fffa4cce5e79934",
+"hypot": "40029620360239aa"
+},
+{
+"x": "3ffb463753660d00",
+"y": "3ff3a855da19bfcf",
+"hypot": "4000cf5cfdfbc6fd"
+},
+{
+"x": "3ffe3291bf280e7c",
+"y": "3ff87cf13e20a838",
+"hypot": "4003707a69ff3d01"
+},
+{
+"x": "3ff47d18ca3a2796",
+"y": "3ff346dcf573e626",
+"hypot": "3ffc21a91a82ae67"
+},
+{
+"x": "3ff58a011e96cc32",
+"y": "3ffe3ce75e13ad82",
+"hypot": "40028ffec8e99e22"
+},
+{
+"x": "3ffc1205e0bf45d4",
+"y": "3ff4402ee20d1103",
+"hypot": "40014e6cee333b99"
+},
+{
+"x": "3ff443464e9e0602",
+"y": "3fff4965592b0e58",
+"hypot": "4002a338da8543c0"
+},
+{
+"x": "3ff8641cb3eddb7c",
+"y": "3ffe49ae8dc90266",
+"hypot": "400371a9bebc0609"
+},
+{
+"x": "3ff6926c840a26b6",
+"y": "3ffc35a07f4fa409",
+"hypot": "40021072b220e21e"
+},
+{
+"x": "3ffa4eef62887e2b",
+"y": "3ff47a0d3c45c7f6",
+"hypot": "4000ab45bf91e00f"
+},
+{
+"x": "3ff8687ce6e8a706",
+"y": "3ff3f02cf0b2f423",
+"hypot": "3fff8438e05a9453"
+},
+{
+"x": "3ffb256227415a8c",
+"y": "3ff228555dac2d3e",
+"hypot": "40005456c319e9ca"
+},
+{
+"x": "3ff3d2316d9c04e2",
+"y": "3ff83268107c6cba",
+"hypot": "3fff4760d88bc46e"
+},
+{
+"x": "3ff3ab1f98bc7da0",
+"y": "3ffe1fcce7d2d1eb",
+"hypot": "4001fd019f60b193"
+},
+{
+"x": "3ffdb014d530aeb0",
+"y": "3ffab1e80981e4a9",
+"hypot": "4003f65ea4281730"
+},
+{
+"x": "3ffc2f5dba9431fe",
+"y": "3ffbff35b4962410",
+"hypot": "4003dd0977bf39a6"
+},
+{
+"x": "3ffbc8ac681a2284",
+"y": "3ff0b9722a379fca",
+"hypot": "400036ee437c83ad"
+},
+{
+"x": "3ff1d7756258b10e",
+"y": "3ff2e8bf01eb7e64",
+"hypot": "3ff9ff694f5e8c7e"
+},
+{
+"x": "3ff09088f873816a",
+"y": "3ff541a18748173d",
+"hypot": "3ffaf2cd9bf49a20"
+},
+{
+"x": "3ff468992098684e",
+"y": "3ff8b0a11c19aa80",
+"hypot": "40000434ec8acd27"
+},
+{
+"x": "3ff7639f7e12d6a2",
+"y": "3ffc49301ac7c5a8",
+"hypot": "40025a0b015d68ef"
+},
+{
+"x": "3ff6d2dc3452128e",
+"y": "3ffb83fc1ca50722",
+"hypot": "4001dfef729c9ecb"
+},
+{
+"x": "3ffe2a761f3252e0",
+"y": "3ff20347bcbd3772",
+"hypot": "4001913aea31686c"
+},
+{
+"x": "3ffbf44d22c5e535",
+"y": "3ff36d0f64e1926d",
+"hypot": "4001054ac2e183f7"
+},
+{
+"x": "3ffb27764026bb88",
+"y": "3ffe31f35cb99f06",
+"hypot": "40044df492468f61"
+},
+{
+"x": "3ff5d11bb26f117b",
+"y": "3ffabd8235c11827",
+"hypot": "4001416bb1dc0850"
+},
+{
+"x": "3ffcb178ff8e4dfa",
+"y": "3ff3cfa197822d18",
+"hypot": "40016f1c37f3cca7"
+},
+{
+"x": "3ff6a8f5d202d9ae",
+"y": "3ff3b0d1e357c3fb",
+"hypot": "3ffe051da444678a"
+},
+{
+"x": "3ffae781f49756c1",
+"y": "3ff33662234e6cd8",
+"hypot": "400087ac853e376b"
+},
+{
+"x": "3ffb051a37a67a6e",
+"y": "3ffabb1145b557b6",
+"hypot": "400301066f1a6fbe"
+},
+{
+"x": "3ff2d4d01071bce2",
+"y": "3ff66271dce3e442",
+"hypot": "3ffd408a4462d7db"
+},
+{
+"x": "3ff47287552127f2",
+"y": "3ff195cb1615458c",
+"hypot": "3ffaf81690811119"
+},
+{
+"x": "3ffa7d095eb2c115",
+"y": "3ffa7fb403db3850",
+"hypot": "4002bbdc1e399139"
+},
+{
+"x": "3ff008c7efa35f41",
+"y": "3ff7d158030bee51",
+"hypot": "3ffcb64b60c5310b"
+},
+{
+"x": "3ff9c92a7e663104",
+"y": "3ff433b1309f1542",
+"hypot": "400060e78c66decd"
+},
+{
+"x": "3ff20507d0d0cb7a",
+"y": "3ff9daf5d43b43c1",
+"hypot": "3fff83e13fab5925"
+},
+{
+"x": "3ff8a9ebc2bc4e8f",
+"y": "3fff1ed0c7391ade",
+"hypot": "4003dab5a84db875"
+},
+{
+"x": "3ff9b4bf770dff0e",
+"y": "3ffeda899a3d0eba",
+"hypot": "4004145bbffe0ec8"
+},
+{
+"x": "3ffab7cceab7ab09",
+"y": "3ff80f1b62c50cab",
+"hypot": "4001fa1acaacb362"
+},
+{
+"x": "3ff411f778a74103",
+"y": "3ffe493885d5197c",
+"hypot": "40022a916e768a75"
+},
+{
+"x": "3ffc62657ef23679",
+"y": "3ff47e7372668636",
+"hypot": "4001813b6c6767eb"
+},
+{
+"x": "3ff8ef6ecc39ae30",
+"y": "3ffcc874be217df1",
+"hypot": "40030a7bc8571d7e"
+},
+{
+"x": "3ff5e4869784c2da",
+"y": "3fff53ccc5e1734e",
+"hypot": "40031c0821dbc481"
+},
+{
+"x": "3ff8806aecdbee84",
+"y": "3ff0c1b2cc6357e1",
+"hypot": "3ffdaefee85219db"
+},
+{
+"x": "3ffc970dc6503b5c",
+"y": "3ff5a37019798c48",
+"hypot": "4001ed7f295f515d"
+},
+{
+"x": "3ff6619fadd7be40",
+"y": "3ff4ab3c991e1b3a",
+"hypot": "3ffe7716899a1566"
+},
+{
+"x": "3ffc8ea6175bcfa2",
+"y": "3ffd00691281163c",
+"hypot": "400459c910bfc9dc"
+},
+{
+"x": "3ffa8c5d9c598b3a",
+"y": "3ff6c3f665afce50",
+"hypot": "40017c7c990424f8"
+},
+{
+"x": "3ff60c38bdaf5304",
+"y": "3ff5603c14032747",
+"hypot": "3ffeb5765ceed91e"
+},
+{
+"x": "3ff480c9594f6619",
+"y": "3ffeda74cb286818",
+"hypot": "400285b68a8ec72c"
+},
+{
+"x": "3ffe0e038b050fcc",
+"y": "3ffd014ea139aec8",
+"hypot": "4004e254d2b9fcf3"
+},
+{
+"x": "3ff5bed9f6c4879c",
+"y": "3ff83afef70a926c",
+"hypot": "40004757d47feab0"
+},
+{
+"x": "3ff628576fe24e79",
+"y": "3fff2aedae0381a6",
+"hypot": "40031edd133db764"
+},
+{
+"x": "3ffc0506ee5aa9d4",
+"y": "3ff3e22ac4c4104a",
+"hypot": "40012dc971b2e945"
+},
+{
+"x": "3ff6c31fec19d100",
+"y": "3ffa21be8852aa86",
+"hypot": "400153e0cfd12ef5"
+},
+{
+"x": "3ff03173ce167566",
+"y": "3ff4e0cfd3100816",
+"hypot": "3ffa6c01c0bb41a4"
+},
+{
+"x": "3ff20387c16f8206",
+"y": "3ff8b622748f3e15",
+"hypot": "3ffe948cb9a82634"
+},
+{
+"x": "3ff6892d918842cb",
+"y": "3ffd53e8731971d4",
+"hypot": "40027e3d54d8b7d8"
+},
+{
+"x": "3fff5914d7089828",
+"y": "3ff75cb46e2ef344",
+"hypot": "40038c44686574c9"
+},
+{
+"x": "3ff9c9865b6e6f90",
+"y": "3ff22ef2b017e970",
+"hypot": "3fff8daa39f503ea"
+},
+{
+"x": "3ff78d19c0876d35",
+"y": "3ff8dca9c145bf88",
+"hypot": "40011f76852a1222"
+},
+{
+"x": "3ff2b99bbb428798",
+"y": "3ffd7286554524f8",
+"hypot": "400172c465a5b71a"
+},
+{
+"x": "3ff8746ebb264970",
+"y": "3ffb7e77a597b717",
+"hypot": "400265e92974213b"
+},
+{
+"x": "3ff40a02eeb68257",
+"y": "3ffe2436a96d4ede",
+"hypot": "400218f3a7a16bce"
+},
+{
+"x": "3ff3c02d61d862d0",
+"y": "3ff7a6842bb8712f",
+"hypot": "3ffed0192fe0fda4"
+},
+{
+"x": "3ff26e47f4fb5416",
+"y": "3ff1ae45b7008437",
+"hypot": "3ff98a4bd5594d15"
+},
+{
+"x": "3ffe07dc4b6c5040",
+"y": "3ff94eca6d083050",
+"hypot": "4003a2e040a88f0b"
+},
+{
+"x": "3ffabeaf64be1332",
+"y": "3ff7ce93c96fb6ff",
+"hypot": "4001e725cc9efbc3"
+},
+{
+"x": "3fff9883eedf30e0",
+"y": "3ffde6d00be30e7e",
+"hypot": "4005c037fcbd3733"
+},
+{
+"x": "3ffc44a09a1cf15e",
+"y": "3fff1eb6f0c33454",
+"hypot": "40050563262450d9"
+},
+{
+"x": "3ff91db17e83c744",
+"y": "3ff12113ee1a6d81",
+"hypot": "3ffe66aa11f19e86"
+},
+{
+"x": "3ffe4ccc136948de",
+"y": "3ff38d8cbebd0eb8",
+"hypot": "400207d3ae2b07f1"
+},
+{
+"x": "3ffe88031e54c8b0",
+"y": "3ff41aa73cd4eb26",
+"hypot": "4002472880a37db2"
+},
+{
+"x": "3ff58e48065ffdca",
+"y": "3ff92cf3317dac50",
+"hypot": "4000924f9b3509df"
+},
+{
+"x": "3ff8546260bda063",
+"y": "3ff64a05de35197c",
+"hypot": "40007f7d6b6ce380"
+},
+{
+"x": "3ff29087ef957352",
+"y": "3ff2125e4284b928",
+"hypot": "3ff9e87bb4387853"
+},
+{
+"x": "3ffe62050358e6ca",
+"y": "3ffd27d2d2ab3b18",
+"hypot": "40050df33cb552b0"
+},
+{
+"x": "3ff894f0ef2654f5",
+"y": "3ff2c83d7a0cbd6e",
+"hypot": "3ffeef9d1d366274"
+},
+{
+"x": "3ff59f226e97ccca",
+"y": "3ffcc91f659a4353",
+"hypot": "40020030cb41856d"
+},
+{
+"x": "3ff843bf445273c9",
+"y": "3ffdce521a2397b4",
+"hypot": "4003378ae648fa26"
+},
+{
+"x": "3ff82337b3f9baf8",
+"y": "3ffa709e7afc5a88",
+"hypot": "4001e67df7e4a584"
+},
+{
+"x": "3ff985e5797af7b8",
+"y": "3ff120c316861b30",
+"hypot": "3ffebccb9c46bc03"
+},
+{
+"x": "3ff70790226f64e2",
+"y": "3ff4721c35f72658",
+"hypot": "3ffecbc0f4c9536b"
+},
+{
+"x": "3ffd5a8d671124be",
+"y": "3ff47532822911fc",
+"hypot": "4001e3c20afb7505"
+},
+{
+"x": "3ff84d51bbb89044",
+"y": "3ffe6b0ec2d415e8",
+"hypot": "4003778cc99d9e5c"
+},
+{
+"x": "3ffba768f256f42d",
+"y": "3ff39981057de356",
+"hypot": "4000f296969568b6"
+},
+{
+"x": "3ff85091d3ffd054",
+"y": "3ff822e87d94f21e",
+"hypot": "4001215243f13955"
+},
+{
+"x": "3ff9288c6866c1ea",
+"y": "3ffb8cb234e51de2",
+"hypot": "4002a77d3a074037"
+},
+{
+"x": "3ff5290d22ab74f8",
+"y": "3fffba5b8160f1e8",
+"hypot": "4003118655a97986"
+},
+{
+"x": "3ff67777e2cb4dae",
+"y": "3ff186d9616525e5",
+"hypot": "3ffc7e99d73e1ba6"
+},
+{
+"x": "3ffffe18fc4eee0b",
+"y": "3ffc7c28a84a9275",
+"hypot": "40056b00b7a78293"
+},
+{
+"x": "3ff79386d5055048",
+"y": "3ff06635229f478a",
+"hypot": "3ffcb80ae222c4ac"
+},
+{
+"x": "3fff9c8205dbe29d",
+"y": "3ffa58e22a72737a",
+"hypot": "400493672a595508"
+},
+{
+"x": "3ffdc8bc8dafe4d6",
+"y": "3ffa40b204216d1e",
+"hypot": "4003d9effdb33bd7"
+},
+{
+"x": "3ff19c3364a63c31",
+"y": "3ff41cd6a34f7770",
+"hypot": "3ffabb913029a210"
+},
+{
+"x": "3ff5e52f2e890610",
+"y": "3ffaed4e5596b953",
+"hypot": "40015a4a3794e530"
+},
+{
+"x": "3ff81feb718265fe",
+"y": "3ff407dacfe867d2",
+"hypot": "3fff5b422a3a1431"
+},
+{
+"x": "3ffe042eb8775f7e",
+"y": "3ff4ec9c40fd4581",
+"hypot": "40024b7ad9c50588"
+},
+{
+"x": "3ff14676bb390030",
+"y": "3ffc56f59d0f5d62",
+"hypot": "4000984fe4d992de"
+},
+{
+"x": "3ffebe76d7bab2be",
+"y": "3ff823105feb43e2",
+"hypot": "40038b1fff5351c6"
+},
+{
+"x": "3ff100ed61bf4726",
+"y": "3ffe44061d332c62",
+"hypot": "40015b87c8cb71c6"
+},
+{
+"x": "3ff72214f4c810c1",
+"y": "3ffa5014b511c5d2",
+"hypot": "4001849489d296d4"
+},
+{
+"x": "3ffaae3a7c176eb2",
+"y": "3ff08ff8fe1f14db",
+"hypot": "3fff673d94c72d45"
+},
+{
+"x": "3ff547aac3e7270c",
+"y": "3ff70787158f6616",
+"hypot": "3fff5b196a65685f"
+},
+{
+"x": "3ff5a8698270315c",
+"y": "3fffe85a9c04f6da",
+"hypot": "40034827ba742801"
+},
+{
+"x": "3ff74c4b7479e0f8",
+"y": "3ff697f1d2491713",
+"hypot": "40003a1e877882f9"
+},
+{
+"x": "3ff9e30e110ed3a0",
+"y": "3ff331439c724aae",
+"hypot": "40001cdd41bc6500"
+},
+{
+"x": "3ff075df4ceb9cf2",
+"y": "3ffad3eb38635514",
+"hypot": "3fff799b5c127a2f"
+},
+{
+"x": "3ff316a17ac2db2c",
+"y": "3ff5607c15541d2e",
+"hypot": "3ffca8b4a2b18035"
+},
+{
+"x": "3ff92020c59935bd",
+"y": "3ff3b627ed19fc86",
+"hypot": "3fffef538b1fc828"
+},
+{
+"x": "3ff748357f16ba26",
+"y": "3ff7f428edf24fee",
+"hypot": "4000b3baefeca3a4"
+},
+{
+"x": "3ff857be27971fac",
+"y": "3fff5feb2099043c",
+"hypot": "4003daf84c179afc"
+},
+{
+"x": "3ffdaca14524ae61",
+"y": "3ffe7590e5ce5d8e",
+"hypot": "4005432240ec2c35"
+},
+{
+"x": "3ffc3c13a80ed9ea",
+"y": "3ff729b2391c5bac",
+"hypot": "40024291ba95f058"
+},
+{
+"x": "3ffab085ebeb14ac",
+"y": "3ff7032b4395e1ec",
+"hypot": "40019ecca4c7a666"
+},
+{
+"x": "3ff002c98200f3b4",
+"y": "3ff41b4e4f812d30",
+"hypot": "3ff9b3e1260295ee"
+},
+{
+"x": "3ffa9282482f7004",
+"y": "3fffebe6a0dd266d",
+"hypot": "4004c4584a562127"
+},
+{
+"x": "3ff4d396828ce59a",
+"y": "3ff25f414496c447",
+"hypot": "3ffbc59a0c186225"
+},
+{
+"x": "3ff1fe8cba7364dc",
+"y": "3ffd83dfda19f23a",
+"hypot": "400148b0ba74a572"
+},
+{
+"x": "3ff459edeb73fec2",
+"y": "3ffd4dd53ee157d3",
+"hypot": "4001d6c047d908a8"
+},
+{
+"x": "3ff353d89932e85e",
+"y": "3ff61bd9615ade7e",
+"hypot": "3ffd5da6995ceae9"
+},
+{
+"x": "3ff1e904d060a626",
+"y": "3ff287d92724f85a",
+"hypot": "3ff9c5760e403fbf"
+},
+{
+"x": "3ff1ba4ff096e3a2",
+"y": "3ffd97fbd17b6eaa",
+"hypot": "40013fa6041b9cda"
+},
+{
+"x": "3ff76419b98f2fd2",
+"y": "3ff11612a2f2e246",
+"hypot": "3ffcf783cc5e89ae"
+},
+{
+"x": "3ff46c5704fb8af9",
+"y": "3ff2a3a7ab192cb2",
+"hypot": "3ffba66f213d8385"
+},
+{
+"x": "3ff6267d35c98628",
+"y": "3ff9b25bbb977427",
+"hypot": "4000f68025b562ad"
+},
+{
+"x": "3ff252fd0d1da926",
+"y": "3ffd48a3e052094e",
+"hypot": "400145addd5f7801"
+},
+{
+"x": "3ffee4d4323ae71e",
+"y": "3ffb8ba7b92b08ed",
+"hypot": "4004b20133cb5529"
+},
+{
+"x": "3ffa863c2f761ea1",
+"y": "3ff62b57c458403a",
+"hypot": "400148d6d8286a6f"
+},
+{
+"x": "3ffa0da7bc74f57c",
+"y": "3ff615a5e12bf62f",
+"hypot": "400113ba770cdad0"
+},
+{
+"x": "3ff7a654683ed4d4",
+"y": "3ffd773bdc2c0078",
+"hypot": "4002e432f4c0f152"
+},
+{
+"x": "3ff2fac8d6135e1e",
+"y": "3ff6425a21ebee68",
+"hypot": "3ffd40976fd6d4ca"
+},
+{
+"x": "3ff3b43b4ed0655e",
+"y": "3ff1d2a2f24f188a",
+"hypot": "3ffa919ca88c24fc"
+},
+{
+"x": "3ff1eae30dbf5138",
+"y": "3ff7fbf9e43f0735",
+"hypot": "3ffdf0207203ce77"
+},
+{
+"x": "3ff1805aad7bb554",
+"y": "3ff546b2f40ae6ba",
+"hypot": "3ffb8caa9d4ec1d2"
+},
+{
+"x": "3ff9843bbae80f8e",
+"y": "3ff95c77273ea399",
+"hypot": "4001fcf2a7da6bef"
+},
+{
+"x": "3ff95d1dbab6c47c",
+"y": "3ff2500f07e4cd52",
+"hypot": "3fff48a60756af95"
+},
+{
+"x": "3ff40a355459cbba",
+"y": "3ffa597cd296823a",
+"hypot": "40008d5a5b20f926"
+},
+{
+"x": "3ff514a7f167f091",
+"y": "3ff635b5be216ae6",
+"hypot": "3ffe9f14c8120c4f"
+},
+{
+"x": "3ffc3cb2f9f01f68",
+"y": "3ff7307636b62fa3",
+"hypot": "400244f4bbf0c0e8"
+},
+{
+"x": "3ff94e1fbc4eec83",
+"y": "3fff870739bad686",
+"hypot": "400436a3c78db75c"
+},
+{
+"x": "3ff99dfdc2f55499",
+"y": "3ff53c20a3651c81",
+"hypot": "4000a312168fc920"
+},
+{
+"x": "3ffca25c59feabb4",
+"y": "3ff5a557fdf2200e",
+"hypot": "4001f29499e81368"
+},
+{
+"x": "3ff6f91ec953c2e4",
+"y": "3ffeee5ab89b97e8",
+"hypot": "400343bb52eb5084"
+},
+{
+"x": "3ff531dabf8f813e",
+"y": "3ff399f22ea85457",
+"hypot": "3ffcde8345c61650"
+},
+{
+"x": "3ff97512919280b1",
+"y": "3ffd6b01bf26ed8c",
+"hypot": "400373aa86096f75"
+},
+{
+"x": "3ff819254424b329",
+"y": "3ffbeabd4bef4584",
+"hypot": "4002708bef849dca"
+},
+{
+"x": "3ff519bdecaaa87e",
+"y": "3ffc7d845282e808",
+"hypot": "4001ba0304a4e426"
+},
+{
+"x": "3fffbe393a94c1b6",
+"y": "3ff86004c7c65737",
+"hypot": "400402d3307e580c"
+},
+{
+"x": "3ffc7e049716721c",
+"y": "3fff6f939776f71c",
+"hypot": "4005369caa373665"
+},
+{
+"x": "3ff46fa344f7a298",
+"y": "3ff381198bbb8eda",
+"hypot": "3ffc3ff2d19d106a"
+},
+{
+"x": "3ff57636bc0f5fef",
+"y": "3ffe2dfc076939e8",
+"hypot": "4002842e0d75e5cb"
+},
+{
+"x": "3ff5584553923037",
+"y": "3ffd01f71f2d27d8",
+"hypot": "400201dc0484d8b9"
+},
+{
+"x": "3ffe77fd78c4c032",
+"y": "3ff21f85a2fdad34",
+"hypot": "4001b9c23014e20a"
+},
+{
+"x": "3ff392b9598a0ced",
+"y": "3fff0220622bebe2",
+"hypot": "400255a514382557"
+},
+{
+"x": "3ff8662e1567c232",
+"y": "3ff0a56c8b7bbda8",
+"hypot": "3ffd8961d17dcf15"
+},
+{
+"x": "3ff3c67282013a4a",
+"y": "3ff21bdbc0828f2c",
+"hypot": "3ffad05e5a3e72db"
+},
+{
+"x": "3ff38167bd3e5f8f",
+"y": "3ffa90a035987e14",
+"hypot": "40007a7d41a44c09"
+},
+{
+"x": "3ff73ca80baca450",
+"y": "3ff74db5a02a50ae",
+"hypot": "4000745e6825a518"
+},
+{
+"x": "3ff4865d1f82597f",
+"y": "3ffc5e6485a7c1aa",
+"hypot": "400181ed5d12d810"
+},
+{
+"x": "3ff8311c1bace0b8",
+"y": "3ffb963822791e66",
+"hypot": "40025887808e1bdf"
+},
+{
+"x": "3ffa3598e4a58a0c",
+"y": "3ff1278750da5a41",
+"hypot": "3fff52fdb91bc075"
+},
+{
+"x": "3ffe57244664622c",
+"y": "3ff8a877db997d91",
+"hypot": "40038c644603ba48"
+},
+{
+"x": "3ff8e114daa8c952",
+"y": "3ff2f8d25d13ba92",
+"hypot": "3fff499d2d6035ff"
+},
+{
+"x": "3ffb0f26f23a5f8c",
+"y": "3ffee030ec6076f6",
+"hypot": "4004870995480ac0"
+},
+{
+"x": "3ffe1b5cfb86a6c4",
+"y": "3ff270e8ad053c7c",
+"hypot": "4001a7234b9def42"
+},
+{
+"x": "3ffcb3a908adaf2a",
+"y": "3ff48fa23359c71c",
+"hypot": "4001a73c3bd4a92f"
+},
+{
+"x": "3ff7d4930e473664",
+"y": "3fffb76a94a14b40",
+"hypot": "4003d5f0d68af386"
+},
+{
+"x": "3ff165d2d9ced60f",
+"y": "3ff4ed3496e6928f",
+"hypot": "3ffb36cad446fdcb"
+},
+{
+"x": "3ff07ed8f2263210",
+"y": "3ffb6da9de9cb1c6",
+"hypot": "400000d5899fb58b"
+},
+{
+"x": "3ffa31e5192c8b36",
+"y": "3ff4ddd27f8ede20",
+"hypot": "4000beb9f2f50e20"
+},
+{
+"x": "3ffd8ed73748aeb0",
+"y": "3ffbb36b9a984cd6",
+"hypot": "40044133f73fc426"
+},
+{
+"x": "3ffbb4a22571eecd",
+"y": "3ff4611b7b2a0b23",
+"hypot": "4001326040d33120"
+},
+{
+"x": "3ff1c40d55d3a58a",
+"y": "3ff673c3a0b16160",
+"hypot": "3ffca18002629a78"
+},
+{
+"x": "3ff6d82a5169b578",
+"y": "3ffd7f8df34697b0",
+"hypot": "4002a7a44335d3a3"
+},
+{
+"x": "3ff71517aec89170",
+"y": "3ffb4d84569ad6b7",
+"hypot": "4001e0513cf19a77"
+},
+{
+"x": "3ff108a0d9cd878e",
+"y": "3ffd6f45673d62e4",
+"hypot": "4001010703646ded"
+},
+{
+"x": "3ffd78a5dde1600c",
+"y": "3ffe4627f00594d0",
+"hypot": "4005200494ead0ba"
+},
+{
+"x": "3ffdd1fb0b3cd45b",
+"y": "3ff611f778a0b520",
+"hypot": "40028cada7c399c6"
+},
+{
+"x": "3ffc5ddf54b8f71c",
+"y": "3ff71015a4024684",
+"hypot": "4002478e85d408ed"
+},
+{
+"x": "3ff197138aea595e",
+"y": "3ff2cee2533b4c45",
+"hypot": "3ff9c07b2057c134"
+},
+{
+"x": "3fff320391e18db0",
+"y": "3ff157e9c72abfd4",
+"hypot": "4001d89f5f3d1d49"
+},
+{
+"x": "3ffccc0baf039d89",
+"y": "3ff21e20d497abfe",
+"hypot": "400102dca8f170ea"
+},
+{
+"x": "3ff4138a9e1e1970",
+"y": "3ff4d72a4ac54820",
+"hypot": "3ffcf00716fcf6c7"
+},
+{
+"x": "3ff2427e8d89a084",
+"y": "3fffad5dd60bf1f6",
+"hypot": "400248155ae34d6c"
+},
+{
+"x": "3ff6b7df22c80fd2",
+"y": "3ff09d6eefb80870",
+"hypot": "3ffc2547a56cfd02"
+},
+{
+"x": "3fe1c0d57f10c894",
+"y": "40629ca109ead3fe",
+"hypot": "40629ca9817fb4c9"
+},
+{
+"x": "3f9e2b8410510668",
+"y": "3fe52ff3205f11a2",
+"hypot": "3fe5355132e71b4b"
+},
+{
+"x": "3fb535c8ea8a4e06",
+"y": "3fef9da7ce34979e",
+"hypot": "3fefba1064d39343"
+},
+{
+"x": "3fdcb3af63658795",
+"y": "406f2f7b56ed04cf",
+"hypot": "406f2f7ea43d919f"
+},
+{
+"x": "401d0af9825c659f",
+"y": "3fba248aaaa789be",
+"hypot": "401d0bb5c1f17ae3"
+},
+{
+"x": "3fafd70522e931f8",
+"y": "3fcc06b4e214cba2",
+"hypot": "3fcd2279c83a17e9"
+},
+{
+"x": "3f729616ccb5e001",
+"y": "4002846ba3796be4",
+"hypot": "4002846df873a087"
+},
+{
+"x": "4017a5b1baa844c0",
+"y": "4058a7e707a9a6ba",
+"hypot": "4058b33b7385b68e"
+},
+{
+"x": "3faa92e8eaf3493e",
+"y": "4037d8bf3f40bf56",
+"hypot": "4037d8c2f2ddcfd1"
+},
+{
+"x": "406618d3e487ffb5",
+"y": "3fe1095ffba0d41a",
+"hypot": "406618da75d28560"
+},
+{
+"x": "40707727df42b81c",
+"y": "3fcb7677a89c3962",
+"hypot": "407077283adefa9f"
+},
+{
+"x": "3fe38c4ac26c8470",
+"y": "3f934ff2dac99d66",
+"hypot": "3fe38ead27d9c7f0"
+},
+{
+"x": "406a7e5b8ad61158",
+"y": "4072847a7718fb98",
+"hypot": "4076c491ef165fc8"
+},
+{
+"x": "407dab33022a4b9c",
+"y": "3fe4e240c419ca2a",
+"hypot": "407dab34d89157d1"
+},
+{
+"x": "3fb4b0e14fa2fee1",
+"y": "3fb1a9e770bbd00c",
+"hypot": "3fbb34856c9ab605"
+},
+{
+"x": "3fff33082c146e3d",
+"y": "3f7f9d4da40cb613",
+"hypot": "3fff3318308edd60"
+},
+{
+"x": "4070c996e223db1a",
+"y": "3ff584a89355a996",
+"hypot": "4070c9a4ac9f6043"
+},
+{
+"x": "3fdc360b934d02e7",
+"y": "3fe2c71ab0f74b34",
+"hypot": "3fe77c4c77ab5e5e"
+},
+{
+"x": "4027c5b2a840d01a",
+"y": "3f84017506cfa814",
+"hypot": "4027c5b32ef0c2f1"
+},
+{
+"x": "4062f32df6d0cf03",
+"y": "407e7c0cf0d72044",
+"hypot": "407fec4ffc8b9bd5"
+},
+{
+"x": "400d75f5767c6aec",
+"y": "4042e8de03dee0a3",
+"hypot": "4042ffc340ba0cd0"
+},
+{
+"x": "3f72a0254f4b8c0f",
+"y": "3fa21247cd06fadb",
+"hypot": "3fa2388413052df1"
+},
+{
+"x": "405cc8f347b2e2d1",
+"y": "3ff12567411429ea",
+"hypot": "405cc944fc0ce302"
+},
+{
+"x": "3fbda3685c1600dc",
+"y": "4072a3bb5a66f5ba",
+"hypot": "4072a3bb71f73aed"
+},
+{
+"x": "3f8849d7a22f547a",
+"y": "4046bc5d5f002c4f",
+"hypot": "4046bc5d6bf967af"
+},
+{
+"x": "3feeb7d555532ece",
+"y": "4048451678ea8b00",
+"hypot": "4048464d7a6f6eb7"
+},
+{
+"x": "40037774f28e3150",
+"y": "3fc51a699727f640",
+"hypot": "400382e1e3a14c22"
+},
+{
+"x": "402597820df5d320",
+"y": "403d051f6822c277",
+"hypot": "403ef68ce2322e6d"
+},
+{
+"x": "4037b3c5add822ac",
+"y": "40731f7064ca546e",
+"hypot": "40732e1b31894115"
+},
+{
+"x": "400532b85a8b7c1e",
+"y": "404a167d4b3ec3c6",
+"hypot": "404a1f18a93652c7"
+},
+{
+"x": "3ff28a233c74a120",
+"y": "3fec9e92fdfa2e0a",
+"hypot": "3ff76b74c86889c7"
+},
+{
+"x": "3fbe9b5194fe726b",
+"y": "4034707bfa210cbe",
+"hypot": "40347092e4878010"
+},
+{
+"x": "3fd8b3557b077fad",
+"y": "3fda394383562510",
+"hypot": "3fe20331cf7bad05"
+},
+{
+"x": "3f8828b4a613b63a",
+"y": "3fbfa05d4a8b8b90",
+"hypot": "3fbfc530ae51b661"
+},
+{
+"x": "3f8192113900ab0c",
+"y": "3fd578f050a9ba7a",
+"hypot": "3fd57abc53f896d6"
+},
+{
+"x": "3fef8b096f3e5096",
+"y": "40438769d808dd11",
+"hypot": "404389015d9e2eba"
+},
+{
+"x": "3f9dc622fa995ce7",
+"y": "401b1c6a95083688",
+"hypot": "401b1c7aee6c13ed"
+},
+{
+"x": "3fd66a5e5675389c",
+"y": "3fa72c8b9f1ceefc",
+"hypot": "3fd69a1621fb9770"
+},
+{
+"x": "3fee69fb192e031e",
+"y": "402de5ca51759500",
+"hypot": "402df53e8d2637f5"
+},
+{
+"x": "4069dfade60d0cbc",
+"y": "3f769db1246b4631",
+"hypot": "4069dfade6349629"
+},
+{
+"x": "400464aa1d581b04",
+"y": "3fb9384955f5b568",
+"hypot": "4004688fc95a54ab"
+},
+{
+"x": "3fe6c93d002adffc",
+"y": "40148c4d3ee528f0",
+"hypot": "4014be98d8c28af6"
+},
+{
+"x": "3f9aeed00ddf40a0",
+"y": "4073bea751de0f4f",
+"hypot": "4073bea75303f666"
+},
+{
+"x": "407830f964395b35",
+"y": "3f94dd4918b5ed21",
+"hypot": "407830f964c95103"
+},
+{
+"x": "3fcfaae2e18cb1ed",
+"y": "3f71edda518a2a83",
+"hypot": "3fcfac27af026887"
+},
+{
+"x": "3fff76acc8dd7256",
+"y": "3f94e560f987aa8d",
+"hypot": "3fff771bcdb5b75f"
+},
+{
+"x": "3fc3bd21fc20861c",
+"y": "401db7c515171b5a",
+"hypot": "401db96893ef6183"
+},
+{
+"x": "401d60bc6a3bed9e",
+"y": "402e186c91de9122",
+"hypot": "4030be9057cb6df9"
+},
+{
+"x": "3ffb15f4941bd8ce",
+"y": "406bf6cbcd8e42ea",
+"hypot": "406bf70045b75758"
+},
+{
+"x": "405c9b76b6f506e2",
+"y": "406ef5b6aead2334",
+"hypot": "40710d5a49c2cfd0"
+},
+{
+"x": "3fb9ec2c43c7295a",
+"y": "40568e8883eb9350",
+"hypot": "40568e89723e9aba"
+},
+{
+"x": "3f8b4b19120f5ace",
+"y": "4056791299e793b8",
+"hypot": "405679129e0c4df3"
+},
+{
+"x": "3fbc6ffc4fd02e0e",
+"y": "3fbaf4b37baf97ee",
+"hypot": "3fc3976c40c35fc7"
+},
+{
+"x": "4032c814011f6e1c",
+"y": "3fa49b155cc08888",
+"hypot": "4032c816d48d930d"
+},
+{
+"x": "406f7a510d0e5b68",
+"y": "403cc0364d3181a7",
+"hypot": "406faeaab0d2543f"
+},
+{
+"x": "4000792b684d06e0",
+"y": "405638a33e5d80a2",
+"hypot": "40563a29fb489a69"
+},
+{
+"x": "4024e38c39715f5a",
+"y": "3f7d373f7ea97723",
+"hypot": "4024e38c8b2acab5"
+},
+{
+"x": "401ca72ebd6b99be",
+"y": "3f80f0c51a351e6a",
+"hypot": "401ca72ffdec4b5b"
+},
+{
+"x": "3fb8764545d0d08d",
+"y": "4013fb4191ef690e",
+"hypot": "4013fc312034211a"
+},
+{
+"x": "4025510fb42f0b30",
+"y": "3f71c902a7ed95e4",
+"hypot": "4025510fd1dc80f2"
+},
+{
+"x": "4064fb04eb48519b",
+"y": "400169dd942eaa5a",
+"hypot": "4064fb7889bb3b7a"
+},
+{
+"x": "405db6a7639a04c2",
+"y": "40483765ef757efc",
+"hypot": "40600afc457d7a6c"
+},
+{
+"x": "3ff60976aaff6854",
+"y": "3fac0eac40528c7a",
+"hypot": "3ff60ded55095b6a"
+},
+{
+"x": "407e91161c171e55",
+"y": "3f9526968b354bc0",
+"hypot": "407e91161c8c336f"
+},
+{
+"x": "3face708f6b048fa",
+"y": "4020cb5ff8b43fa5",
+"hypot": "4020cb78d756ca11"
+},
+{
+"x": "3f80b6822a421b60",
+"y": "3fc08100eb9ba2a1",
+"hypot": "3fc0897519c31978"
+},
+{
+"x": "3f8fd354eef4d586",
+"y": "3fb16b67c4963719",
+"hypot": "3fb1de37bf316ef6"
+},
+{
+"x": "3f74e09fe83a7c2a",
+"y": "4027394caeeadcb7",
+"hypot": "4027394cd4742349"
+},
+{
+"x": "3fd897db565510e3",
+"y": "40050ec2de3d5156",
+"hypot": "400547e72b7d0a0a"
+},
+{
+"x": "4038f1f15a6ca313",
+"y": "40296da5b211e7fb",
+"hypot": "403bff936429fb97"
+},
+{
+"x": "40797bdf4146462f",
+"y": "3fd5166c3afc0460",
+"hypot": "40797bdfccdf49d3"
+},
+{
+"x": "4051d5edf912cdca",
+"y": "3fe34a74677ecd8c",
+"hypot": "4051d617b3a12cf5"
+},
+{
+"x": "4003f64d1fbe23fe",
+"y": "3f98576d1347cdff",
+"hypot": "4003f6887c6a9013"
+},
+{
+"x": "3fe9b88a49432296",
+"y": "403b2e1c233d1beb",
+"hypot": "403b3126d885be69"
+},
+{
+"x": "4079c9fa30b10b98",
+"y": "3fd71c6851f52800",
+"hypot": "4079c9fad66145b5"
+},
+{
+"x": "3faac561db34118f",
+"y": "3fdb3a008c567540",
+"hypot": "3fdb6e737501849c"
+},
+{
+"x": "3feb3ac4b6c6d436",
+"y": "3f7c8b2abafa4072",
+"hypot": "3feb3b008e1e6975"
+},
+{
+"x": "4007f9e1bb7449e2",
+"y": "3f842ee7a64f8194",
+"hypot": "4007f9ea3a36bb44"
+},
+{
+"x": "4072ad6f13c5424a",
+"y": "3fd3908c8f9cb5ea",
+"hypot": "4072ad6fb7b8dd50"
+},
+{
+"x": "4005e6ab36278312",
+"y": "406d9d138ebf8516",
+"hypot": "406d9d95216e7a8c"
+},
+{
+"x": "3fd00eb139a372b4",
+"y": "4015a0c1bbb297c1",
+"hypot": "4015a6b6e09c7443"
+},
+{
+"x": "3ff963a209ed5a32",
+"y": "3fc7cc9ffe64da58",
+"hypot": "3ff990194ef3f0c9"
+},
+{
+"x": "405fa4ddd8ed7a10",
+"y": "4015f019b1a2ea52",
+"hypot": "405fac77ad027f32"
+},
+{
+"x": "3f95136227eb832c",
+"y": "405da11bfebc9090",
+"hypot": "405da11c063b7775"
+},
+{
+"x": "4044c337d01377e4",
+"y": "3fd2a56ccd15ef3e",
+"hypot": "4044c3594dafe31e"
+},
+{
+"x": "403802f973888dfe",
+"y": "3fbff40a79076dd8",
+"hypot": "4038030eb642dfe1"
+},
+{
+"x": "3fca572c52735df3",
+"y": "3f836f1362c971a9",
+"hypot": "3fca5e56a39e46eb"
+},
+{
+"x": "3fdf6ef472b87ffa",
+"y": "40360bd4edca956e",
+"hypot": "40360d3b6cf55bbc"
+},
+{
+"x": "406695e5fc60ab6e",
+"y": "3ff301d3d2c1567c",
+"hypot": "40669605fa152000"
+},
+{
+"x": "3f9ad9519b508103",
+"y": "3fd8a6f5a83e11f6",
+"hypot": "3fd8b59039dd3ac0"
+},
+{
+"x": "3f8f89eac7215c3e",
+"y": "3fc76cd68510b0a1",
+"hypot": "3fc78208243415b9"
+},
+{
+"x": "3f8159df36aadcd4",
+"y": "404e14c343bf83b5",
+"hypot": "404e14c348c09233"
+},
+{
+"x": "3ffd428400cb4c3e",
+"y": "4033764e74bb994a",
+"hypot": "40338c40ca2bbccf"
+},
+{
+"x": "400a26ea46f89838",
+"y": "4036bf31be4332d5",
+"hypot": "4036fb055482f49d"
+},
+{
+"x": "4062488cc4214e7c",
+"y": "4056c064d3b60c2c",
+"hypot": "4065889226fe10ba"
+},
+{
+"x": "4011f44144f1da53",
+"y": "4003fdd73de1c5a5",
+"hypot": "40148c92cedf8da2"
+},
+{
+"x": "402a3294e003387c",
+"y": "3f814e70aac807be",
+"hypot": "402a32953b799723"
+},
+{
+"x": "40173381052a69d9",
+"y": "3f9789a80504dad7",
+"hypot": "4017338cf5aecdf2"
+},
+{
+"x": "3fb2d306e0b82175",
+"y": "403b0d0ea423317c",
+"hypot": "403b0d1530df7476"
+},
+{
+"x": "3fe74a32ee237e54",
+"y": "3fa31e3ff458c7c1",
+"hypot": "3fe7520a67ec8f0a"
+},
+{
+"x": "406f9476734e1592",
+"y": "3fce372033ba3e28",
+"hypot": "406f94775a9524c9"
+},
+{
+"x": "3f98def57748255f",
+"y": "3fc4ad1ccf8dba9d",
+"hypot": "3fc4e89c873a9d08"
+},
+{
+"x": "40520f2e587e7d34",
+"y": "3f7f2bcf10ee5e04",
+"hypot": "40520f2e5a2ce925"
+},
+{
+"x": "4021cd4f81557bee",
+"y": "3fb7a5cde61680ca",
+"hypot": "4021cd8e544f80cb"
+},
+{
+"x": "3fa3cc3b84fa782c",
+"y": "4056cccdb5eaed19",
+"hypot": "4056cccdd84ca78a"
+},
+{
+"x": "3fcf45268e43fb84",
+"y": "3fc85d20a777310a",
+"hypot": "3fd3d20e75137d0b"
+},
+{
+"x": "405fd2ee14b66d03",
+"y": "400d693ede0ba774",
+"hypot": "405fd653b2de8f4a"
+},
+{
+"x": "3f9192ca859b1b7c",
+"y": "3f935c092f59f9c3",
+"hypot": "3f9a2562c184665c"
+},
+{
+"x": "402cb813d1c00c33",
+"y": "403f8ef489eda164",
+"hypot": "404155fbb086fd8f"
+},
+{
+"x": "3ff2be681e2c8644",
+"y": "3ff9d6af5c845340",
+"hypot": "3fffebd3d7001204"
+},
+{
+"x": "402c8bd5f15e076c",
+"y": "4048d286e94f43bf",
+"hypot": "4049d3f172a020e1"
+},
+{
+"x": "3fae9e970b88229a",
+"y": "403369f032ead5ee",
+"hypot": "403369f63c4ad746"
+},
+{
+"x": "3fe4843247acbcd0",
+"y": "3fc52ac8f4a78c1c",
+"hypot": "3fe530176f00a1c4"
+},
+{
+"x": "400ab839c00e30d6",
+"y": "40202f860085f4a0",
+"hypot": "40218287ccf20434"
+},
+{
+"x": "3f75f284be9f1638",
+"y": "3fe9ae43fe60d118",
+"hypot": "3fe9ae6981b38eda"
+},
+{
+"x": "40175ee24858bc1f",
+"y": "3f873fbc222ddacc",
+"hypot": "40175ee52c707e5e"
+},
+{
+"x": "40428b70cd3edc6e",
+"y": "4047930dd9e74a92",
+"hypot": "404dfe8bcef2a12f"
+},
+{
+"x": "401179a80dc99fb4",
+"y": "40045be3bda7aecc",
+"hypot": "4014394fa5b95b4f"
+},
+{
+"x": "40348fc3b33bbe72",
+"y": "3ff51beb693f9def",
+"hypot": "40349a96c1126dd6"
+},
+{
+"x": "406c05bc005e6027",
+"y": "400d8a99f432781f",
+"hypot": "406c06b5206cb6e1"
+},
+{
+"x": "3faf71424f4c4cb7",
+"y": "3f8cc278b49dae58",
+"hypot": "3fb0208311b8ac3c"
+},
+{
+"x": "40034f47d77f189c",
+"y": "40701ac4d945e9a7",
+"hypot": "40701af3273187b3"
+},
+{
+"x": "405399aab8982864",
+"y": "3fd07201a677f0f8",
+"hypot": "405399b19ec3b5b8"
+},
+{
+"x": "3f87298f1a51bc0b",
+"y": "3fa41c8fffd94fea",
+"hypot": "3fa4edb898a1c249"
+},
+{
+"x": "3fc317a7c856a694",
+"y": "400e46e4e5d78540",
+"hypot": "400e4ce95bf2a8be"
+},
+{
+"x": "3fd1b958062eea84",
+"y": "402bfb43196ce352",
+"hypot": "402bfcaa51a44c95"
+},
+{
+"x": "4004dea02d012798",
+"y": "3f77886b14295123",
+"hypot": "4004dea37e27d5ab"
+},
+{
+"x": "3fc39a5309299a66",
+"y": "3fd7905a9133be6e",
+"hypot": "3fd98563e1579ace"
+},
+{
+"x": "3f88d3a367ec6231",
+"y": "3fe255ee2f98615b",
+"hypot": "3fe256fb14c79a1c"
+},
+{
+"x": "405eaa9a732ed5a6",
+"y": "3fc78d332720b830",
+"hypot": "405eaa9cb5facdf4"
+},
+{
+"x": "3f89224c6ccfe2d8",
+"y": "3fdc91598afdcda4",
+"hypot": "3fdc941d05d0da1a"
+},
+{
+"x": "3f9c9d738e16cb10",
+"y": "3fb54374763c622f",
+"hypot": "3fb66f43cef294c9"
+},
+{
+"x": "4061b8ddf4b6fef6",
+"y": "4079896d74b660fd",
+"hypot": "407b07cefa022901"
+},
+{
+"x": "3fbb492e1014737f",
+"y": "3fbdd3e36b8e6ae4",
+"hypot": "3fc43671f43d4ea2"
+},
+{
+"x": "3fab1779a70a7c2d",
+"y": "3ff153e94a3245ec",
+"hypot": "3ff15933eb729f80"
+},
+{
+"x": "3f7e539fa8450b25",
+"y": "3f7f2b53a308a3ec",
+"hypot": "3f85be7ef4389ea9"
+},
+{
+"x": "405898adf7d62b8e",
+"y": "3fa1e7d29ad6f6b7",
+"hypot": "405898ae11e7fb94"
+},
+{
+"x": "404ec7754eb49ec7",
+"y": "3f7a669e4a45ec4d",
+"hypot": "404ec775518945b1"
+},
+{
+"x": "403a65233621b8e2",
+"y": "402b9473a5cfb1ac",
+"hypot": "403dc7bd49ada643"
+},
+{
+"x": "405852525c00ecfe",
+"y": "405bc3adb1933eaa",
+"hypot": "40627491703f5c86"
+},
+{
+"x": "3fbc623e3427ede4",
+"y": "3fc84782afacb15b",
+"hypot": "3fcc1f744e1ebe13"
+},
+{
+"x": "402f1f2accd7db78",
+"y": "40781bcf7e9d238e",
+"hypot": "407820d491fdd7f5"
+},
+{
+"x": "3ffc527ce96ba982",
+"y": "3fceb7066a3568d8",
+"hypot": "3ffc94cde4b7f827"
+},
+{
+"x": "3fc4f9484ee2c036",
+"y": "3f9b4fec253fc7a9",
+"hypot": "3fc53ff321d8bb72"
+},
+{
+"x": "3fc29c01601dcb20",
+"y": "3fbdbd4a369603fb",
+"hypot": "3fc7d20e761a9e6e"
+},
+{
+"x": "4036c383db43becd",
+"y": "402757fac65bf60b",
+"hypot": "403994e4e845a00c"
+},
+{
+"x": "4060854a5ffb51d4",
+"y": "4007615bec146ba1",
+"hypot": "406086530c4d1559"
+},
+{
+"x": "406a9e840a9e79a6",
+"y": "3fc76164fe37366c",
+"hypot": "406a9e84aee7af96"
+},
+{
+"x": "403c46c40cbeefac",
+"y": "4008bea8c7bd0dea",
+"hypot": "403c71f2074efe6c"
+},
+{
+"x": "404ec1f48bb9573e",
+"y": "405cf1a0e7d14f64",
+"hypot": "4060634e798067bf"
+},
+{
+"x": "3f7cf148c97550e5",
+"y": "400e36313ffbaa79",
+"hypot": "400e3634b73c47e2"
+},
+{
+"x": "4028c8500c189b68",
+"y": "3f9ec0014cbd6cb4",
+"hypot": "4028c854d10a1d3b"
+},
+{
+"x": "40635f5318775734",
+"y": "4064254cedd862b8",
+"hypot": "406bf2e761c98d21"
+},
+{
+"x": "3feb7f2385889488",
+"y": "4064414f8571297c",
+"hypot": "406441622f47242a"
+},
+{
+"x": "3fa6ba82158188fe",
+"y": "3f8f08fe18954e12",
+"hypot": "3fa8043030a0c41a"
+},
+{
+"x": "3fe3a42998601cd6",
+"y": "4001af49189fbe83",
+"hypot": "40025a8f5786dd59"
+},
+{
+"x": "3ffd8da50053f4a0",
+"y": "3fc2d79573acd238",
+"hypot": "3ffda5a1f4421379"
+},
+{
+"x": "4073fc2cf458afa2",
+"y": "3f8b3df8151b9474",
+"hypot": "4073fc2cf4a2f45e"
+},
+{
+"x": "3fc274efce79c7a8",
+"y": "4003e5ec4eb4ff5e",
+"hypot": "4003ee79cf01442f"
+},
+{
+"x": "3f8825f9a52d528c",
+"y": "3f7513e214dc7a1c",
+"hypot": "3f8a590ceb45d4f8"
+},
+{
+"x": "3fc7328ed64bda1a",
+"y": "3ff19a681670307c",
+"hypot": "3ff1d72308679a37"
+},
+{
+"x": "3fcbc6cb78c592c8",
+"y": "3fcb27dab52cbeae",
+"hypot": "3fd36c36ff628ea2"
+},
+{
+"x": "3f8639ad8ff56dae",
+"y": "3ff0778c1a572f8f",
+"hypot": "3ff077c8188178f7"
+},
+{
+"x": "400b80c9f685d660",
+"y": "404d34fd3ba37001",
+"hypot": "404d41ed62a83bc6"
+},
+{
+"x": "3ffcac1a9736610e",
+"y": "3f846534d62d1dd6",
+"hypot": "3ffcac379b1d43c0"
+},
+{
+"x": "3f75ceac16724173",
+"y": "3fff18627d75fcce",
+"hypot": "3fff186a230a5199"
+},
+{
+"x": "404d66ef3dd2171a",
+"y": "405c1d3587b16018",
+"hypot": "405fb9cabe454a47"
+},
+{
+"x": "4038578be7256f70",
+"y": "400efb8692cf7af3",
+"hypot": "4038a5ec4016a428"
+},
+{
+"x": "40473b640f0e5225",
+"y": "3fa775a0e147ced9",
+"hypot": "40473b64cc91cca6"
+},
+{
+"x": "3fdef666af30405e",
+"y": "3fc50dd24e3fd1b4",
+"hypot": "3fe059fff54e1ffe"
+},
+{
+"x": "40663fcdd4594336",
+"y": "3f99075fb7736aa8",
+"hypot": "40663fcdd7de3e11"
+},
+{
+"x": "3fbf51dc254bfa14",
+"y": "407c69b9fcf907f5",
+"hypot": "407c69ba0e3c177a"
+},
+{
+"x": "402cc6436e220d48",
+"y": "3fc3a3245c43d456",
+"hypot": "402cc6aea3bb521f"
+},
+{
+"x": "405d749faedbfd81",
+"y": "400293230374f682",
+"hypot": "405d761678cb1663"
+},
+{
+"x": "3fe9c196de22fc8c",
+"y": "3feef982fd59c935",
+"hypot": "3ff4245e87a565c3"
+},
+{
+"x": "3ff6004301904fe6",
+"y": "3fb416981f419e48",
+"hypot": "3ff6096cd8d29dad"
+},
+{
+"x": "3f8eb5d125d0b1a2",
+"y": "3fa1f3f30aeae35e",
+"hypot": "3fa386936ef2ebf6"
+},
+{
+"x": "3fc0d1091f8e3818",
+"y": "3fd2b5865616629b",
+"hypot": "3fd482fd0ecd6ca6"
+},
+{
+"x": "3f94ed6e505580e5",
+"y": "4053a46bf430ddee",
+"hypot": "4053a46bff56d9b7"
+},
+{
+"x": "3f9bd993c1582fc0",
+"y": "3f75492707f86770",
+"hypot": "3f9c5a8f785bcd8a"
+},
+{
+"x": "3f8055c59774459e",
+"y": "4004e5e123f49d45",
+"hypot": "4004e5e7864ec9ec"
+},
+{
+"x": "40314aa171c2689c",
+"y": "407e72349a1853a0",
+"hypot": "407e771d3bcb5db3"
+},
+{
+"x": "407d0890c1e1e94c",
+"y": "40549b4b22693b47",
+"hypot": "407d7ca9eb678a45"
+},
+{
+"x": "402bde0eba9525be",
+"y": "4012a9036637b72c",
+"hypot": "402d6347a958a4eb"
+},
+{
+"x": "406666b09418dee4",
+"y": "3f9303ab5c4f579c",
+"hypot": "406666b0961d5656"
+},
+{
+"x": "4012cbfcd81228c8",
+"y": "3fa86b0eeac85574",
+"hypot": "4012cc3c48a55c06"
+},
+{
+"x": "3fb34f2ca65dd20c",
+"y": "3f849656ce5cebf0",
+"hypot": "3fb37ae17fe65f95"
+},
+{
+"x": "3fd63519d2667336",
+"y": "407ca818c69b9380",
+"hypot": "407ca8195048e083"
+},
+{
+"x": "3faf86d09fa0ca5e",
+"y": "3fab4f2b7b29e434",
+"hypot": "3fb4dae0fc6c6701"
+},
+{
+"x": "4048c4eb2a259b95",
+"y": "3fba63c33bdc4a39",
+"hypot": "4048c4eeaddd443e"
+},
+{
+"x": "3fd9ab6c691a02ac",
+"y": "3f7d5e932565badd",
+"hypot": "3fd9ac793587b7e7"
+},
+{
+"x": "400322114c3ff6c6",
+"y": "3fb5d9f16d313cae",
+"hypot": "4003252fa108a1eb"
+},
+{
+"x": "3f77cdc05df5b438",
+"y": "3f726ba18bde5922",
+"hypot": "3f7e1941bee2c37e"
+},
+{
+"x": "400b8db7d678d53e",
+"y": "407b9214294a7250",
+"hypot": "407b924b3bcbd9dd"
+},
+{
+"x": "3ff1e3b8f91615f9",
+"y": "40716857dce47b3e",
+"hypot": "407168610e245509"
+},
+{
+"x": "3f9f882fab361446",
+"y": "3ff66f8108bfb537",
+"hypot": "3ff670e385fff862"
+},
+{
+"x": "3fe1831184e6cfda",
+"y": "3fb9c26506ddd8b4",
+"hypot": "3fe1ce38632f5629"
+},
+{
+"x": "3fe198e37e96433b",
+"y": "4000133b440a745c",
+"hypot": "4000aa8e88d0b2d9"
+},
+{
+"x": "3fb69a448a7121fc",
+"y": "3fbdc881f8595087",
+"hypot": "3fc2b1c2ac278d6d"
+},
+{
+"x": "401c1326bb0e9cd0",
+"y": "3fe854289f8949de",
+"hypot": "401c3d3180e5898a"
+},
+{
+"x": "3fe86e102153fff0",
+"y": "4077a4190ebd5980",
+"hypot": "4077a41c3695b67e"
+},
+{
+"x": "3fd21fdf6d661448",
+"y": "3fd128a1fddf653e",
+"hypot": "3fd8f5569102cee1"
+},
+{
+"x": "4012686005f75ffe",
+"y": "3fa2fffc63acf669",
+"hypot": "401268873ec08379"
+},
+{
+"x": "3fbb020daab6b6be",
+"y": "403bc585b9a619a4",
+"hypot": "403bc592db9db2fd"
+},
+{
+"x": "400a7e1ef245fe62",
+"y": "3fd986f322836e54",
+"hypot": "400aaf232cb70800"
+},
+{
+"x": "406813522b32a05e",
+"y": "407623f33a4ad019",
+"hypot": "40793388ae42d492"
+},
+{
+"x": "400767cad36cd48a",
+"y": "3f97b17a94cb08d6",
+"hypot": "400767facb605173"
+},
+{
+"x": "3fb1a71075bdc5aa",
+"y": "3fb148faf1179dcc",
+"hypot": "3fb8b4be93baa3c4"
+},
+{
+"x": "3ffac2361093845a",
+"y": "403667d46a570e46",
+"hypot": "403677c94882b384"
+},
+{
+"x": "3f808f120701d0b8",
+"y": "4055f45deec8be4e",
+"hypot": "4055f45df058664e"
+},
+{
+"x": "3fc6f2e45f34f76a",
+"y": "3ffd06f56bad4c00",
+"hypot": "3ffd2b283113d370"
+},
+{
+"x": "3f8f6c23ae755270",
+"y": "3f742f54b3b531d8",
+"hypot": "3f908070205a9e13"
+},
+{
+"x": "3f8b07d80db37244",
+"y": "3fef41f307af5ca4",
+"hypot": "3fef42ae061358e2"
+},
+{
+"x": "3f70869e80e387ce",
+"y": "402205582074bf80",
+"hypot": "402205583ec409b2"
+},
+{
+"x": "3fe42c38eff75ba8",
+"y": "40459ac40bf7f458",
+"hypot": "40459b5ab9af6844"
+},
+{
+"x": "3ff8aa350e55f326",
+"y": "3feb420a27119b88",
+"hypot": "3ffc2e0c01236747"
+},
+{
+"x": "4011651f285bf7c8",
+"y": "3fb4dbaa96247104",
+"hypot": "401165e73986dc4f"
+},
+{
+"x": "4016abc414d5095c",
+"y": "3fade4d8f137f191",
+"hypot": "4016ac12ea63efd2"
+},
+{
+"x": "3fdca22014e1578d",
+"y": "3f9c98186f46ee92",
+"hypot": "3fdcb063918a58ea"
+},
+{
+"x": "403fcd350649332a",
+"y": "3fa919efc27992e1",
+"hypot": "403fcd37804ae77a"
+},
+{
+"x": "3fb12f24298ebbd1",
+"y": "400d74d14e011f35",
+"hypot": "400d761212aa20b6"
+},
+{
+"x": "405b0b8ef9d9625c",
+"y": "404be86852a008a2",
+"hypot": "405e6ec87c04b032"
+},
+{
+"x": "3ff7d9da2924aca4",
+"y": "402e5f49f34c27a0",
+"hypot": "402e84a8aec57773"
+},
+{
+"x": "3fc42637dc787b14",
+"y": "406d1a4f572b4a23",
+"hypot": "406d1a4fc6c59a9a"
+},
+{
+"x": "3f94e0c2f0b20489",
+"y": "3f816bb1fdb5bf4a",
+"hypot": "3f969f42a2d0bee2"
+},
+{
+"x": "40569510fce6d107",
+"y": "3faa9c1b587f5716",
+"hypot": "405695113b9ce099"
+},
+{
+"x": "4020b69c1d532fb8",
+"y": "3f8ce4bf2aded4b2",
+"hypot": "4020b69daced8119"
+},
+{
+"x": "4012d21db940f8be",
+"y": "400a3ccfe2e6f5d1",
+"hypot": "4016f115e69ce72e"
+},
+{
+"x": "40549a75a956df5a",
+"y": "3fadbb9a534bf596",
+"hypot": "40549a75ff27909d"
+},
+{
+"x": "4012bb14b3492cd7",
+"y": "4029252d0975d58e",
+"hypot": "402ad52a5b167469"
+},
+{
+"x": "3fe71614eb3770d0",
+"y": "4012c883bd1bbb3b",
+"hypot": "401300ef033ff307"
+},
+{
+"x": "3fde3d0058ec8742",
+"y": "3fac23f6acf854ac",
+"hypot": "3fde7133a829cead"
+},
+{
+"x": "4048b177194c48ee",
+"y": "401766d8b2fb7aaa",
+"hypot": "4048ddaa93d57ccd"
+},
+{
+"x": "3feee8f4d4194e86",
+"y": "3f8b45ecef832aed",
+"hypot": "3feee9b55544b3dd"
+},
+{
+"x": "3fc0f0feccca6339",
+"y": "401f85b721b678ee",
+"hypot": "401f86da78932a10"
+},
+{
+"x": "404fe162ebcf96fc",
+"y": "40332ee2d1d937b7",
+"hypot": "4050a561356563d6"
+},
+{
+"x": "400f2b66699f552e",
+"y": "3fb7dc1d1bffe357",
+"hypot": "400f2daec9b5e997"
+},
+{
+"x": "3f8b50c19c69780f",
+"y": "3fa156c68ec1b454",
+"hypot": "3fa2a2a0d5b3cc78"
+},
+{
+"x": "4020310f82e6057c",
+"y": "402043158d9bcbba",
+"hypot": "4026f2c2640e3021"
+},
+{
+"x": "4077e01d026c1582",
+"y": "40112ec4858d0a34",
+"hypot": "4077e07fef46157b"
+},
+{
+"x": "3f739f1341285746",
+"y": "3fcc348560cf68b0",
+"hypot": "3fcc363a1ff0c43c"
+},
+{
+"x": "3f9f24f7b5c6bcab",
+"y": "3f8c2ebf4c6a8d26",
+"hypot": "3fa11789eb007c72"
+},
+{
+"x": "3f72e5e6ac550962",
+"y": "4023a1f56704d9d5",
+"hypot": "4023a1f58b669c53"
+},
+{
+"x": "3ff43f84373955b2",
+"y": "3f7d8d09f8d559a4",
+"hypot": "3ff43f99c78b8126"
+},
+{
+"x": "402747b7fb45099e",
+"y": "3f7f963e3bd2b008",
+"hypot": "402747b850fc208a"
+},
+{
+"x": "40090b9c2aaf68d4",
+"y": "3fa39d8334429705",
+"hypot": "40090c170feadbbe"
+},
+{
+"x": "3fb5c23f61df7bf6",
+"y": "3fe03a411c1b79ae",
+"hypot": "3fe074336cc47948"
+},
+{
+"x": "3fd3ebc19bb0f7a4",
+"y": "402f11dcf15f5dc9",
+"hypot": "402f1375a05cffec"
+},
+{
+"x": "3ff5d489395fb5e0",
+"y": "4033fba08dbd92f0",
+"hypot": "4034078995e3ed55"
+},
+{
+"x": "406f2ee7889e6a45",
+"y": "3f9524846e9081d2",
+"hypot": "406f2ee78a692297"
+},
+{
+"x": "3f78cd7afff46d82",
+"y": "3f7f45473b4f79f9",
+"hypot": "3f83f4d3441673f6"
+},
+{
+"x": "3fb3b7d7c240d0b2",
+"y": "401d78e5c90a80a6",
+"hypot": "401d794f51ff4444"
+},
+{
+"x": "405abbf601e35cf8",
+"y": "3fc84e1c56a8e73a",
+"hypot": "405abbf8c4fb9e95"
+},
+{
+"x": "3f9be617634bb7f7",
+"y": "3f7e105d1cbbd3b0",
+"hypot": "3f9ce4ba8987e1aa"
+},
+{
+"x": "400801663a909990",
+"y": "405ec5c1307ce9a6",
+"hypot": "405ec818599c23ae"
+},
+{
+"x": "401478f492c1d376",
+"y": "400ecbeaac67e67c",
+"hypot": "40199df20a123898"
+},
+{
+"x": "407f5b0a133cdf0e",
+"y": "3f73f729bf0d46f8",
+"hypot": "407f5b0a13433a4e"
+},
+{
+"x": "401866d100c1ba24",
+"y": "4014d61fb6b4f100",
+"hypot": "40200b2d2a956c2a"
+},
+{
+"x": "407c70af4c020eea",
+"y": "407d6a3c0e035fea",
+"hypot": "40847531a9271efd"
+},
+{
+"x": "4058188eeb13f7cb",
+"y": "3fd63f5c9492f5cf",
+"hypot": "40581899304d39b6"
+},
+{
+"x": "3fa49aed0589238e",
+"y": "400859ebc9bed87c",
+"hypot": "40085a7743d8c51e"
+},
+{
+"x": "3fa61e0a09e7b247",
+"y": "407bb21ee7462464",
+"hypot": "407bb21ee97b5795"
+},
+{
+"x": "404469b44328d79a",
+"y": "4031932e4cee4433",
+"hypot": "4046395831e25293"
+},
+{
+"x": "3f94f3d3617f22ca",
+"y": "3f997dc69c82df5e",
+"hypot": "3fa07fa29ac539af"
+},
+{
+"x": "40470f4449904120",
+"y": "3ffac2400c0a1658",
+"hypot": "404713259aa7e8f0"
+},
+{
+"x": "400249fcaf212319",
+"y": "407f6183496da6c0",
+"hypot": "407f61989aca054c"
+},
+{
+"x": "401976eb29d4a0e8",
+"y": "40059c89734e1636",
+"hypot": "401ba9903eac7136"
+},
+{
+"x": "3f7ab85552790ecd",
+"y": "3fa8dfeff5f5262e",
+"hypot": "3fa91915dc4058a1"
+},
+{
+"x": "4000c11c07ada5af",
+"y": "405537b30d11975e",
+"hypot": "4055395a586ae0c6"
+},
+{
+"x": "3fa3c293c4a23894",
+"y": "3fff7a534ce0a734",
+"hypot": "3fff7be033117cac"
+},
+{
+"x": "4026cffaefdf6362",
+"y": "40658a8f13e2b5e4",
+"hypot": "406596a00038ec6d"
+},
+{
+"x": "4061e929b770336f",
+"y": "3fd9b5e4e611277f",
+"hypot": "4061e92e5474914a"
+},
+{
+"x": "40380dbb55453e64",
+"y": "3f9bdc49b18cd6a0",
+"hypot": "40380dbc576de1f3"
+},
+{
+"x": "3f9bd248ee192ff2",
+"y": "40694cefebd75322",
+"hypot": "40694cefefaa5102"
+},
+{
+"x": "4026bc7bbba50ace",
+"y": "3fe3f42d9e36ab6e",
+"hypot": "4026c53b92582b79"
+},
+{
+"x": "3fbc70d0183bad88",
+"y": "3f8c3897d5e4a2d4",
+"hypot": "3fbca89afc28af91"
+},
+{
+"x": "3fcffc3b2b659fac",
+"y": "3fa672555d07fb70",
+"hypot": "3fd03ca5f7e13178"
+},
+{
+"x": "3fb2d7f3054cbfae",
+"y": "3faf6f07c041de2d",
+"hypot": "3fb889a718c58cde"
+},
+{
+"x": "404a150f74781e3a",
+"y": "3feadd3afa4b6f48",
+"hypot": "404a15eccc02ac8e"
+},
+{
+"x": "4079d1eb3cd02735",
+"y": "3f99f5f0a6d941ee",
+"hypot": "4079d1eb3da0f878"
+},
+{
+"x": "402d2eacfd372d2c",
+"y": "3fabc5aa35c4a160",
+"hypot": "402d2eba3440e8d2"
+},
+{
+"x": "3faa9dcd7b4f7f82",
+"y": "3fc885316a868a36",
+"hypot": "3fc96838b03a296d"
+},
+{
+"x": "3f91c4e80fb367ec",
+"y": "4025bd98eef6b224",
+"hypot": "4025bd9abfb4a903"
+},
+{
+"x": "3f843b1718d9bfce",
+"y": "401d057e1f4320cf",
+"hypot": "401d057fe28ddf6c"
+},
+{
+"x": "3ff384e5c0d841d3",
+"y": "3f86c99d3c5ba042",
+"hypot": "3ff3851af56f6840"
+},
+{
+"x": "3f9ed86287e85066",
+"y": "3fe3aa4e1fe8af61",
+"hypot": "3fe3b059655c8de1"
+},
+{
+"x": "402842b05d089d70",
+"y": "3f8036b9d610a4f2",
+"hypot": "402842b0b3b8b570"
+},
+{
+"x": "4011a373bedaf3ec",
+"y": "402c5023672855ba",
+"hypot": "402da7a11af8335b"
+},
+{
+"x": "3f92ba6cb14657c8",
+"y": "3f7d9e3aac3fd429",
+"hypot": "3f94238b86de69c0"
+},
+{
+"x": "3ff6c8498ecfc496",
+"y": "4004e9159ab8c40e",
+"hypot": "4007cfda00afbb46"
+},
+{
+"x": "3fe70bf5c2ac0790",
+"y": "3f94b02b259340e4",
+"hypot": "3fe70e47ea21c521"
+},
+{
+"x": "3f742a15fc70856c",
+"y": "4078f09a31617931",
+"hypot": "4078f09a3169a005"
+},
+{
+"x": "4048bb6a03f43076",
+"y": "3f7a863c5e41e566",
+"hypot": "4048bb6a07827a4a"
+},
+{
+"x": "403c2d293662878b",
+"y": "3f7cb54d8a6d64df",
+"hypot": "403c2d294502895e"
+},
+{
+"x": "3fb96b758dfd2a56",
+"y": "3f82e8ced8ca8f6f",
+"hypot": "3fb98788129b780f"
+},
+{
+"x": "406dd8c5955a6365",
+"y": "3ff4af0951332df5",
+"hypot": "406dd8e24031b393"
+},
+{
+"x": "4069449140acfc86",
+"y": "3fd2607baa35108a",
+"hypot": "40694492ec5cb8aa"
+},
+{
+"x": "406b7a713f68c600",
+"y": "4033a9c005c55cb6",
+"hypot": "406b96870f35d23d"
+},
+{
+"x": "40752cdf314c6d0c",
+"y": "3fe45a54c8b5f242",
+"hypot": "40752ce1a34b4043"
+},
+{
+"x": "40091a96e6e99233",
+"y": "3fa9dacf2080a909",
+"hypot": "40091b6be99b3c76"
+},
+{
+"x": "3ffa30b4de6483e4",
+"y": "3f7700fa88d4ee68",
+"hypot": "3ffa30bef8a2174a"
+},
+{
+"x": "404dec1b419295ed",
+"y": "3fbd22966512acb7",
+"hypot": "404dec1ecd5e36ef"
+},
+{
+"x": "401d5585fb5dc23c",
+"y": "3f7f666186ba6b50",
+"hypot": "401d558708419b3e"
+},
+{
+"x": "3f9e43521173136f",
+"y": "3fc310873eb739ae",
+"hypot": "3fc36fade4f55315"
+},
+{
+"x": "401cd6c53b944db8",
+"y": "3f7cef3c7b0c3c13",
+"hypot": "401cd6c623d28df1"
+},
+{
+"x": "404dcac304495e8e",
+"y": "400e97e04ece9442",
+"hypot": "404dda74233e2fa5"
+},
+{
+"x": "404ed0f089484fb0",
+"y": "403fa9b150c5e4cc",
+"hypot": "4051528cc62a3e5c"
+},
+{
+"x": "3fb4598c9967cdf4",
+"y": "406b96d3d492d168",
+"hypot": "406b96d3f297f4c1"
+},
+{
+"x": "3fec3143fcc5c86d",
+"y": "40228b90ffbca2dc",
+"hypot": "4022a0f28761e322"
+},
+{
+"x": "3fdef3df3f76405c",
+"y": "407e0251a49698fa",
+"hypot": "407e0252a3febe4e"
+},
+{
+"x": "3fb50c0267531670",
+"y": "3f87747b3a037926",
+"hypot": "3fb5400913899322"
+},
+{
+"x": "3fe1792bc5b175da",
+"y": "4042f41bacdb8bf6",
+"hypot": "4042f49c89c4f947"
+},
+{
+"x": "4014837e4fe971ad",
+"y": "3f9d6f3725278054",
+"hypot": "401483936de67c66"
+},
+{
+"x": "3fa2e02223dd7d12",
+"y": "4024973562b28ec0",
+"hypot": "4024973e09819b50"
+},
+{
+"x": "3fbf5575096e9aca",
+"y": "403b6d72a740bb12",
+"hypot": "403b6d848d2ccc86"
+},
+{
+"x": "4068f705d4f4747d",
+"y": "4064bdd0163c375c",
+"hypot": "40703a7e7caca8f4"
+},
+{
+"x": "3fec89fc871afe62",
+"y": "406559f40717ae4f",
+"hypot": "40655a0719c77837"
+},
+{
+"x": "4004ac5e1eaedfa9",
+"y": "3f9eecc768439fb6",
+"hypot": "4004acbaa3129f4b"
+},
+{
+"x": "3f962c4877eb8c44",
+"y": "3fa66513c223fd80",
+"hypot": "3fa8fd20431967f2"
+},
+{
+"x": "40456ad67756d076",
+"y": "3fffb477a651dbdc",
+"hypot": "404570b38e372f54"
+},
+{
+"x": "400b5d53f17282b5",
+"y": "3f9a12e4ceec4ade",
+"hypot": "400b5d85a15ce6cf"
+},
+{
+"x": "40589806dfeb245c",
+"y": "4065242b823c5440",
+"hypot": "4068751daadf2554"
+},
+{
+"x": "3f875c91c10e6dab",
+"y": "3fb2a27a8a539ba4",
+"hypot": "3fb2dcb2d264006c"
+},
+{
+"x": "3fe9bf07ce6c15a0",
+"y": "4079563d9a1443f7",
+"hypot": "40795640df447af9"
+},
+{
+"x": "403a55b8cc829a12",
+"y": "3f8c04100ea48053",
+"hypot": "403a55b9081e58f0"
+},
+{
+"x": "403a78d8bf3e60a3",
+"y": "3fc3329cf7419afd",
+"hypot": "403a78f49767b506"
+},
+{
+"x": "3fd1626574203d08",
+"y": "401bb4ebafae40ef",
+"hypot": "401bba5f5529b097"
+},
+{
+"x": "3fb6cc3c88e63d14",
+"y": "4058bdb0b3b78470",
+"hypot": "4058bdb15bc65579"
+},
+{
+"x": "3fcfe9219d238f20",
+"y": "3fabd492140c4d40",
+"hypot": "3fd054868a4a58ab"
+},
+{
+"x": "3fc680a92eef6b3a",
+"y": "3f885ac73694d0d2",
+"hypot": "3fc68dd34a76a0d8"
+},
+{
+"x": "4000455f1e9c1ba4",
+"y": "4036828264b43112",
+"hypot": "403699fbf2353ede"
+},
+{
+"x": "401a216183ab952c",
+"y": "4051f7401a268448",
+"hypot": "40520a36c797c8eb"
+},
+{
+"x": "400e8e53322b83cc",
+"y": "403afa44152a4c77",
+"hypot": "403b3f23f269ca87"
+},
+{
+"x": "3fe68e320084441a",
+"y": "4030860e3026c8de",
+"hypot": "403089e6fdc72905"
+},
+{
+"x": "407f4b43f819f60a",
+"y": "4025c436dc419002",
+"hypot": "407f4d286118aa38"
+},
+{
+"x": "4069caa5adf1a983",
+"y": "3fbacb70e23684c2",
+"hypot": "4069caa5e59e1afc"
+},
+{
+"x": "3fb5af9507b39940",
+"y": "3ffad97edb0e7d0a",
+"hypot": "3ffae23f610c3dd1"
+},
+{
+"x": "3fbd031ed2bb7c7e",
+"y": "402182733ff3d486",
+"hypot": "402182d36367e057"
+},
+{
+"x": "403f15469d962c04",
+"y": "4012f2b629b9a9ed",
+"hypot": "403f71269246e4cb"
+},
+{
+"x": "4064ee5dc1fd2af2",
+"y": "3fe2254b8db3a960",
+"hypot": "4064ee659f8aa4cc"
+},
+{
+"x": "40641ce8b58a17e3",
+"y": "3fb81226d4220a4b",
+"hypot": "40641ce8ef27ab1a"
+},
+{
+"x": "3f90a210147a9ede",
+"y": "4032654a7ac8cb6a",
+"hypot": "4032654af31958df"
+},
+{
+"x": "403a1b53f0b6389c",
+"y": "401d595dbec33b48",
+"hypot": "403b1e43c1164852"
+},
+{
+"x": "405d44deb826d794",
+"y": "3fcad5adf0667fe2",
+"hypot": "405d44e1cb70eeb1"
+},
+{
+"x": "4008d63c87719762",
+"y": "4028a0993b1813cc",
+"hypot": "402965e5905fbe8c"
+},
+{
+"x": "3fdb61f99c5196f6",
+"y": "3fb607ab8e91136c",
+"hypot": "3fdbee5b9cc7a293"
+},
+{
+"x": "3f9fef5de3aa5a1b",
+"y": "3fec4a2ac5b5b8c4",
+"hypot": "3fec4eac03f98c7d"
+},
+{
+"x": "3ff0f80dadc562c1",
+"y": "3f8b18938f32884d",
+"hypot": "3ff0f8643588a0ff"
+},
+{
+"x": "3ff17b0151cd26a4",
+"y": "3fac6568439f7560",
+"hypot": "3ff180c47721f1ba"
+},
+{
+"x": "3f9e068be83319c0",
+"y": "405af4014c4da8b0",
+"hypot": "405af4015d070846"
+},
+{
+"x": "3fb635a02e4c3a0c",
+"y": "3f936da01bd79754",
+"hypot": "3fb6bbfffa990193"
+},
+{
+"x": "401fa3164d9c5d15",
+"y": "40224e94b16dbce2",
+"hypot": "402831c647b59efa"
+},
+{
+"x": "3f90e09e095973d6",
+"y": "3f7df02701f58f17",
+"hypot": "3f9276688affd1f4"
+},
+{
+"x": "3faff686ad020d74",
+"y": "3f9042e355d52595",
+"hypot": "3fb07d8e59cb5323"
+},
+{
+"x": "40420e2c9d1a953a",
+"y": "3f79bd9cb28d9428",
+"hypot": "40420e2ca1b0e507"
+},
+{
+"x": "3f9e9eb99b701c69",
+"y": "3f73326300911a21",
+"hypot": "3f9efe6c26be7c37"
+},
+{
+"x": "4051e1409892f462",
+"y": "404559e5067a0d44",
+"hypot": "4054d3104cf93e67"
+},
+{
+"x": "3f9282397193f18f",
+"y": "3f80090e4d7ccac0",
+"hypot": "3f942baf52b1037e"
+},
+{
+"x": "3fef9178deb1e3ac",
+"y": "3fb1ace7a29afcb2",
+"hypot": "3fefa53dc47792b5"
+},
+{
+"x": "3f82c146585ea3d8",
+"y": "40591179b66226ce",
+"hypot": "40591179b8232a22"
+},
+{
+"x": "40192752e1690cef",
+"y": "3f87ef756a63b07a",
+"hypot": "40192755ba3f3673"
+},
+{
+"x": "403e196384c846c8",
+"y": "4076b36849ca8710",
+"hypot": "4076c753dd550eb9"
+},
+{
+"x": "3fe090fe686200b0",
+"y": "40244be74092f6a7",
+"hypot": "402452a8eac09c3d"
+},
+{
+"x": "407352da099d8bba",
+"y": "40345c1efdb57beb",
+"hypot": "40735d90dff5b7a3"
+},
+{
+"x": "405bc034cdde396a",
+"y": "3fd810454eb6158a",
+"hypot": "405bc03f3cbd0390"
+},
+{
+"x": "404ecd67b254f71b",
+"y": "40643d19334fffaa",
+"hypot": "4065a77719e0a704"
+},
+{
+"x": "3ffca40e3e80d2cc",
+"y": "3f7f549d059ac7f6",
+"hypot": "3ffca41f6166719c"
+},
+{
+"x": "3fe46155ff3ce9ac",
+"y": "405e20c44dea4cba",
+"hypot": "405e20dfe0726310"
+},
+{
+"x": "405e7598c63534fa",
+"y": "3fab3c6a92987d85",
+"hypot": "405e7598f6ea53d0"
+},
+{
+"x": "402fa2b1ade7bdc1",
+"y": "4037ad6916ce97ee",
+"hypot": "403c799349a09986"
+},
+{
+"x": "40358f962119f3cc",
+"y": "40090da9239d1ed2",
+"hypot": "4035c98173e82d2c"
+},
+{
+"x": "401267ce8c8f3885",
+"y": "3f72a15c2d3eeebc",
+"hypot": "401267cf236c2446"
+},
+{
+"x": "401114ced74b220c",
+"y": "3fcee5c4ca2d95bf",
+"hypot": "40111bc9ddbc9b6e"
+},
+{
+"x": "3f7a538b403c8f34",
+"y": "3fb1ffe159c4797e",
+"hypot": "3fb21317c4a0516a"
+},
+{
+"x": "3fa8bf8ad19b58ba",
+"y": "4003f8d6200e59ae",
+"hypot": "4003f9cb6f6199f0"
+},
+{
+"x": "3fcb8973f7d64060",
+"y": "407b4fecea1e61b3",
+"hypot": "407b4fed21a549dd"
+},
+{
+"x": "3fecd53c47beb24a",
+"y": "3fdd5898430c3fc8",
+"hypot": "3ff02d06d308535f"
+},
+{
+"x": "402a2ac5d5c9012f",
+"y": "405923a923829c3d",
+"hypot": "405959e7e5d13109"
+},
+{
+"x": "3f8a0dcbda1ef9e0",
+"y": "40438a8ed461cf3a",
+"hypot": "40438a8ee5c02727"
+},
+{
+"x": "3fc6705c7ad4fe98",
+"y": "4076ce117f86d7a2",
+"hypot": "4076ce11abaf287d"
+},
+{
+"x": "3f8f54014e844e9c",
+"y": "40156e0527795974",
+"hypot": "40156e0ae1067a5c"
+},
+{
+"x": "4022eada229cb2ab",
+"y": "402463d130ebce4c",
+"hypot": "402bd05f69b1bbfb"
+},
+{
+"x": "3f7eba7072f17ac8",
+"y": "3f746bb7b750166a",
+"hypot": "3f82728cb17e398a"
+},
+{
+"x": "3fca4f7d01e68dc7",
+"y": "3fff76cbfca93ccb",
+"hypot": "3fffa2adedbff583"
+},
+{
+"x": "405a1d3511873f2c",
+"y": "3f84be33958284d4",
+"hypot": "405a1d3513967f58"
+},
+{
+"x": "407f6dc32316b3e2",
+"y": "3f766fcfacfcbc0f",
+"hypot": "407f6dc3231eb61e"
+},
+{
+"x": "3ff5d452d6f5d23c",
+"y": "40256fbf560e4e6f",
+"hypot": "40259c0716ad60ee"
+},
+{
+"x": "3f9508d32b3a0dc6",
+"y": "4024f2976be1bfaf",
+"hypot": "4024f29a0fc6658d"
+},
+{
+"x": "405367f906f7d365",
+"y": "3ffc8b10c319f03a",
+"hypot": "40536948d77cb7e0"
+},
+{
+"x": "3fffe433d50fee4f",
+"y": "4048aa598c3cf826",
+"hypot": "4048af80821b436b"
+},
+{
+"x": "4008782f8b85f246",
+"y": "4077d069689666ba",
+"hypot": "4077d09bb188a8f6"
+},
+{
+"x": "40281b965bd38bae",
+"y": "3fed0c9a59295911",
+"hypot": "40282d107b0aff41"
+},
+{
+"x": "3f8498c047e689f2",
+"y": "3fbe8b190c531e38",
+"hypot": "3fbea6d3be22ab28"
+},
+{
+"x": "3fe1ab27991a8caa",
+"y": "3ffd07a44d390373",
+"hypot": "3ffe582461cfdf96"
+},
+{
+"x": "3fb52498d470702f",
+"y": "4078f4ebf0206700",
+"hypot": "4078f4ebf915231c"
+},
+{
+"x": "4059aa8793f1e9dc",
+"y": "3fcaa8c6bc2053f2",
+"hypot": "4059aa8b0a0d3c30"
+},
+{
+"x": "3fc5cd5556cc38ba",
+"y": "3fde53f70ce0ada0",
+"hypot": "3fe01d22b441f972"
+},
+{
+"x": "3feb62843f7662f0",
+"y": "4056e778e4255519",
+"hypot": "4056e7ba5faf28d0"
+},
+{
+"x": "3f77d723c0b32c82",
+"y": "4068097e52ecb72f",
+"hypot": "4068097e531c0194"
+},
+{
+"x": "4003a2780079c7e8",
+"y": "3f8e4b282dd1d595",
+"hypot": "4003a28f5eff3e48"
+},
+{
+"x": "40145339509f34ea",
+"y": "403e36c8a9f32184",
+"hypot": "403ea36746d19656"
+},
+{
+"x": "3f7dcde2585a5658",
+"y": "401f29eefbca6279",
+"hypot": "401f29efdfd28610"
+},
+{
+"x": "3fa6f363f092fb09",
+"y": "4016a8876c7f677c",
+"hypot": "4016a8b5eabf49cb"
+},
+{
+"x": "3fbc292d1b056aac",
+"y": "3fa3102df650657c",
+"hypot": "3fbdbaee25be6ea2"
+},
+{
+"x": "403e87ba73157aea",
+"y": "3f708db03598a936",
+"hypot": "403e87ba7792514b"
+},
+{
+"x": "405a92e47332c55e",
+"y": "40218fb699d9a736",
+"hypot": "405aaa105c56ee4e"
+},
+{
+"x": "4030d85569b04ace",
+"y": "3fdd72390d6c7858",
+"hypot": "4030d9f1203af7db"
+},
+{
+"x": "3f9efb367e39a442",
+"y": "40627df3a24b7568",
+"hypot": "40627df3a8c87143"
+},
+{
+"x": "4014806556b3d666",
+"y": "4070780998bde848",
+"hypot": "407078d5c0230d95"
+},
+{
+"x": "4032da208c74efbc",
+"y": "404afb1598cbad32",
+"hypot": "404c9477910a2564"
+},
+{
+"x": "3f94108881b8ce1a",
+"y": "3f827fad69d52275",
+"hypot": "3f961806bcd0f12a"
+},
+{
+"x": "400e0c6567ffbc04",
+"y": "4074f2f874bde95b",
+"hypot": "4074f34ea748062d"
+},
+{
+"x": "3fb3a30c2f4a0a46",
+"y": "4054d639b4efbe8d",
+"hypot": "4054d63a48fc354b"
+},
+{
+"x": "401065cffda75e6a",
+"y": "4055b1be4d67148e",
+"hypot": "4055b7efe1e28f37"
+},
+{
+"x": "4042ca931c562278",
+"y": "401e6a9579b61ec5",
+"hypot": "40432c0d9dd0d895"
+},
+{
+"x": "407484b03744568d",
+"y": "401824ec2cd59f98",
+"hypot": "407485937be01d4e"
+},
+{
+"x": "40345959d97bf8b5",
+"y": "403697a8f2fe1016",
+"hypot": "403e67d54ff6dbbe"
+},
+{
+"x": "4075cb91d73f4ba4",
+"y": "3faf87f512109bac",
+"hypot": "4075cb91dcf301c6"
+},
+{
+"x": "4015a1c42cf978b3",
+"y": "3f7b23465226ee7a",
+"hypot": "4015a1c53d55c49a"
+},
+{
+"x": "400856b506db5db6",
+"y": "3fb0a1c63c33f8a1",
+"hypot": "40085820ae4c9a0b"
+},
+{
+"x": "406a89936ff7cb1d",
+"y": "401f8721379f8d34",
+"hypot": "406a8e41a41de145"
+},
+{
+"x": "3fc40dd99ff30ae2",
+"y": "40223bab56042730",
+"hypot": "40223c5bc767ae9c"
+},
+{
+"x": "40061caaa1243cd3",
+"y": "3f73ef8702aa2306",
+"hypot": "40061cace04b466e"
+},
+{
+"x": "400a0c15db28e89a",
+"y": "3fc357d3ada75f38",
+"hypot": "400a134385161fcd"
+},
+{
+"x": "3ffedb9a96f91a28",
+"y": "3f9b2f8b3b367a7a",
+"hypot": "3ffedc5a2f76eaff"
+},
+{
+"x": "3fdff979092170e1",
+"y": "4069f4d83296c9fa",
+"hypot": "4069f4dd1efff11e"
+},
+{
+"x": "3ff6db7f8bcdbe22",
+"y": "4015c9f885aea61c",
+"hypot": "4016869b79fe4d45"
+},
+{
+"x": "4032b6deac2f2392",
+"y": "40551257a07dd05d",
+"hypot": "405595b568cf0d22"
+},
+{
+"x": "3fd7df44a0b915bf",
+"y": "402202f785d678bb",
+"hypot": "402206eb8e35a9c1"
+},
+{
+"x": "405a095e3bee3b99",
+"y": "40663bf86ca1cd2c",
+"hypot": "4069c3db03ad15ca"
+},
+{
+"x": "3fad79bc9e85d72c",
+"y": "4071835dd76201ac",
+"hypot": "4071835ddd957d4d"
+},
+{
+"x": "400a1059e9a13838",
+"y": "40359d5260906354",
+"hypot": "4035dbd3b2c8e530"
+},
+{
+"x": "3fe2627f216bad0e",
+"y": "4065000c14ab4d08",
+"hypot": "4065001420d4845e"
+},
+{
+"x": "3fc17d71f6b37a44",
+"y": "3fddfed22c36b829",
+"hypot": "3fdf3e82b18dc0e0"
+},
+{
+"x": "3fda2bebb0f495ba",
+"y": "3fd4bd7b49f3a7ea",
+"hypot": "3fe0b2540f8f9705"
+},
+{
+"x": "3fe6d97aea9b3566",
+"y": "403ceb93c727d1a0",
+"hypot": "403cedd56404e6bd"
+},
+{
+"x": "40460f517d69b67c",
+"y": "3fd2d868f1e0a8b2",
+"hypot": "40460f71b025aef0"
+},
+{
+"x": "40291ac8c667f55c",
+"y": "3fb6ceeb98bc5892",
+"hypot": "40291af237ee1742"
+},
+{
+"x": "3ff236da4b56e2d5",
+"y": "40744dc9b2693b46",
+"hypot": "40744dd1dde3dcc7"
+},
+{
+"x": "3fba55a70e9ef737",
+"y": "406a6ff6b4d9ff00",
+"hypot": "406a6ff6e950e1fc"
+},
+{
+"x": "40175264702817b6",
+"y": "4030596bcc2af14d",
+"hypot": "40315b9a1c5bc61d"
+},
+{
+"x": "404e3e693b9a969c",
+"y": "3fa02726eb94ca4a",
+"hypot": "404e3e69809ef782"
+},
+{
+"x": "40045ba4dc982ac8",
+"y": "403b31e40d23d674",
+"hypot": "403b504de08e828d"
+},
+{
+"x": "404fd67629760f04",
+"y": "400aa91518808178",
+"hypot": "404fe19dd26fd2fe"
+},
+{
+"x": "407b8b247e9beda5",
+"y": "3f9625fcdf1108aa",
+"hypot": "407b8b247f2a6899"
+},
+{
+"x": "3fd18e0e0ea2d0fd",
+"y": "400f9b3a6f6c7f73",
+"hypot": "400faeb4a32f2722"
+},
+{
+"x": "3f8d225078a9051d",
+"y": "3fcfd774bd365464",
+"hypot": "3fcfe4c602a9c981"
+},
+{
+"x": "3fc480512798ab68",
+"y": "3f70337e1b68294a",
+"hypot": "3fc481eac9a89271"
+},
+{
+"x": "3ffb41a2bbabb472",
+"y": "3fc3d3ce411714da",
+"hypot": "3ffb5e6c36167542"
+},
+{
+"x": "3ff062d6baa608b9",
+"y": "4077a2cf4652486e",
+"hypot": "4077a2d4f46504b8"
+},
+{
+"x": "400fbab7afb2dc9e",
+"y": "4052968a8dac984a",
+"hypot": "40529d4e7bae5814"
+},
+{
+"x": "3fbfc8f2acb9803b",
+"y": "4005210aaed988f7",
+"hypot": "40052703e9e9d148"
+},
+{
+"x": "3fba20d8394d6f89",
+"y": "3ffb32c1f0ea4832",
+"hypot": "3ffb3f4be786a513"
+},
+{
+"x": "4009c21b2b11fb4a",
+"y": "3fcea386b4b85bde",
+"hypot": "4009d44d94b37409"
+},
+{
+"x": "3fc4b33742c89754",
+"y": "3fa25ab51fe3d596",
+"hypot": "3fc533d993039085"
+},
+{
+"x": "3fb26008c216ae99",
+"y": "3faea5e7db1a7d42",
+"hypot": "3fb7ed271e2e7dfe"
+},
+{
+"x": "401f74b3f4f1d192",
+"y": "4061f612beada940",
+"hypot": "4061fcf449105901"
+},
+{
+"x": "402b4bdfab2c276c",
+"y": "406cbb8b137e5ea4",
+"hypot": "406cc87f72666cb7"
+},
+{
+"x": "4025899a2eb43e8a",
+"y": "402042247613d7fc",
+"hypot": "402afc336df6e736"
+},
+{
+"x": "3f95bfe07e2facdc",
+"y": "4059b8e1d408b52c",
+"hypot": "4059b8e1dd3aadf1"
+},
+{
+"x": "404c0b3101dc6478",
+"y": "3ff182707287dada",
+"hypot": "404c0c8ecf1bc285"
+},
+{
+"x": "404c62055b563516",
+"y": "3fb006376f246be4",
+"hypot": "404c62067cd68517"
+},
+{
+"x": "3fefab11b981a6ca",
+"y": "40139157cd294b6d",
+"hypot": "4013f6d17aa1b376"
+},
+{
+"x": "3fcd326ce3802e9c",
+"y": "403821f6fb6d39f8",
+"hypot": "4038223da0ecdbef"
+},
+{
+"x": "3fa9616b2808b164",
+"y": "3f9f3a905591e40e",
+"hypot": "3fadcc8bb8a22cdf"
+},
+{
+"x": "407c169903a75d84",
+"y": "3f87f4573e471cfc",
+"hypot": "407c169903d0392d"
+},
+{
+"x": "401bab5de36617de",
+"y": "406a8ebcfd11041b",
+"hypot": "406a92573bac9ca7"
+},
+{
+"x": "3fcda27107e00cb5",
+"y": "3f7db7ce9d28f728",
+"hypot": "3fcda62a736a4762"
+},
+{
+"x": "3f74ae13223c68c2",
+"y": "407006d08646f832",
+"hypot": "407006d086544fce"
+},
+{
+"x": "40484bde2f7ad32e",
+"y": "3f824a167d849192",
+"hypot": "40484bde365d13a2"
+},
+{
+"x": "3ffeb37ccfa4f4d0",
+"y": "3fd36f0b1a944678",
+"hypot": "3fff154a954dfc26"
+},
+{
+"x": "3fbeaf6aea282d40",
+"y": "406093ec555a427c",
+"hypot": "406093ecc6f2b2c2"
+},
+{
+"x": "400d809119e68a3a",
+"y": "407ad88645953ed5",
+"hypot": "407ad8c71d13ada3"
+},
+{
+"x": "402d3937119329d0",
+"y": "3fb93881e2ea7788",
+"hypot": "402d396299c1e8c9"
+},
+{
+"x": "402f91146e1163ea",
+"y": "402e663119e60f36",
+"hypot": "4035e98246c03f57"
+},
+{
+"x": "3fcb9d602fbc6b98",
+"y": "4072a9eeb49b63f9",
+"hypot": "4072a9ef0652ed61"
+},
+{
+"x": "401d9863f36b8cb8",
+"y": "3ffcb475adaf9bca",
+"hypot": "401e73f0af5c6cf8"
+},
+{
+"x": "3f7d1222c472be64",
+"y": "3fba4bfebf0d12fc",
+"hypot": "3fba5c0b71393886"
+},
+{
+"x": "404f9f20e1ccf6b5",
+"y": "3ffe9873b5015b47",
+"hypot": "404fa2d3f3f82685"
+},
+{
+"x": "40556a30579a8056",
+"y": "3fb20d65da7a1de0",
+"hypot": "40556a30d1589d45"
+},
+{
+"x": "40133dae717e8664",
+"y": "3fd919d407c07724",
+"hypot": "40134e06ed685d57"
+},
+{
+"x": "4027678b0e891f22",
+"y": "3ff6e2fa85e74654",
+"hypot": "402794234413848c"
+},
+{
+"x": "40047613d5e351fc",
+"y": "404624dcdcf86fdd",
+"hypot": "40462e4edce56928"
+},
+{
+"x": "403e74e0c48de954",
+"y": "3fb8eb65624834b1",
+"hypot": "403e74eaf65accc4"
+},
+{
+"x": "40579f382a2754a8",
+"y": "3fb1ee25399d8533",
+"hypot": "40579f3897088c1b"
+},
+{
+"x": "3fde90d0e5d57386",
+"y": "406108cadda39a30",
+"hypot": "406108d1b8b282b4"
+},
+{
+"x": "3fa8f74d2462d5c9",
+"y": "4000e07a8155226a",
+"hypot": "4000e1a1eca7d52a"
+},
+{
+"x": "3fa536c65428d1ac",
+"y": "3fd1b2742264f730",
+"hypot": "3fd1e507e354ee61"
+},
+{
+"x": "3f87923fbc15c430",
+"y": "40400e50889c8e8a",
+"hypot": "40400e5099e9ebbd"
+},
+{
+"x": "406fbcc3829de44a",
+"y": "3fe4c2e0756e4573",
+"hypot": "406fbcca4cff6b5d"
+},
+{
+"x": "3f91b17be8924566",
+"y": "403cd62a7caa20a0",
+"hypot": "403cd62ad3836936"
+},
+{
+"x": "3fa8eace0c21f9b9",
+"y": "3fe57873e21fc65f",
+"hypot": "3fe586e46dc63388"
+},
+{
+"x": "406ef625a6e1b8e4",
+"y": "3fba308132a937fc",
+"hypot": "406ef625d3300679"
+},
+{
+"x": "400b7840e4dc0366",
+"y": "3fc79698ca70353e",
+"hypot": "400b825fb39c76ef"
+},
+{
+"x": "3fc3a6d848e36f5c",
+"y": "3ff6e7e5f9753872",
+"hypot": "3ff709859310be98"
+},
+{
+"x": "3fd916c2bbb79f14",
+"y": "406e881b4e539d80",
+"hypot": "406e881de20d228e"
+},
+{
+"x": "405e0c039cd855f0",
+"y": "3fb360dc22bbca9a",
+"hypot": "405e0c0400d3d8a4"
+},
+{
+"x": "3f9f77f843fe3417",
+"y": "3f7daab5651314f4",
+"hypot": "3fa02a5886e23e8e"
+},
+{
+"x": "40355311f942d577",
+"y": "402965b7a672a010",
+"hypot": "4038d1b3b9cb9f41"
+},
+{
+"x": "3f8b899842b76498",
+"y": "4013463518db9a14",
+"hypot": "4013463a03d76741"
+},
+{
+"x": "3fbb4d8318f625bc",
+"y": "3fc166d549d0fbb6",
+"hypot": "3fc61e0de336116a"
+},
+{
+"x": "402335f6f49e12d4",
+"y": "3f98e959fcae5637",
+"hypot": "402335fafe576e8e"
+},
+{
+"x": "403a1f15aa6454bf",
+"y": "403366d595813dee",
+"hypot": "404044ede5ee2de1"
+},
+{
+"x": "3fdfeece83cb3a5e",
+"y": "3fc4bb98530083dd",
+"hypot": "3fe0c962d0f95819"
+},
+{
+"x": "3f80e58777ae41f3",
+"y": "3f8a2e0ce982b4e1",
+"hypot": "3f8f28b23bd65953"
+},
+{
+"x": "3fc9a59ee3cbdd58",
+"y": "4070d0fe53bd38e8",
+"hypot": "4070d0fea1f7e7a3"
+},
+{
+"x": "404eb83c4eaccd7f",
+"y": "4010afc9a437f0bc",
+"hypot": "404eca57c52a2567"
+},
+{
+"x": "407ed235dbab45c0",
+"y": "3ffaef47b6ff54de",
+"hypot": "407ed241a0905f90"
+},
+{
+"x": "405d7953c51e7b7e",
+"y": "404e9a276161dbef",
+"hypot": "40609abfa400318f"
+},
+{
+"x": "3fb486b2db8eda9e",
+"y": "3fbfb88c82bdd32a",
+"hypot": "3fc2e432357f4e9b"
+},
+{
+"x": "404f84e25158cb41",
+"y": "406eec39d14bd76e",
+"hypot": "406fe932f1bff796"
+},
+{
+"x": "400933154ad4c958",
+"y": "3fd989e7b8c8c159",
+"hypot": "400966a456a563b8"
+},
+{
+"x": "3f8bb48ae7508289",
+"y": "3ff24118d4311af1",
+"hypot": "3ff2416cecb1ff75"
+},
+{
+"x": "401c1998583ac2e0",
+"y": "40499380cbd9195e",
+"hypot": "4049d0f5d792326f"
+},
+{
+"x": "3fb3819a90802cce",
+"y": "407fa4cce5e79934",
+"hypot": "407fa4ccebeab5e1"
+},
+{
+"x": "3fab463753660d00",
+"y": "4073a855da19bfcf",
+"hypot": "4073a855ded4b394"
+},
+{
+"x": "3f9e3291bf280e7c",
+"y": "40787cf13e20a838",
+"hypot": "40787cf13f4a900f"
+},
+{
+"x": "40047d18ca3a2796",
+"y": "3fa346dcf573e626",
+"hypot": "40047da9e00d47d6"
+},
+{
+"x": "40258a011e96cc32",
+"y": "3fbe3ce75e13ad82",
+"hypot": "40258a560443979b"
+},
+{
+"x": "401c1205e0bf45d4",
+"y": "3fc4402ee20d1103",
+"hypot": "401c13d951ac392f"
+},
+{
+"x": "3f9443464e9e0602",
+"y": "3f8f4965592b0e58",
+"hypot": "3f9999469b44c84f"
+},
+{
+"x": "3f88641cb3eddb7c",
+"y": "3fbe49ae8dc90266",
+"hypot": "3fbe70de16966aa3"
+},
+{
+"x": "3fe6926c840a26b6",
+"y": "3fdc35a07f4fa409",
+"hypot": "3fea9dd22cd61ec0"
+},
+{
+"x": "3fea4eef62887e2b",
+"y": "3fe47a0d3c45c7f6",
+"hypot": "3ff0ab45bf91e00f"
+},
+{
+"x": "3fe8687ce6e8a706",
+"y": "3f73f02cf0b2f423",
+"hypot": "3fe8689d79ad0a07"
+},
+{
+"x": "3f7b256227415a8c",
+"y": "407228555dac2d3e",
+"hypot": "407228555dc07800"
+},
+{
+"x": "4073d2316d9c04e2",
+"y": "3f783268107c6cba",
+"hypot": "4073d2316daac9d9"
+},
+{
+"x": "4053ab1f98bc7da0",
+"y": "3f8e1fcce7d2d1eb",
+"hypot": "4053ab1f9e80ea7a"
+},
+{
+"x": "3fcdb014d530aeb0",
+"y": "407ab1e80981e4a9",
+"hypot": "407ab1e84b8a33c4"
+},
+{
+"x": "3fcc2f5dba9431fe",
+"y": "3f7bff35b4962410",
+"hypot": "3fcc32d76fb86369"
+},
+{
+"x": "3f8bc8ac681a2284",
+"y": "3fd0b9722a379fca",
+"hypot": "3fd0bf362ff65991"
+},
+{
+"x": "3fe1d7756258b10e",
+"y": "4072e8bf01eb7e64",
+"hypot": "4072e8c11c9e9025"
+},
+{
+"x": "40409088f873816a",
+"y": "403541a18748173d",
+"hypot": "4043ae59b11f45cd"
+},
+{
+"x": "3f7468992098684e",
+"y": "3f98b0a11c19aa80",
+"hypot": "3f99362cefb6bffc"
+},
+{
+"x": "4057639f7e12d6a2",
+"y": "3fcc49301ac7c5a8",
+"hypot": "405763a3c4b8cb58"
+},
+{
+"x": "3f86d2dc3452128e",
+"y": "404b83fc1ca50722",
+"hypot": "404b83fc261c4d5a"
+},
+{
+"x": "402e2a761f3252e0",
+"y": "40620347bcbd3772",
+"hypot": "40621c787c195b90"
+},
+{
+"x": "405bf44d22c5e535",
+"y": "40336d0f64e1926d",
+"hypot": "405c5f7ea9db1cd6"
+},
+{
+"x": "3f9b27764026bb88",
+"y": "3fce31f35cb99f06",
+"hypot": "3fce62a2dd0b18f1"
+},
+{
+"x": "3f75d11bb26f117b",
+"y": "3faabd8235c11827",
+"hypot": "3faae1042eb4a6d3"
+},
+{
+"x": "3facb178ff8e4dfa",
+"y": "3fa3cfa197822d18",
+"hypot": "3fb16f1c37f3cca7"
+},
+{
+"x": "3f86a8f5d202d9ae",
+"y": "4053b0d1e357c3fb",
+"hypot": "4053b0d1e69a3b42"
+},
+{
+"x": "3ffae781f49756c1",
+"y": "3fb33662234e6cd8",
+"hypot": "3ffaee5d321315b3"
+},
+{
+"x": "407b051a37a67a6e",
+"y": "3feabb1145b557b6",
+"hypot": "407b051d85e0ac8d"
+},
+{
+"x": "4012d4d01071bce2",
+"y": "3f866271dce3e442",
+"hypot": "4012d4d363e84a27"
+},
+{
+"x": "3fe47287552127f2",
+"y": "3fe195cb1615458c",
+"hypot": "3feaf81690811119"
+},
+{
+"x": "401a7d095eb2c115",
+"y": "404a7fb403db3850",
+"hypot": "404ab474407b2d2e"
+},
+{
+"x": "404008c7efa35f41",
+"y": "4057d158030bee51",
+"hypot": "4059217fb81f1b39"
+},
+{
+"x": "3f89c92a7e663104",
+"y": "3fd433b1309f1542",
+"hypot": "3fd437cdfd81f031"
+},
+{
+"x": "40320507d0d0cb7a",
+"y": "3ff9daf5d43b43c1",
+"hypot": "4032178ae186b089"
+},
+{
+"x": "3fb8a9ebc2bc4e8f",
+"y": "3fef1ed0c7391ade",
+"hypot": "3fef45d04197016e"
+},
+{
+"x": "3fe9b4bf770dff0e",
+"y": "3f7eda899a3d0eba",
+"hypot": "3fe9b5098710960f"
+},
+{
+"x": "406ab7cceab7ab09",
+"y": "40480f1b62c50cab",
+"hypot": "406b62f9d2e12b74"
+},
+{
+"x": "404411f778a74103",
+"y": "3f8e493885d5197c",
+"hypot": "404411f78f8114ad"
+},
+{
+"x": "400c62657ef23679",
+"y": "40247e7372668636",
+"hypot": "4025b00d47fb0619"
+},
+{
+"x": "4038ef6ecc39ae30",
+"y": "400cc874be217df1",
+"hypot": "4039318a1fb9acf3"
+},
+{
+"x": "4035e4869784c2da",
+"y": "400f53ccc5e1734e",
+"hypot": "40363d79c430e832"
+},
+{
+"x": "3f88806aecdbee84",
+"y": "3f80c1b2cc6357e1",
+"hypot": "3f8daefee85219db"
+},
+{
+"x": "405c970dc6503b5c",
+"y": "4065a37019798c48",
+"hypot": "4069ef16e8f0d189"
+},
+{
+"x": "4076619fadd7be40",
+"y": "3fd4ab3c991e1b3a",
+"hypot": "407661a0468ade6c"
+},
+{
+"x": "3fcc8ea6175bcfa2",
+"y": "3fdd00691281163c",
+"hypot": "3fe029bb19e54ce9"
+},
+{
+"x": "405a8c5d9c598b3a",
+"y": "3f76c3f665afce50",
+"hypot": "405a8c5d9cf5b797"
+},
+{
+"x": "3f960c38bdaf5304",
+"y": "4045603c14032747",
+"hypot": "4045603c417e6173"
+},
+{
+"x": "3fd480c9594f6619",
+"y": "406eda74cb286818",
+"hypot": "406eda767f28229c"
+},
+{
+"x": "404e0e038b050fcc",
+"y": "3f7d014ea139aec8",
+"hypot": "404e0e038e84cf4f"
+},
+{
+"x": "4025bed9f6c4879c",
+"y": "3fc83afef70a926c",
+"hypot": "4025bfb1f1422da3"
+},
+{
+"x": "3fa628576fe24e79",
+"y": "401f2aedae0381a6",
+"hypot": "401f2b0d2f0f293b"
+},
+{
+"x": "405c0506ee5aa9d4",
+"y": "4043e22ac4c4104a",
+"hypot": "405dbb292558995d"
+},
+{
+"x": "4076c31fec19d100",
+"y": "3faa21be8852aa86",
+"hypot": "4076c31fefd9d2fb"
+},
+{
+"x": "3fd03173ce167566",
+"y": "3fb4e0cfd3100816",
+"hypot": "3fd1037b1a751f62"
+},
+{
+"x": "3fa20387c16f8206",
+"y": "3ff8b622748f3e15",
+"hypot": "3ff8b7c69b363086"
+},
+{
+"x": "4016892d918842cb",
+"y": "3f7d53e8731971d4",
+"hypot": "4016892ec2dd847c"
+},
+{
+"x": "402f5914d7089828",
+"y": "40475cb46e2ef344",
+"hypot": "4048a43ea21a96e9"
+},
+{
+"x": "3fb9c9865b6e6f90",
+"y": "40422ef2b017e970",
+"hypot": "40422ef7425ad27b"
+},
+{
+"x": "40078d19c0876d35",
+"y": "4078dca9c145bf88",
+"hypot": "4078dcd65f936630"
+},
+{
+"x": "4032b99bbb428798",
+"y": "3fad7286554524f8",
+"hypot": "4032b9a185292b20"
+},
+{
+"x": "4038746ebb264970",
+"y": "403b7e77a597b717",
+"hypot": "404265e92974213b"
+},
+{
+"x": "40740a02eeb68257",
+"y": "405e2436a96d4ede",
+"hypot": "407568b7af07a0dd"
+},
+{
+"x": "4063c02d61d862d0",
+"y": "4017a6842bb8712f",
+"hypot": "4063c3b74ff0f4d3"
+},
+{
+"x": "40026e47f4fb5416",
+"y": "3fa1ae45b7008437",
+"hypot": "40026ecfa3a6326f"
+},
+{
+"x": "400e07dc4b6c5040",
+"y": "40594eca6d083050",
+"hypot": "4059533e5ae088b8"
+},
+{
+"x": "3faabeaf64be1332",
+"y": "4037ce93c96fb6ff",
+"hypot": "4037ce978ae2dcf8"
+},
+{
+"x": "406f9883eedf30e0",
+"y": "3fede6d00be30e7e",
+"hypot": "406f9892150abc7b"
+},
+{
+"x": "3fdc44a09a1cf15e",
+"y": "3fef1eb6f0c33454",
+"hypot": "3ff116f318215f78"
+},
+{
+"x": "3f991db17e83c744",
+"y": "40612113ee1a6d81",
+"hypot": "40612113f2b4e223"
+},
+{
+"x": "401e4ccc136948de",
+"y": "40638d8cbebd0eb8",
+"hypot": "4063936a65203f5c"
+},
+{
+"x": "3fae88031e54c8b0",
+"y": "40541aa73cd4eb26",
+"hypot": "40541aa79990a1e6"
+},
+{
+"x": "40758e48065ffdca",
+"y": "40592cf3317dac50",
+"hypot": "407674b263b4d3c7"
+},
+{
+"x": "3fc8546260bda063",
+"y": "40764a05de35197c",
+"hypot": "40764a0613523acc"
+},
+{
+"x": "3fe29087ef957352",
+"y": "4002125e4284b928",
+"hypot": "4002a87fbae46781"
+},
+{
+"x": "3f7e62050358e6ca",
+"y": "3fcd27d2d2ab3b18",
+"hypot": "3fcd2bc7bc14e8e8"
+},
+{
+"x": "3fb894f0ef2654f5",
+"y": "3fa2c83d7a0cbd6e",
+"hypot": "3fba5088eb27bd70"
+},
+{
+"x": "40059f226e97ccca",
+"y": "402cc91f659a4353",
+"hypot": "402d49ebe25f70a6"
+},
+{
+"x": "3fb843bf445273c9",
+"y": "3ffdce521a2397b4",
+"hypot": "3ffdd830eb851db7"
+},
+{
+"x": "3f882337b3f9baf8",
+"y": "3fea709e7afc5a88",
+"hypot": "3fea714ec1d02372"
+},
+{
+"x": "407985e5797af7b8",
+"y": "404120c316861b30",
+"hypot": "40799cd83410bcb8"
+},
+{
+"x": "3fd70790226f64e2",
+"y": "4064721c35f72658",
+"hypot": "4064721f740a488f"
+},
+{
+"x": "406d5a8d671124be",
+"y": "3fa47532822911fc",
+"hypot": "406d5a8d6e3226c6"
+},
+{
+"x": "40784d51bbb89044",
+"y": "3f8e6b0ec2d415e8",
+"hypot": "40784d51bc04b5f7"
+},
+{
+"x": "401ba768f256f42d",
+"y": "3fd39981057de356",
+"hypot": "401bae5a24b50e91"
+},
+{
+"x": "3fa85091d3ffd054",
+"y": "3fa822e87d94f21e",
+"hypot": "3fb1215243f13955"
+},
+{
+"x": "4029288c6866c1ea",
+"y": "3fcb8cb234e51de2",
+"hypot": "4029297dbc16564f"
+},
+{
+"x": "3ff5290d22ab74f8",
+"y": "3f7fba5b8160f1e8",
+"hypot": "3ff52924ebf8d03f"
+},
+{
+"x": "40767777e2cb4dae",
+"y": "3f8186d9616525e5",
+"hypot": "40767777e2e6a643"
+},
+{
+"x": "3ffffe18fc4eee0b",
+"y": "3f8c7c28a84a9275",
+"hypot": "3ffffe4bb57c7640"
+},
+{
+"x": "3fd79386d5055048",
+"y": "3fa06635229f478a",
+"hypot": "3fd7aa4c3c67293b"
+},
+{
+"x": "3fdf9c8205dbe29d",
+"y": "3f7a58e22a72737a",
+"hypot": "3fdf9d31b15b1092"
+},
+{
+"x": "406dc8bc8dafe4d6",
+"y": "402a40b204216d1e",
+"hypot": "406dd44c3b3c2fc6"
+},
+{
+"x": "40119c3364a63c31",
+"y": "3ff41cd6a34f7770",
+"hypot": "4012505de22ae747"
+},
+{
+"x": "3fc5e52f2e890610",
+"y": "3f8aed4e5596b953",
+"hypot": "3fc5f5b7aa1beef9"
+},
+{
+"x": "3fd81feb718265fe",
+"y": "3fc407dacfe867d2",
+"hypot": "3fda1efaff8aacdf"
+},
+{
+"x": "403e042eb8775f7e",
+"y": "3fd4ec9c40fd4581",
+"hypot": "403e04a36823bb84"
+},
+{
+"x": "40514676bb390030",
+"y": "3fcc56f59d0f5d62",
+"hypot": "4051467c8aeb857c"
+},
+{
+"x": "404ebe76d7bab2be",
+"y": "400823105feb43e2",
+"hypot": "404ec7eef6153dd0"
+},
+{
+"x": "404100ed61bf4726",
+"y": "3fce44061d332c62",
+"hypot": "40410108513d2d4d"
+},
+{
+"x": "40572214f4c810c1",
+"y": "407a5014b511c5d2",
+"hypot": "407af0dd106acc0b"
+},
+{
+"x": "406aae3a7c176eb2",
+"y": "3fd08ff8fe1f14db",
+"hypot": "406aae3bc5185e8c"
+},
+{
+"x": "406547aac3e7270c",
+"y": "3fc70787158f6616",
+"hypot": "406547ab8b48cc7e"
+},
+{
+"x": "4015a8698270315c",
+"y": "3f9fe85a9c04f6da",
+"hypot": "4015a88103702528"
+},
+{
+"x": "3f974c4b7479e0f8",
+"y": "3fe697f1d2491713",
+"hypot": "3fe69af267cf0ef6"
+},
+{
+"x": "3f79e30e110ed3a0",
+"y": "3ff331439c724aae",
+"hypot": "3ff3315511bb2ecc"
+},
+{
+"x": "3fd075df4ceb9cf2",
+"y": "3f9ad3eb38635514",
+"hypot": "3fd08bada5522a0b"
+},
+{
+"x": "3fe316a17ac2db2c",
+"y": "3fc5607c15541d2e",
+"hypot": "3fe3d289394aa0f3"
+},
+{
+"x": "40192020c59935bd",
+"y": "3f73b627ed19fc86",
+"hypot": "40192021414fd4c5"
+},
+{
+"x": "404748357f16ba26",
+"y": "3f77f428edf24fee",
+"hypot": "40474835822b5c70"
+},
+{
+"x": "404857be27971fac",
+"y": "404f5feb2099043c",
+"hypot": "4053daf84c179afc"
+},
+{
+"x": "3fcdaca14524ae61",
+"y": "400e7590e5ce5d8e",
+"hypot": "400e8401e8fb6dfa"
+},
+{
+"x": "3f7c3c13a80ed9ea",
+"y": "3fd729b2391c5bac",
+"hypot": "3fd72ac588c04245"
+},
+{
+"x": "3fcab085ebeb14ac",
+"y": "4057032b4395e1ec",
+"hypot": "4057032f221f0efb"
+},
+{
+"x": "400002c98200f3b4",
+"y": "40641b4e4f812d30",
+"hypot": "40641bb44d53ea59"
+},
+{
+"x": "3f8a9282482f7004",
+"y": "3fafebe6a0dd266d",
+"hypot": "3fb04d7d9be6cab1"
+},
+{
+"x": "4014d396828ce59a",
+"y": "40325f414496c447",
+"hypot": "4033187a7b6fe434"
+},
+{
+"x": "4061fe8cba7364dc",
+"y": "3f8d83dfda19f23a",
+"hypot": "4061fe8cbbf6b0cc"
+},
+{
+"x": "405459edeb73fec2",
+"y": "406d4dd53ee157d3",
+"hypot": "406f053e3087374e"
+},
+{
+"x": "3f8353d89932e85e",
+"y": "3fb61bd9615ade7e",
+"hypot": "3fb63d8a886aff4e"
+},
+{
+"x": "3fa1e904d060a626",
+"y": "402287d92724f85a",
+"hypot": "402287e1cee3dd12"
+},
+{
+"x": "3fc1ba4ff096e3a2",
+"y": "402d97fbd17b6eaa",
+"hypot": "402d9850c606cb89"
+},
+{
+"x": "3f976419b98f2fd2",
+"y": "40411612a2f2e246",
+"hypot": "40411612e2fe497a"
+},
+{
+"x": "3f746c5704fb8af9",
+"y": "3fe2a3a7ab192cb2",
+"hypot": "3fe2a3d46c5adc07"
+},
+{
+"x": "4036267d35c98628",
+"y": "4059b25bbb977427",
+"hypot": "405a495f4d94206b"
+},
+{
+"x": "3fe252fd0d1da926",
+"y": "405d48a3e052094e",
+"hypot": "405d48bacf03ca2d"
+},
+{
+"x": "3f8ee4d4323ae71e",
+"y": "3feb8ba7b92b08ed",
+"hypot": "3feb8cbce54d1fe8"
+},
+{
+"x": "3faa863c2f761ea1",
+"y": "40362b57c458403a",
+"hypot": "40362b5bbbdc72e8"
+},
+{
+"x": "405a0da7bc74f57c",
+"y": "3f8615a5e12bf62f",
+"hypot": "405a0da7becc02ab"
+},
+{
+"x": "3ff7a654683ed4d4",
+"y": "3fcd773bdc2c0078",
+"hypot": "3ff7ef50616ca1bc"
+},
+{
+"x": "4012fac8d6135e1e",
+"y": "3f76425a21ebee68",
+"hypot": "4012fac9a6eb488f"
+},
+{
+"x": "3f83b43b4ed0655e",
+"y": "4021d2a2f24f188a",
+"hypot": "4021d2a3a0945d2d"
+},
+{
+"x": "3f91eae30dbf5138",
+"y": "4047fbf9e43f0735",
+"hypot": "4047fbf9ff04527c"
+},
+{
+"x": "3ff1805aad7bb554",
+"y": "3fa546b2f40ae6ba",
+"hypot": "3ff18396101f5cc6"
+},
+{
+"x": "4069843bbae80f8e",
+"y": "40095c77273ea399",
+"hypot": "406985055f4fc5e8"
+},
+{
+"x": "40395d1dbab6c47c",
+"y": "3fd2500f07e4cd52",
+"hypot": "40395d87803f0e58"
+},
+{
+"x": "40440a355459cbba",
+"y": "3faa597cd296823a",
+"hypot": "40440a3669848ce9"
+},
+{
+"x": "3fd514a7f167f091",
+"y": "406635b5be216ae6",
+"hypot": "406635b83e6ac9d0"
+},
+{
+"x": "3f9c3cb2f9f01f68",
+"y": "3f87307636b62fa3",
+"hypot": "3f9e866079a6aa08"
+},
+{
+"x": "40394e1fbc4eec83",
+"y": "3fdf870739bad686",
+"hypot": "40394f59f19427d3"
+},
+{
+"x": "3fc99dfdc2f55499",
+"y": "3f853c20a3651c81",
+"hypot": "3fc9a6c957577acc"
+},
+{
+"x": "403ca25c59feabb4",
+"y": "3f95a557fdf2200e",
+"hypot": "403ca25cdce63d4e"
+},
+{
+"x": "3f76f91ec953c2e4",
+"y": "3fceee5ab89b97e8",
+"hypot": "3fcef07ca69c68d7"
+},
+{
+"x": "405531dabf8f813e",
+"y": "405399f22ea85457",
+"hypot": "405cde8345c61650"
+},
+{
+"x": "40297512919280b1",
+"y": "3f9d6b01bf26ed8c",
+"hypot": "40297516d1683ca4"
+},
+{
+"x": "3fd819254424b329",
+"y": "3fdbeabd4bef4584",
+"hypot": "3fe2708bef849dca"
+},
+{
+"x": "3fe519bdecaaa87e",
+"y": "3f9c7d845282e808",
+"hypot": "3fe51e8c5acf6558"
+},
+{
+"x": "404fbe393a94c1b6",
+"y": "3f886004c7c65737",
+"hypot": "404fbe3943f091fa"
+},
+{
+"x": "400c7e049716721c",
+"y": "404f6f939776f71c",
+"hypot": "404f7c7a74610be9"
+},
+{
+"x": "3f846fa344f7a298",
+"y": "402381198bbb8eda",
+"hypot": "4023811a37081e75"
+},
+{
+"x": "3f957636bc0f5fef",
+"y": "3fae2dfc076939e8",
+"hypot": "3fb003ebf6427568"
+},
+{
+"x": "3f75584553923037",
+"y": "3f9d01f71f2d27d8",
+"hypot": "3f9d7e91d3f067eb"
+},
+{
+"x": "402e77fd78c4c032",
+"y": "40421f85a2fdad34",
+"hypot": "4043a8a8a9473757"
+},
+{
+"x": "400392b9598a0ced",
+"y": "3f9f0220622bebe2",
+"hypot": "4003931b982bfa48"
+},
+{
+"x": "4008662e1567c232",
+"y": "3ff0a56c8b7bbda8",
+"hypot": "4009c7992d929086"
+},
+{
+"x": "4043c67282013a4a",
+"y": "3fb21bdbc0828f2c",
+"hypot": "4043c67494a80968"
+},
+{
+"x": "40538167bd3e5f8f",
+"y": "404a90a035987e14",
+"hypot": "40579935dff424bb"
+},
+{
+"x": "3fe73ca80baca450",
+"y": "3fd74db5a02a50ae",
+"hypot": "3fe9fe9e1c6dc69d"
+},
+{
+"x": "3f84865d1f82597f",
+"y": "407c5e6485a7c1aa",
+"hypot": "407c5e6485c574c3"
+},
+{
+"x": "3fd8311c1bace0b8",
+"y": "3fbb963822791e66",
+"hypot": "3fd927dc146808ab"
+},
+{
+"x": "401a3598e4a58a0c",
+"y": "4041278750da5a41",
+"hypot": "404176e6371c4ca7"
+},
+{
+"x": "401e57244664622c",
+"y": "3fa8a877db997d91",
+"hypot": "401e574c5ac1bccb"
+},
+{
+"x": "3fb8e114daa8c952",
+"y": "3f82f8d25d13ba92",
+"hypot": "3fb8fdf35d09cb47"
+},
+{
+"x": "3fab0f26f23a5f8c",
+"y": "3faee030ec6076f6",
+"hypot": "3fb4870995480ac0"
+},
+{
+"x": "3fde1b5cfb86a6c4",
+"y": "3ff270e8ad053c7c",
+"hypot": "3ff3eafd5eb4e718"
+},
+{
+"x": "3f7cb3a908adaf2a",
+"y": "40748fa23359c71c",
+"hypot": "40748fa2336dcf84"
+},
+{
+"x": "3fb7d4930e473664",
+"y": "406fb76a94a14b40",
+"hypot": "406fb76ab870b415"
+},
+{
+"x": "403165d2d9ced60f",
+"y": "3fa4ed3496e6928f",
+"hypot": "403165d5ff48e10d"
+},
+{
+"x": "40007ed8f2263210",
+"y": "400b6da9de9cb1c6",
+"hypot": "401000d5899fb58b"
+},
+{
+"x": "3fda31e5192c8b36",
+"y": "3fc4ddd27f8ede20",
+"hypot": "3fdc3239f7b117b8"
+},
+{
+"x": "400d8ed73748aeb0",
+"y": "403bb36b9a984cd6",
+"hypot": "403bf238aee4e7fe"
+},
+{
+"x": "405bb4a22571eecd",
+"y": "4074611b7b2a0b23",
+"hypot": "4075863318cddf60"
+},
+{
+"x": "4041c40d55d3a58a",
+"y": "402673c3a0b16160",
+"hypot": "4042a1a6d619955b"
+},
+{
+"x": "3fe6d82a5169b578",
+"y": "3f9d7f8df34697b0",
+"hypot": "3fe6dcecb550a2fc"
+},
+{
+"x": "3fb71517aec89170",
+"y": "3fab4d84569ad6b7",
+"hypot": "3fbad12e5a6d146d"
+},
+{
+"x": "3f9108a0d9cd878e",
+"y": "3f9d6f45673d62e4",
+"hypot": "3fa1010703646ded"
+},
+{
+"x": "404d78a5dde1600c",
+"y": "3f9e4627f00594d0",
+"hypot": "404d78a61c13e5e4"
+},
+{
+"x": "404dd1fb0b3cd45b",
+"y": "402611f778a0b520",
+"hypot": "404e538e319870f2"
+},
+{
+"x": "403c5ddf54b8f71c",
+"y": "40171015a4024684",
+"hypot": "403cf25c0cb9a85b"
+},
+{
+"x": "401197138aea595e",
+"y": "4002cee2533b4c45",
+"hypot": "4013f238182fa111"
+},
+{
+"x": "3fdf320391e18db0",
+"y": "400157e9c72abfd4",
+"hypot": "4001c6c0492bd0aa"
+},
+{
+"x": "3fcccc0baf039d89",
+"y": "3f821e20d497abfe",
+"hypot": "3fccd1be293cacbf"
+},
+{
+"x": "4034138a9e1e1970",
+"y": "3f74d72a4ac54820",
+"hypot": "4034138aa8ef377d"
+},
+{
+"x": "3fb2427e8d89a084",
+"y": "401fad5dd60bf1f6",
+"hypot": "401fadb209d0e0be"
+},
+{
+"x": "4056b7df22c80fd2",
+"y": "40409d6eefb80870",
+"hypot": "40583084c2b01f5c"
+},
+{
+"x": "4311c0d57f10c894",
+"y": "42429ca109ead3fe",
+"hypot": "4311c0d581812a4c"
+},
+{
+"x": "430e2b8410510668",
+"y": "3e352ff3205f11a2",
+"hypot": "430e2b8410510668"
+},
+{
+"x": "3ce535c8ea8a4e06",
+"y": "42ff9da7ce34979e",
+"hypot": "42ff9da7ce34979e"
+},
+{
+"x": "3facb3af63658795",
+"y": "3e1f2f7b56ed04cf",
+"hypot": "3facb3af63658799"
+},
+{
+"x": "3f9d0af9825c659f",
+"y": "405a248aaaa789be",
+"hypot": "405a248abac96c27"
+},
+{
+"x": "3fbfd70522e931f8",
+"y": "400c06b4e214cba2",
+"hypot": "400c0b3a0ac41161"
+},
+{
+"x": "3c729616ccb5e001",
+"y": "42d2846ba3796be4",
+"hypot": "42d2846ba3796be4"
+},
+{
+"x": "4067a5b1baa844c0",
+"y": "3dd8a7e707a9a6ba",
+"hypot": "4067a5b1baa844c0"
+},
+{
+"x": "3f5a92e8eaf3493e",
+"y": "4157d8bf3f40bf56",
+"hypot": "4157d8bf3f40bf56"
+},
+{
+"x": "434618d3e487ffb5",
+"y": "4221095ffba0d41a",
+"hypot": "434618d3e48868ca"
+},
+{
+"x": "41607727df42b81c",
+"y": "40cb7677a89c3962",
+"hypot": "416077294db3b635"
+},
+{
+"x": "3f138c4ac26c8470",
+"y": "3f134ff2dac99d66",
+"hypot": "3f1b7a990d00330d"
+},
+{
+"x": "424a7e5b8ad61158",
+"y": "40a2847a7718fb98",
+"hypot": "424a7e5b8ad61158"
+},
+{
+"x": "408dab33022a4b9c",
+"y": "3c84e240c419ca2a",
+"hypot": "408dab33022a4b9c"
+},
+{
+"x": "3d44b0e14fa2fee1",
+"y": "3e71a9e770bbd00c",
+"hypot": "3e71a9e770bc0085"
+},
+{
+"x": "43bf33082c146e3d",
+"y": "3e4f9d4da40cb613",
+"hypot": "43bf33082c146e3d"
+},
+{
+"x": "41e0c996e223db1a",
+"y": "433584a89355a996",
+"hypot": "433584a89355ab39"
+},
+{
+"x": "40fc360b934d02e7",
+"y": "41a2c71ab0f74b34",
+"hypot": "41a2c71b05bba59d"
+},
+{
+"x": "3ea7c5b2a840d01a",
+"y": "3e74017506cfa814",
+"hypot": "3ea7e746ee0f528d"
+},
+{
+"x": "3c52f32df6d0cf03",
+"y": "435e7c0cf0d72044",
+"hypot": "435e7c0cf0d72044"
+},
+{
+"x": "3cbd75f5767c6aec",
+"y": "42c2e8de03dee0a3",
+"hypot": "42c2e8de03dee0a3"
+},
+{
+"x": "3c82a0254f4b8c0f",
+"y": "3d421247cd06fadb",
+"hypot": "3d421247d6a02918"
+},
+{
+"x": "3c6cc8f347b2e2d1",
+"y": "3ee12567411429ea",
+"hypot": "3ee12567411429ea"
+},
+{
+"x": "403da3685c1600dc",
+"y": "3cc2a3bb5a66f5ba",
+"hypot": "403da3685c1600dc"
+},
+{
+"x": "3e0849d7a22f547a",
+"y": "3e86bc5d5f002c4f",
+"hypot": "3e86bc6a5837dc8e"
+},
+{
+"x": "3f9eb7d555532ece",
+"y": "4348451678ea8b00",
+"hypot": "4348451678ea8b00"
+},
+{
+"x": "40537774f28e3150",
+"y": "3f851a699727f640",
+"hypot": "40537774f56a442c"
+},
+{
+"x": "418597820df5d320",
+"y": "3ded051f6822c277",
+"hypot": "418597820df5d320"
+},
+{
+"x": "4177b3c5add822ac",
+"y": "42c31f7064ca546e",
+"hypot": "42c31f7064ca581a"
+},
+{
+"x": "3db532b85a8b7c1e",
+"y": "3d3a167d4b3ec3c6",
+"hypot": "3db532c868059a3b"
+},
+{
+"x": "3df28a233c74a120",
+"y": "3ebc9e92fdfa2e0a",
+"hypot": "3ebc9e9303fb72c2"
+},
+{
+"x": "3f9e9b5194fe726b",
+"y": "3c44707bfa210cbe",
+"hypot": "3f9e9b5194fe726b"
+},
+{
+"x": "3dc8b3557b077fad",
+"y": "438a394383562510",
+"hypot": "438a394383562510"
+},
+{
+"x": "435828b4a613b63a",
+"y": "3fbfa05d4a8b8b90",
+"hypot": "435828b4a613b63a"
+},
+{
+"x": "434192113900ab0c",
+"y": "3d9578f050a9ba7a",
+"hypot": "434192113900ab0c"
+},
+{
+"x": "3c6f8b096f3e5096",
+"y": "41438769d808dd11",
+"hypot": "41438769d808dd11"
+},
+{
+"x": "423dc622fa995ce7",
+"y": "437b1c6a95083688",
+"hypot": "437b1c6a950846e1"
+},
+{
+"x": "40c66a5e5675389c",
+"y": "40a72c8b9f1ceefc",
+"hypot": "40c726ef88b1b125"
+},
+{
+"x": "3d1e69fb192e031e",
+"y": "3d1de5ca51759500",
+"hypot": "3d2552fbc75c62a4"
+},
+{
+"x": "3cd9dfade60d0cbc",
+"y": "42e69db1246b4631",
+"hypot": "42e69db1246b4631"
+},
+{
+"x": "434464aa1d581b04",
+"y": "41e9384955f5b568",
+"hypot": "434464aa1d581bfe"
+},
+{
+"x": "3c96c93d002adffc",
+"y": "3dd48c4d3ee528f0",
+"hypot": "3dd48c4d3ee53592"
+},
+{
+"x": "40daeed00ddf40a0",
+"y": "4063bea751de0f4f",
+"hypot": "40daeeed010ab00c"
+},
+{
+"x": "3c7830f964395b35",
+"y": "40c4dd4918b5ed21",
+"hypot": "40c4dd4918b5ed21"
+},
+{
+"x": "413faae2e18cb1ed",
+"y": "41f1edda518a2a83",
+"hypot": "41f1edda6d819c8d"
+},
+{
+"x": "429f76acc8dd7256",
+"y": "4254e560f987aa8d",
+"hypot": "429f7d9c5eeab471"
+},
+{
+"x": "3eb3bd21fc20861c",
+"y": "428db7c515171b5a",
+"hypot": "428db7c515171b5a"
+},
+{
+"x": "3dbd60bc6a3bed9e",
+"y": "407e186c91de9122",
+"hypot": "407e186c91de9122"
+},
+{
+"x": "42ab15f4941bd8ce",
+"y": "41dbf6cbcd8e42ea",
+"hypot": "42ab15f497b7b67c"
+},
+{
+"x": "42fc9b76b6f506e2",
+"y": "413ef5b6aead2334",
+"hypot": "42fc9b76b6f506e2"
+},
+{
+"x": "4259ec2c43c7295a",
+"y": "43968e8883eb9350",
+"hypot": "43968e8883eba235"
+},
+{
+"x": "41bb4b19120f5ace",
+"y": "4116791299e793b8",
+"hypot": "41bb4b19a6174e24"
+},
+{
+"x": "3e0c6ffc4fd02e0e",
+"y": "3f2af4b37baf97ee",
+"hypot": "3f2af4b37bb087ef"
+},
+{
+"x": "3e72c814011f6e1c",
+"y": "40849b155cc08888",
+"hypot": "40849b155cc08888"
+},
+{
+"x": "3def7a510d0e5b68",
+"y": "418cc0364d3181a7",
+"hypot": "418cc0364d3181a7"
+},
+{
+"x": "4010792b684d06e0",
+"y": "3ea638a33e5d80a2",
+"hypot": "4010792b684d071c"
+},
+{
+"x": "3ee4e38c39715f5a",
+"y": "42cd373f7ea97723",
+"hypot": "42cd373f7ea97723"
+},
+{
+"x": "411ca72ebd6b99be",
+"y": "4380f0c51a351e6a",
+"hypot": "4380f0c51a351e6a"
+},
+{
+"x": "3fa8764545d0d08d",
+"y": "3ce3fb4191ef690e",
+"hypot": "3fa8764545d0d08d"
+},
+{
+"x": "4365510fb42f0b30",
+"y": "4351c902a7ed95e4",
+"hypot": "436718dde9cceb68"
+},
+{
+"x": "3e14fb04eb48519b",
+"y": "42e169dd942eaa5a",
+"hypot": "42e169dd942eaa5a"
+},
+{
+"x": "40edb6a7639a04c2",
+"y": "43483765ef757efc",
+"hypot": "43483765ef757efc"
+},
+{
+"x": "3e260976aaff6854",
+"y": "3d8c0eac40528c7a",
+"hypot": "3e260977c8c6d1c7"
+},
+{
+"x": "3d0e91161c171e55",
+"y": "3f1526968b354bc0",
+"hypot": "3f1526968b354bc0"
+},
+{
+"x": "408ce708f6b048fa",
+"y": "3f90cb5ff8b43fa5",
+"hypot": "408ce708f6c3cd79"
+},
+{
+"x": "4120b6822a421b60",
+"y": "40408100eb9ba2a1",
+"hypot": "4120b6822ac47cb8"
+},
+{
+"x": "42dfd354eef4d586",
+"y": "3f916b67c4963719",
+"hypot": "42dfd354eef4d586"
+},
+{
+"x": "42e4e09fe83a7c2a",
+"y": "42e7394caeeadcb7",
+"hypot": "42ef3a7919204721"
+},
+{
+"x": "3da897db565510e3",
+"y": "41650ec2de3d5156",
+"hypot": "41650ec2de3d5156"
+},
+{
+"x": "4168f1f15a6ca313",
+"y": "42a96da5b211e7fb",
+"hypot": "42a96da5b211f437"
+},
+{
+"x": "3fb97bdf4146462f",
+"y": "42f5166c3afc0460",
+"hypot": "42f5166c3afc0460"
+},
+{
+"x": "3d11d5edf912cdca",
+"y": "42434a74677ecd8c",
+"hypot": "42434a74677ecd8c"
+},
+{
+"x": "41c3f64d1fbe23fe",
+"y": "40f8576d1347cdff",
+"hypot": "41c3f64d2373f449"
+},
+{
+"x": "4149b88a49432296",
+"y": "3d8b2e1c233d1beb",
+"hypot": "4149b88a49432296"
+},
+{
+"x": "3f59c9fa30b10b98",
+"y": "42571c6851f52800",
+"hypot": "42571c6851f52800"
+},
+{
+"x": "411ac561db34118f",
+"y": "40cb3a008c567540",
+"hypot": "411ac8d7b55bf710"
+},
+{
+"x": "3feb3ac4b6c6d436",
+"y": "3eac8b2abafa4072",
+"hypot": "3feb3ac4b6c6e32c"
+},
+{
+"x": "3f37f9e1bb7449e2",
+"y": "40e42ee7a64f8194",
+"hypot": "40e42ee7a64f8194"
+},
+{
+"x": "4172ad6f13c5424a",
+"y": "4333908c8f9cb5ea",
+"hypot": "4333908c8f9cb5ea"
+},
+{
+"x": "3c75e6ab36278312",
+"y": "439d9d138ebf8516",
+"hypot": "439d9d138ebf8516"
+},
+{
+"x": "3cc00eb139a372b4",
+"y": "3ee5a0c1bbb297c1",
+"hypot": "3ee5a0c1bbb297c1"
+},
+{
+"x": "426963a209ed5a32",
+"y": "3f57cc9ffe64da58",
+"hypot": "426963a209ed5a32"
+},
+{
+"x": "424fa4ddd8ed7a10",
+"y": "3c75f019b1a2ea52",
+"hypot": "424fa4ddd8ed7a10"
+},
+{
+"x": "4325136227eb832c",
+"y": "3d6da11bfebc9090",
+"hypot": "4325136227eb832c"
+},
+{
+"x": "4154c337d01377e4",
+"y": "40a2a56ccd15ef3e",
+"hypot": "4154c337f1912f37"
+},
+{
+"x": "407802f973888dfe",
+"y": "3dcff40a79076dd8",
+"hypot": "407802f973888dfe"
+},
+{
+"x": "3c7a572c52735df3",
+"y": "3ca36f1362c971a9",
+"hypot": "3ca3b5f955995ad8"
+},
+{
+"x": "41ff6ef472b87ffa",
+"y": "3e760bd4edca956e",
+"hypot": "41ff6ef472b87ffa"
+},
+{
+"x": "41c695e5fc60ab6e",
+"y": "3d5301d3d2c1567c",
+"hypot": "41c695e5fc60ab6e"
+},
+{
+"x": "400ad9519b508103",
+"y": "3ec8a6f5a83e11f6",
+"hypot": "400ad9519b508c54"
+},
+{
+"x": "413f89eac7215c3e",
+"y": "3ec76cd68510b0a1",
+"hypot": "413f89eac7215c3e"
+},
+{
+"x": "416159df36aadcd4",
+"y": "402e14c343bf83b5",
+"hypot": "416159df36aaf6e7"
+},
+{
+"x": "43bd428400cb4c3e",
+"y": "3c43764e74bb994a",
+"hypot": "43bd428400cb4c3e"
+},
+{
+"x": "43aa26ea46f89838",
+"y": "3f86bf31be4332d5",
+"hypot": "43aa26ea46f89838"
+},
+{
+"x": "4042488cc4214e7c",
+"y": "3d36c064d3b60c2c",
+"hypot": "4042488cc4214e7c"
+},
+{
+"x": "4171f44144f1da53",
+"y": "3e83fdd73de1c5a5",
+"hypot": "4171f44144f1da53"
+},
+{
+"x": "3eaa3294e003387c",
+"y": "41314e70aac807be",
+"hypot": "41314e70aac807be"
+},
+{
+"x": "3e373381052a69d9",
+"y": "40b789a80504dad7",
+"hypot": "40b789a80504dad7"
+},
+{
+"x": "4072d306e0b82175",
+"y": "3f2b0d0ea423317c",
+"hypot": "4072d306e0b82651"
+},
+{
+"x": "3c474a32ee237e54",
+"y": "43331e3ff458c7c1",
+"hypot": "43331e3ff458c7c1"
+},
+{
+"x": "3e6f9476734e1592",
+"y": "3ebe372033ba3e28",
+"hypot": "3ebe3b401e1abd97"
+},
+{
+"x": "4128def57748255f",
+"y": "3f54ad1ccf8dba9d",
+"hypot": "4128def57748255f"
+},
+{
+"x": "3f120f2e587e7d34",
+"y": "439f2bcf10ee5e04",
+"hypot": "439f2bcf10ee5e04"
+},
+{
+"x": "3e01cd4f81557bee",
+"y": "4167a5cde61680ca",
+"hypot": "4167a5cde61680ca"
+},
+{
+"x": "43b3cc3b84fa782c",
+"y": "3ff6cccdb5eaed19",
+"hypot": "43b3cc3b84fa782c"
+},
+{
+"x": "3f8f45268e43fb84",
+"y": "3d685d20a777310a",
+"hypot": "3f8f45268e43fb84"
+},
+{
+"x": "3edfd2ee14b66d03",
+"y": "3fbd693ede0ba774",
+"hypot": "3fbd693edf1f21c2"
+},
+{
+"x": "428192ca859b1b7c",
+"y": "3e435c092f59f9c3",
+"hypot": "428192ca859b1b7c"
+},
+{
+"x": "400cb813d1c00c33",
+"y": "413f8ef489eda164",
+"hypot": "413f8ef489edd5a9"
+},
+{
+"x": "4362be681e2c8644",
+"y": "4269d6af5c845340",
+"hypot": "4362be681e3e557e"
+},
+{
+"x": "3cec8bd5f15e076c",
+"y": "40e8d286e94f43bf",
+"hypot": "40e8d286e94f43bf"
+},
+{
+"x": "3cbe9e970b88229a",
+"y": "421369f032ead5ee",
+"hypot": "421369f032ead5ee"
+},
+{
+"x": "3dc4843247acbcd0",
+"y": "3e652ac8f4a78c1c",
+"hypot": "3e652ac993bd5f3b"
+},
+{
+"x": "3f9ab839c00e30d6",
+"y": "40002f860085f4a0",
+"hypot": "40002fde3797f2ea"
+},
+{
+"x": "3fa5f284be9f1638",
+"y": "3fe9ae43fe60d118",
+"hypot": "3fe9b7a324270a71"
+},
+{
+"x": "3cb75ee24858bc1f",
+"y": "3d373fbc222ddacc",
+"hypot": "3d373fc7e143f84a"
+},
+{
+"x": "41328b70cd3edc6e",
+"y": "42a7930dd9e74a92",
+"hypot": "42a7930dd9e74aaf"
+},
+{
+"x": "3c3179a80dc99fb4",
+"y": "42e45be3bda7aecc",
+"hypot": "42e45be3bda7aecc"
+},
+{
+"x": "42f48fc3b33bbe72",
+"y": "42c51beb693f9def",
+"hypot": "42f4baee01222505"
+},
+{
+"x": "408c05bc005e6027",
+"y": "3d4d8a99f432781f",
+"hypot": "408c05bc005e6027"
+},
+{
+"x": "3f2f71424f4c4cb7",
+"y": "3f2cc278b49dae58",
+"hypot": "3f354e46f4292757"
+},
+{
+"x": "40634f47d77f189c",
+"y": "3cf01ac4d945e9a7",
+"hypot": "40634f47d77f189c"
+},
+{
+"x": "421399aab8982864",
+"y": "3f307201a677f0f8",
+"hypot": "421399aab8982864"
+},
+{
+"x": "3c57298f1a51bc0b",
+"y": "41d41c8fffd94fea",
+"hypot": "41d41c8fffd94fea"
+},
+{
+"x": "422317a7c856a694",
+"y": "3fce46e4e5d78540",
+"hypot": "422317a7c856a694"
+},
+{
+"x": "41c1b958062eea84",
+"y": "3c9bfb43196ce352",
+"hypot": "41c1b958062eea84"
+},
+{
+"x": "41b4dea02d012798",
+"y": "3c87886b14295123",
+"hypot": "41b4dea02d012798"
+},
+{
+"x": "42a39a5309299a66",
+"y": "4277905a9133be6e",
+"hypot": "42a3d2a8a7e4f445"
+},
+{
+"x": "3cf8d3a367ec6231",
+"y": "3c9255ee2f98615b",
+"hypot": "3cf8d40fbc76a5e6"
+},
+{
+"x": "3f3eaa9a732ed5a6",
+"y": "3e278d332720b830",
+"hypot": "3f3eaa9a73311872"
+},
+{
+"x": "42a9224c6ccfe2d8",
+"y": "3f1c91598afdcda4",
+"hypot": "42a9224c6ccfe2d8"
+},
+{
+"x": "430c9d738e16cb10",
+"y": "3e254374763c622f",
+"hypot": "430c9d738e16cb10"
+},
+{
+"x": "3e81b8ddf4b6fef6",
+"y": "3fc9896d74b660fd",
+"hypot": "3fc9896d74b66723"
+},
+{
+"x": "402b492e1014737f",
+"y": "3d0dd3e36b8e6ae4",
+"hypot": "402b492e1014737f"
+},
+{
+"x": "3c5b1779a70a7c2d",
+"y": "409153e94a3245ec",
+"hypot": "409153e94a3245ec"
+},
+{
+"x": "3e3e539fa8450b25",
+"y": "3f0f2b53a308a3ec",
+"hypot": "3f0f2b53a6b8dbf9"
+},
+{
+"x": "435898adf7d62b8e",
+"y": "41c1e7d29ad6f6b7",
+"hypot": "435898adf7d62b90"
+},
+{
+"x": "41fec7754eb49ec7",
+"y": "422a669e4a45ec4d",
+"hypot": "422aae021f19209b"
+},
+{
+"x": "438a65233621b8e2",
+"y": "3ecb9473a5cfb1ac",
+"hypot": "438a65233621b8e2"
+},
+{
+"x": "3f8852525c00ecfe",
+"y": "408bc3adb1933eaa",
+"hypot": "408bc3adb19de5ca"
+},
+{
+"x": "3e8c623e3427ede4",
+"y": "40684782afacb15b",
+"hypot": "40684782afacb15b"
+},
+{
+"x": "3fff1f2accd7db78",
+"y": "41f81bcf7e9d238e",
+"hypot": "41f81bcf7e9d238e"
+},
+{
+"x": "3fbc527ce96ba982",
+"y": "3e6eb7066a3568d8",
+"hypot": "3fbc527ce96badac"
+},
+{
+"x": "4304f9484ee2c036",
+"y": "408b4fec253fc7a9",
+"hypot": "4304f9484ee2c036"
+},
+{
+"x": "3da29c01601dcb20",
+"y": "40edbd4a369603fb",
+"hypot": "40edbd4a369603fb"
+},
+{
+"x": "3c56c383db43becd",
+"y": "3e9757fac65bf60b",
+"hypot": "3e9757fac65bf60b"
+},
+{
+"x": "3e90854a5ffb51d4",
+"y": "40f7615bec146ba1",
+"hypot": "40f7615bec146ba1"
+},
+{
+"x": "3f0a9e840a9e79a6",
+"y": "43176164fe37366c",
+"hypot": "43176164fe37366c"
+},
+{
+"x": "426c46c40cbeefac",
+"y": "3fa8bea8c7bd0dea",
+"hypot": "426c46c40cbeefac"
+},
+{
+"x": "3d3ec1f48bb9573e",
+"y": "3c7cf1a0e7d14f64",
+"hypot": "3d3ec1f49957aeac"
+},
+{
+"x": "43acf148c97550e5",
+"y": "3d3e36313ffbaa79",
+"hypot": "43acf148c97550e5"
+},
+{
+"x": "4358c8500c189b68",
+"y": "3e1ec0014cbd6cb4",
+"hypot": "4358c8500c189b68"
+},
+{
+"x": "3dc35f5318775734",
+"y": "3c54254cedd862b8",
+"hypot": "3dc35f531877575e"
+},
+{
+"x": "434b7f2385889488",
+"y": "4234414f8571297c",
+"hypot": "434b7f23858a71ff"
+},
+{
+"x": "3ce6ba82158188fe",
+"y": "422f08fe18954e12",
+"hypot": "422f08fe18954e12"
+},
+{
+"x": "3c73a42998601cd6",
+"y": "4331af49189fbe83",
+"hypot": "4331af49189fbe83"
+},
+{
+"x": "402d8da50053f4a0",
+"y": "4062d79573acd238",
+"hypot": "4062eeb481e5a71e"
+},
+{
+"x": "4203fc2cf458afa2",
+"y": "40db3df8151b9474",
+"hypot": "4203fc2cf458f9e7"
+},
+{
+"x": "407274efce79c7a8",
+"y": "3f93e5ec4eb4ff5e",
+"hypot": "407274efcf256574"
+},
+{
+"x": "41b825f9a52d528c",
+"y": "3c7513e214dc7a1c",
+"hypot": "41b825f9a52d528c"
+},
+{
+"x": "4327328ed64bda1a",
+"y": "3fb19a681670307c",
+"hypot": "4327328ed64bda1a"
+},
+{
+"x": "3d1bc6cb78c592c8",
+"y": "42fb27dab52cbeae",
+"hypot": "42fb27dab52cbeae"
+},
+{
+"x": "3d3639ad8ff56dae",
+"y": "3da0778c1a572f8f",
+"hypot": "3da077c8188178f7"
+},
+{
+"x": "429b80c9f685d660",
+"y": "42ad34fd3ba37001",
+"hypot": "42b024258c5ea879"
+},
+{
+"x": "3dacac1a9736610e",
+"y": "43246534d62d1dd6",
+"hypot": "43246534d62d1dd6"
+},
+{
+"x": "3df5ceac16724173",
+"y": "3c9f18627d75fcce",
+"hypot": "3df5ceac167242d6"
+},
+{
+"x": "3d6d66ef3dd2171a",
+"y": "3d5c1d3587b16018",
+"hypot": "3d704b78b4e307c4"
+},
+{
+"x": "3e88578be7256f70",
+"y": "3f2efb8692cf7af3",
+"hypot": "3f2efb872bcee43b"
+},
+{
+"x": "3e873b640f0e5225",
+"y": "3d9775a0e147ced9",
+"hypot": "3e873b640f3db304"
+},
+{
+"x": "3c6ef666af30405e",
+"y": "43550dd24e3fd1b4",
+"hypot": "43550dd24e3fd1b4"
+},
+{
+"x": "40763fcdd4594336",
+"y": "3ef9075fb7736aa8",
+"hypot": "40763fcdd4594344"
+},
+{
+"x": "3f8f51dc254bfa14",
+"y": "3cfc69b9fcf907f5",
+"hypot": "3f8f51dc254bfa14"
+},
+{
+"x": "435cc6436e220d48",
+"y": "4313a3245c43d456",
+"hypot": "435cccf60ca45f69"
+},
+{
+"x": "415d749faedbfd81",
+"y": "411293230374f682",
+"hypot": "415d7a7a66e9fd64"
+},
+{
+"x": "3fe9c196de22fc8c",
+"y": "42aef982fd59c935",
+"hypot": "42aef982fd59c935"
+},
+{
+"x": "41e6004301904fe6",
+"y": "3c5416981f419e48",
+"hypot": "41e6004301904fe6"
+},
+{
+"x": "3cdeb5d125d0b1a2",
+"y": "4161f3f30aeae35e",
+"hypot": "4161f3f30aeae35e"
+},
+{
+"x": "3ee0d1091f8e3818",
+"y": "3e12b5865616629b",
+"hypot": "3ee0d10922284952"
+},
+{
+"x": "3fe4ed6e505580e5",
+"y": "3f13a46bf430ddee",
+"hypot": "3fe4ed6e52a374a8"
+},
+{
+"x": "3d2bd993c1582fc0",
+"y": "4055492707f86770",
+"hypot": "4055492707f86770"
+},
+{
+"x": "42f055c59774459e",
+"y": "3fe4e5e123f49d45",
+"hypot": "42f055c59774459e"
+},
+{
+"x": "3e014aa171c2689c",
+"y": "3d4e72349a1853a0",
+"hypot": "3e014aa18c903ee4"
+},
+{
+"x": "40dd0890c1e1e94c",
+"y": "43949b4b22693b47",
+"hypot": "43949b4b22693b47"
+},
+{
+"x": "3eabde0eba9525be",
+"y": "42a2a9036637b72c",
+"hypot": "42a2a9036637b72c"
+},
+{
+"x": "3fc666b09418dee4",
+"y": "3e1303ab5c4f579c",
+"hypot": "3fc666b09418dee4"
+},
+{
+"x": "4252cbfcd81228c8",
+"y": "3ec86b0eeac85574",
+"hypot": "4252cbfcd81228c8"
+},
+{
+"x": "41c34f2ca65dd20c",
+"y": "3e349656ce5cebf0",
+"hypot": "41c34f2ca65dd20c"
+},
+{
+"x": "42f63519d2667336",
+"y": "400ca818c69b9380",
+"hypot": "42f63519d2667336"
+},
+{
+"x": "414f86d09fa0ca5e",
+"y": "435b4f2b7b29e434",
+"hypot": "435b4f2b7b29e434"
+},
+{
+"x": "3f38c4eb2a259b95",
+"y": "3eaa63c33bdc4a39",
+"hypot": "3f38c4eeaddd443e"
+},
+{
+"x": "4169ab6c691a02ac",
+"y": "3ddd5e932565badd",
+"hypot": "4169ab6c691a02ac"
+},
+{
+"x": "422322114c3ff6c6",
+"y": "43b5d9f16d313cae",
+"hypot": "43b5d9f16d313cb0"
+},
+{
+"x": "4207cdc05df5b438",
+"y": "3f326ba18bde5922",
+"hypot": "4207cdc05df5b438"
+},
+{
+"x": "427b8db7d678d53e",
+"y": "3d9b9214294a7250",
+"hypot": "427b8db7d678d53e"
+},
+{
+"x": "3d11e3b8f91615f9",
+"y": "3f216857dce47b3e",
+"hypot": "3f216857dce47b3e"
+},
+{
+"x": "3f8f882fab361446",
+"y": "41166f8108bfb537",
+"hypot": "41166f8108bfb53d"
+},
+{
+"x": "3e21831184e6cfda",
+"y": "3e89c26506ddd8b4",
+"hypot": "3e89c2c443faf4de"
+},
+{
+"x": "3f5198e37e96433b",
+"y": "3cb0133b440a745c",
+"hypot": "3f5198e37e96433b"
+},
+{
+"x": "3f569a448a7121fc",
+"y": "41bdc881f8595087",
+"hypot": "41bdc881f8595087"
+},
+{
+"x": "41fc1326bb0e9cd0",
+"y": "3d4854289f8949de",
+"hypot": "41fc1326bb0e9cd0"
+},
+{
+"x": "3fd86e102153fff0",
+"y": "42a7a4190ebd5980",
+"hypot": "42a7a4190ebd5980"
+},
+{
+"x": "3e721fdf6d661448",
+"y": "3f2128a1fddf653e",
+"hypot": "3f2128a2242973c3"
+},
+{
+"x": "42c2686005f75ffe",
+"y": "3ef2fffc63acf669",
+"hypot": "42c2686005f75ffe"
+},
+{
+"x": "41fb020daab6b6be",
+"y": "3c8bc585b9a619a4",
+"hypot": "41fb020daab6b6be"
+},
+{
+"x": "404a7e1ef245fe62",
+"y": "3ea986f322836e54",
+"hypot": "404a7e1ef245fe63"
+},
+{
+"x": "3c5813522b32a05e",
+"y": "424623f33a4ad019",
+"hypot": "424623f33a4ad019"
+},
+{
+"x": "41e767cad36cd48a",
+"y": "3e87b17a94cb08d6",
+"hypot": "41e767cad36cd48a"
+},
+{
+"x": "4081a71075bdc5aa",
+"y": "3ec148faf1179dcc",
+"hypot": "4081a71075bdc5aa"
+},
+{
+"x": "425ac2361093845a",
+"y": "3ea667d46a570e46",
+"hypot": "425ac2361093845a"
+},
+{
+"x": "3d708f120701d0b8",
+"y": "42d5f45deec8be4e",
+"hypot": "42d5f45deec8be4e"
+},
+{
+"x": "3c96f2e45f34f76a",
+"y": "419d06f56bad4c00",
+"hypot": "419d06f56bad4c00"
+},
+{
+"x": "413f6c23ae755270",
+"y": "3d542f54b3b531d8",
+"hypot": "413f6c23ae755270"
+},
+{
+"x": "41db07d80db37244",
+"y": "3c4f41f307af5ca4",
+"hypot": "41db07d80db37244"
+},
+{
+"x": "4110869e80e387ce",
+"y": "414205582074bf80",
+"hypot": "4142238e180220f4"
+},
+{
+"x": "43842c38eff75ba8",
+"y": "42759ac40bf7f458",
+"hypot": "43842c38effa4012"
+},
+{
+"x": "3c88aa350e55f326",
+"y": "3cbb420a27119b88",
+"hypot": "3cbb6e88e398eadb"
+},
+{
+"x": "4211651f285bf7c8",
+"y": "43b4dbaa96247104",
+"hypot": "43b4dbaa96247104"
+},
+{
+"x": "4326abc414d5095c",
+"y": "405de4d8f137f191",
+"hypot": "4326abc414d5095c"
+},
+{
+"x": "3f5ca22014e1578d",
+"y": "3f1c98186f46ee92",
+"hypot": "3f5cb063918a58ea"
+},
+{
+"x": "417fcd350649332a",
+"y": "438919efc27992e1",
+"hypot": "438919efc27992e1"
+},
+{
+"x": "3d612f24298ebbd1",
+"y": "40dd74d14e011f35",
+"hypot": "40dd74d14e011f35"
+},
+{
+"x": "3ecb0b8ef9d9625c",
+"y": "3f7be86852a008a2",
+"hypot": "3f7be868870b1b15"
+},
+{
+"x": "4237d9da2924aca4",
+"y": "418e5f49f34c27a0",
+"hypot": "4237d9da767f063f"
+},
+{
+"x": "3d642637dc787b14",
+"y": "429d1a4f572b4a23",
+"hypot": "429d1a4f572b4a23"
+},
+{
+"x": "3ff4e0c2f0b20489",
+"y": "3c716bb1fdb5bf4a",
+"hypot": "3ff4e0c2f0b20489"
+},
+{
+"x": "3ff69510fce6d107",
+"y": "3f3a9c1b587f5716",
+"hypot": "3ff695110c9454fc"
+},
+{
+"x": "3e80b69c1d532fb8",
+"y": "3d6ce4bf2aded4b2",
+"hypot": "3e80b69c1d54bf52"
+},
+{
+"x": "4242d21db940f8be",
+"y": "425a3ccfe2e6f5d1",
+"hypot": "425bdfc387e8bf61"
+},
+{
+"x": "3fb49a75a956df5a",
+"y": "3f5dbb9a534bf596",
+"hypot": "3fb49bcce0f40004"
+},
+{
+"x": "3f32bb14b3492cd7",
+"y": "3c89252d0975d58e",
+"hypot": "3f32bb14b3492cd7"
+},
+{
+"x": "3fe71614eb3770d0",
+"y": "3cc2c883bd1bbb3b",
+"hypot": "3fe71614eb3770d0"
+},
+{
+"x": "41ce3d0058ec8742",
+"y": "418c23f6acf854ac",
+"hypot": "41ce4a159bd19883"
+},
+{
+"x": "3eb8b177194c48ee",
+"y": "420766d8b2fb7aaa",
+"hypot": "420766d8b2fb7aaa"
+},
+{
+"x": "3e0ee8f4d4194e86",
+"y": "3e6b45ecef832aed",
+"hypot": "3e6b47052b0010b7"
+},
+{
+"x": "4210f0feccca6339",
+"y": "3f2f85b721b678ee",
+"hypot": "4210f0feccca6339"
+},
+{
+"x": "3defe162ebcf96fc",
+"y": "43b32ee2d1d937b7",
+"hypot": "43b32ee2d1d937b7"
+},
+{
+"x": "410f2b66699f552e",
+"y": "3f57dc1d1bffe357",
+"hypot": "410f2b66699f552e"
+},
+{
+"x": "423b50c19c69780f",
+"y": "40d156c68ec1b454",
+"hypot": "423b50c19c697867"
+},
+{
+"x": "3f00310f82e6057c",
+"y": "42c043158d9bcbba",
+"hypot": "42c043158d9bcbba"
+},
+{
+"x": "40e7e01d026c1582",
+"y": "3f812ec4858d0a34",
+"hypot": "40e7e01d026c15e5"
+},
+{
+"x": "3d339f1341285746",
+"y": "407c348560cf68b0",
+"hypot": "407c348560cf68b0"
+},
+{
+"x": "413f24f7b5c6bcab",
+"y": "402c2ebf4c6a8d26",
+"hypot": "413f24f7b5c9ecbf"
+},
+{
+"x": "4142e5e6ac550962",
+"y": "3e23a1f56704d9d5",
+"hypot": "4142e5e6ac550962"
+},
+{
+"x": "41543f84373955b2",
+"y": "42ed8d09f8d559a4",
+"hypot": "42ed8d09f8d559a6"
+},
+{
+"x": "3e5747b7fb45099e",
+"y": "3c7f963e3bd2b008",
+"hypot": "3e5747b7fb45099e"
+},
+{
+"x": "42490b9c2aaf68d4",
+"y": "3d139d8334429705",
+"hypot": "42490b9c2aaf68d4"
+},
+{
+"x": "42b5c23f61df7bf6",
+"y": "3fc03a411c1b79ae",
+"hypot": "42b5c23f61df7bf6"
+},
+{
+"x": "3dd3ebc19bb0f7a4",
+"y": "42af11dcf15f5dc9",
+"hypot": "42af11dcf15f5dc9"
+},
+{
+"x": "42a5d489395fb5e0",
+"y": "3eb3fba08dbd92f0",
+"hypot": "42a5d489395fb5e0"
+},
+{
+"x": "3e4f2ee7889e6a45",
+"y": "410524846e9081d2",
+"hypot": "410524846e9081d2"
+},
+{
+"x": "3c78cd7afff46d82",
+"y": "3d2f45473b4f79f9",
+"hypot": "3d2f454762a7ce5c"
+},
+{
+"x": "3d53b7d7c240d0b2",
+"y": "40dd78e5c90a80a6",
+"hypot": "40dd78e5c90a80a6"
+},
+{
+"x": "421abbf601e35cf8",
+"y": "41784e1c56a8e73a",
+"hypot": "421abbf6b2a97439"
+},
+{
+"x": "3f0be617634bb7f7",
+"y": "41ce105d1cbbd3b0",
+"hypot": "41ce105d1cbbd3b0"
+},
+{
+"x": "3c6801663a909990",
+"y": "416ec5c1307ce9a6",
+"hypot": "416ec5c1307ce9a6"
+},
+{
+"x": "41a478f492c1d376",
+"y": "3c8ecbeaac67e67c",
+"hypot": "41a478f492c1d376"
+},
+{
+"x": "3dff5b0a133cdf0e",
+"y": "3ed3f729bf0d46f8",
+"hypot": "3ed3f729c0973a29"
+},
+{
+"x": "412866d100c1ba24",
+"y": "3dd4d61fb6b4f100",
+"hypot": "412866d100c1ba24"
+},
+{
+"x": "3dcc70af4c020eea",
+"y": "3fcd6a3c0e035fea",
+"hypot": "3fcd6a3c0e035fea"
+},
+{
+"x": "4328188eeb13f7cb",
+"y": "41d63f5c9492f5cf",
+"hypot": "4328188eeb13fa5c"
+},
+{
+"x": "42349aed0589238e",
+"y": "3f4859ebc9bed87c",
+"hypot": "42349aed0589238e"
+},
+{
+"x": "43461e0a09e7b247",
+"y": "430bb21ee7462464",
+"hypot": "43462f5a7558c8f8"
+},
+{
+"x": "417469b44328d79a",
+"y": "3d11932e4cee4433",
+"hypot": "417469b44328d79a"
+},
+{
+"x": "3c34f3d3617f22ca",
+"y": "42797dc69c82df5e",
+"hypot": "42797dc69c82df5e"
+},
+{
+"x": "3ed70f4449904120",
+"y": "439ac2400c0a1658",
+"hypot": "439ac2400c0a1658"
+},
+{
+"x": "3dd249fcaf212319",
+"y": "3fbf6183496da6c0",
+"hypot": "3fbf6183496da6c0"
+},
+{
+"x": "400976eb29d4a0e8",
+"y": "42459c89734e1636",
+"hypot": "42459c89734e1636"
+},
+{
+"x": "3e6ab85552790ecd",
+"y": "4198dfeff5f5262e",
+"hypot": "4198dfeff5f5262e"
+},
+{
+"x": "3e40c11c07ada5af",
+"y": "3cb537b30d11975e",
+"hypot": "3e40c11c07ada5b2"
+},
+{
+"x": "3ed3c293c4a23894",
+"y": "3eff7a534ce0a734",
+"hypot": "3effdcf4c50f9033"
+},
+{
+"x": "3d66cffaefdf6362",
+"y": "3d858a8f13e2b5e4",
+"hypot": "3d86488e06f3d888"
+},
+{
+"x": "3d71e929b770336f",
+"y": "42f9b5e4e611277f",
+"hypot": "42f9b5e4e611277f"
+},
+{
+"x": "43980dbb55453e64",
+"y": "417bdc49b18cd6a0",
+"hypot": "43980dbb55453e64"
+},
+{
+"x": "3e3bd248ee192ff2",
+"y": "42b94cefebd75322",
+"hypot": "42b94cefebd75322"
+},
+{
+"x": "4346bc7bbba50ace",
+"y": "3c63f42d9e36ab6e",
+"hypot": "4346bc7bbba50ace"
+},
+{
+"x": "3c7c70d0183bad88",
+"y": "42cc3897d5e4a2d4",
+"hypot": "42cc3897d5e4a2d4"
+},
+{
+"x": "404ffc3b2b659fac",
+"y": "3df672555d07fb70",
+"hypot": "404ffc3b2b659fac"
+},
+{
+"x": "42e2d7f3054cbfae",
+"y": "3f5f6f07c041de2d",
+"hypot": "42e2d7f3054cbfae"
+},
+{
+"x": "435a150f74781e3a",
+"y": "42cadd3afa4b6f48",
+"hypot": "435a1512e9e4ba7e"
+},
+{
+"x": "3ef9d1eb3cd02735",
+"y": "4249f5f0a6d941ee",
+"hypot": "4249f5f0a6d941ee"
+},
+{
+"x": "3fad2eacfd372d2c",
+"y": "405bc5aa35c4a160",
+"hypot": "405bc5aa7318aa3b"
+},
+{
+"x": "3efa9dcd7b4f7f82",
+"y": "401885316a868a36",
+"hypot": "401885316a877158"
+},
+{
+"x": "4361c4e80fb367ec",
+"y": "3e05bd98eef6b224",
+"hypot": "4361c4e80fb367ec"
+},
+{
+"x": "41643b1718d9bfce",
+"y": "42ad057e1f4320cf",
+"hypot": "42ad057e1f4327dc"
+},
+{
+"x": "408384e5c0d841d3",
+"y": "3d66c99d3c5ba042",
+"hypot": "408384e5c0d841d3"
+},
+{
+"x": "3c6ed86287e85066",
+"y": "4003aa4e1fe8af61",
+"hypot": "4003aa4e1fe8af61"
+},
+{
+"x": "416842b05d089d70",
+"y": "3f1036b9d610a4f2",
+"hypot": "416842b05d089d70"
+},
+{
+"x": "3fe1a373bedaf3ec",
+"y": "3dec5023672855ba",
+"hypot": "3fe1a373bedaf3ec"
+},
+{
+"x": "3fa2ba6cb14657c8",
+"y": "3f2d9e3aac3fd429",
+"hypot": "3fa2ba841cbe7d90"
+},
+{
+"x": "4066c8498ecfc496",
+"y": "40c4e9159ab8c40e",
+"hypot": "40c4e9dc2a24c84c"
+},
+{
+"x": "40170bf5c2ac0790",
+"y": "4214b02b259340e4",
+"hypot": "4214b02b259340e4"
+},
+{
+"x": "3fd42a15fc70856c",
+"y": "3ee8f09a31617931",
+"hypot": "3fd42a15fcae36b5"
+},
+{
+"x": "3d38bb6a03f43076",
+"y": "3e2a863c5e41e566",
+"hypot": "3e2a863c5e700497"
+},
+{
+"x": "3e6c2d293662878b",
+"y": "3d0cb54d8a6d64df",
+"hypot": "3e6c2d2936628875"
+},
+{
+"x": "3f296b758dfd2a56",
+"y": "3cb2e8ced8ca8f6f",
+"hypot": "3f296b758dfd2a56"
+},
+{
+"x": "410dd8c5955a6365",
+"y": "3db4af0951332df5",
+"hypot": "410dd8c5955a6365"
+},
+{
+"x": "3fe9449140acfc86",
+"y": "3db2607baa35108a",
+"hypot": "3fe9449140acfc86"
+},
+{
+"x": "3f3b7a713f68c600",
+"y": "3dc3a9c005c55cb6",
+"hypot": "3f3b7a713f68c61c"
+},
+{
+"x": "41d52cdf314c6d0c",
+"y": "3da45a54c8b5f242",
+"hypot": "41d52cdf314c6d0c"
+},
+{
+"x": "43791a96e6e99233",
+"y": "4379dacf2080a909",
+"hypot": "438204bedc0fbf46"
+},
+{
+"x": "425a30b4de6483e4",
+"y": "417700fa88d4ee68",
+"hypot": "425a30b4df0627dc"
+},
+{
+"x": "3d3dec1b419295ed",
+"y": "3dad22966512acb7",
+"hypot": "3dad22d3daf5c795"
+},
+{
+"x": "3f6d5585fb5dc23c",
+"y": "3faf666186ba6b50",
+"hypot": "3faf74124596ac95"
+},
+{
+"x": "3cbe43521173136f",
+"y": "40e310873eb739ae",
+"hypot": "40e310873eb739ae"
+},
+{
+"x": "3dfcd6c53b944db8",
+"y": "404cef3c7b0c3c13",
+"hypot": "404cef3c7b0c3c13"
+},
+{
+"x": "427dcac304495e8e",
+"y": "3efe97e04ece9442",
+"hypot": "427dcac304495e8e"
+},
+{
+"x": "42aed0f089484fb0",
+"y": "42ffa9b150c5e4cc",
+"hypot": "42ffad70d76d4aa2"
+},
+{
+"x": "3c44598c9967cdf4",
+"y": "426b96d3d492d168",
+"hypot": "426b96d3d492d168"
+},
+{
+"x": "3dec3143fcc5c86d",
+"y": "3d028b90ffbca2dc",
+"hypot": "3dec3143fd276047"
+},
+{
+"x": "3e5ef3df3f76405c",
+"y": "42ce0251a49698fa",
+"hypot": "42ce0251a49698fa"
+},
+{
+"x": "42550c0267531670",
+"y": "4117747b3a037926",
+"hypot": "42550c0267532382"
+},
+{
+"x": "3ee1792bc5b175da",
+"y": "3d22f41bacdb8bf6",
+"hypot": "3ee1792bc5b175da"
+},
+{
+"x": "40a4837e4fe971ad",
+"y": "3ebd6f3725278054",
+"hypot": "40a4837e4fe971ad"
+},
+{
+"x": "40f2e02223dd7d12",
+"y": "3c44973562b28ec0",
+"hypot": "40f2e02223dd7d12"
+},
+{
+"x": "403f5575096e9aca",
+"y": "3d9b6d72a740bb12",
+"hypot": "403f5575096e9aca"
+},
+{
+"x": "4168f705d4f4747d",
+"y": "3d54bdd0163c375c",
+"hypot": "4168f705d4f4747d"
+},
+{
+"x": "433c89fc871afe62",
+"y": "407559f40717ae4f",
+"hypot": "433c89fc871afe62"
+},
+{
+"x": "4354ac5e1eaedfa9",
+"y": "423eecc768439fb6",
+"hypot": "4354ac5e1eb051be"
+},
+{
+"x": "3dc62c4877eb8c44",
+"y": "3ee66513c223fd80",
+"hypot": "3ee66513c224ad20"
+},
+{
+"x": "43a56ad67756d076",
+"y": "3effb477a651dbdc",
+"hypot": "43a56ad67756d076"
+},
+{
+"x": "3dbb5d53f17282b5",
+"y": "3d5a12e4ceec4ade",
+"hypot": "3dbb5e1aaefed170"
+},
+{
+"x": "43889806dfeb245c",
+"y": "3cd5242b823c5440",
+"hypot": "43889806dfeb245c"
+},
+{
+"x": "40b75c91c10e6dab",
+"y": "3df2a27a8a539ba4",
+"hypot": "40b75c91c10e6dab"
+},
+{
+"x": "4119bf07ce6c15a0",
+"y": "3c59563d9a1443f7",
+"hypot": "4119bf07ce6c15a0"
+},
+{
+"x": "3f8a55b8cc829a12",
+"y": "3ddc04100ea48053",
+"hypot": "3f8a55b8cc829a12"
+},
+{
+"x": "42ca78d8bf3e60a3",
+"y": "3e33329cf7419afd",
+"hypot": "42ca78d8bf3e60a3"
+},
+{
+"x": "4061626574203d08",
+"y": "3cfbb4ebafae40ef",
+"hypot": "4061626574203d08"
+},
+{
+"x": "3eb6cc3c88e63d14",
+"y": "4128bdb0b3b78470",
+"hypot": "4128bdb0b3b78470"
+},
+{
+"x": "3fffe9219d238f20",
+"y": "41bbd492140c4d40",
+"hypot": "41bbd492140c4d40"
+},
+{
+"x": "3c3680a92eef6b3a",
+"y": "3da85ac73694d0d2",
+"hypot": "3da85ac73694d0fc"
+},
+{
+"x": "3f90455f1e9c1ba4",
+"y": "41a6828264b43112",
+"hypot": "41a6828264b43112"
+},
+{
+"x": "40ba216183ab952c",
+"y": "4061f7401a268448",
+"hypot": "40ba22ecbe2052be"
+},
+{
+"x": "3d9e8e53322b83cc",
+"y": "3e7afa44152a4c77",
+"hypot": "3e7afa44163f2b99"
+},
+{
+"x": "41568e320084441a",
+"y": "3d20860e3026c8de",
+"hypot": "41568e320084441a"
+},
+{
+"x": "42af4b43f819f60a",
+"y": "3c75c436dc419002",
+"hypot": "42af4b43f819f60a"
+},
+{
+"x": "4079caa5adf1a983",
+"y": "3c3acb70e23684c2",
+"hypot": "4079caa5adf1a983"
+},
+{
+"x": "3ed5af9507b39940",
+"y": "42fad97edb0e7d0a",
+"hypot": "42fad97edb0e7d0a"
+},
+{
+"x": "42dd031ed2bb7c7e",
+"y": "421182733ff3d486",
+"hypot": "42dd031ed8041ef1"
+},
+{
+"x": "3f7f15469d962c04",
+"y": "3c42f2b629b9a9ed",
+"hypot": "3f7f15469d962c04"
+},
+{
+"x": "3da4ee5dc1fd2af2",
+"y": "4022254b8db3a960",
+"hypot": "4022254b8db3a960"
+},
+{
+"x": "41541ce8b58a17e3",
+"y": "41681226d4220a4b",
+"hypot": "416a16515e8100b0"
+},
+{
+"x": "3f10a210147a9ede",
+"y": "3d22654a7ac8cb6a",
+"hypot": "3f10a210147a9ede"
+},
+{
+"x": "3fba1b53f0b6389c",
+"y": "3e6d595dbec33b48",
+"hypot": "3fba1b53f0b63cbc"
+},
+{
+"x": "42fd44deb826d794",
+"y": "438ad5adf0667fe2",
+"hypot": "438ad5b1edf935ac"
+},
+{
+"x": "3ce8d63c87719762",
+"y": "3ef8a0993b1813cc",
+"hypot": "3ef8a0993b1813cc"
+},
+{
+"x": "3fab61f99c5196f6",
+"y": "3e3607ab8e91136c",
+"hypot": "3fab61f99c519719"
+},
+{
+"x": "41ffef5de3aa5a1b",
+"y": "3edc4a2ac5b5b8c4",
+"hypot": "41ffef5de3aa5a1b"
+},
+{
+"x": "4000f80dadc562c1",
+"y": "3f9b18938f32884d",
+"hypot": "4000f8643588a0ff"
+},
+{
+"x": "3f617b0151cd26a4",
+"y": "40fc6568439f7560",
+"hypot": "40fc6568439f7561"
+},
+{
+"x": "422e068be83319c0",
+"y": "3ccaf4014c4da8b0",
+"hypot": "422e068be83319c0"
+},
+{
+"x": "407635a02e4c3a0c",
+"y": "41c36da01bd79754",
+"hypot": "41c36da01bd79a80"
+},
+{
+"x": "3d5fa3164d9c5d15",
+"y": "3d924e94b16dbce2",
+"hypot": "3d9269d69895d0c1"
+},
+{
+"x": "3e10e09e095973d6",
+"y": "41fdf02701f58f17",
+"hypot": "41fdf02701f58f17"
+},
+{
+"x": "419ff686ad020d74",
+"y": "425042e355d52595",
+"hypot": "425042e3753ee31c"
+},
+{
+"x": "42f20e2c9d1a953a",
+"y": "3c39bd9cb28d9428",
+"hypot": "42f20e2c9d1a953a"
+},
+{
+"x": "431e9eb99b701c69",
+"y": "43a3326300911a21",
+"hypot": "43a332691b76db3f"
+},
+{
+"x": "3cd1e1409892f462",
+"y": "3f7559e5067a0d44",
+"hypot": "3f7559e5067a0d44"
+},
+{
+"x": "410282397193f18f",
+"y": "3d40090e4d7ccac0",
+"hypot": "410282397193f18f"
+},
+{
+"x": "3c9f9178deb1e3ac",
+"y": "3ed1ace7a29afcb2",
+"hypot": "3ed1ace7a29afcb2"
+},
+{
+"x": "3fe2c146585ea3d8",
+"y": "3fa91179b66226ce",
+"hypot": "3fe2d1ffbfa0139b"
+},
+{
+"x": "3cb92752e1690cef",
+"y": "40b7ef756a63b07a",
+"hypot": "40b7ef756a63b07a"
+},
+{
+"x": "437e196384c846c8",
+"y": "3e86b36849ca8710",
+"hypot": "437e196384c846c8"
+},
+{
+"x": "3e7090fe686200b0",
+"y": "3e644be74092f6a7",
+"hypot": "3e736d77bc0f632f"
+},
+{
+"x": "3c9352da099d8bba",
+"y": "3ca45c1efdb57beb",
+"hypot": "3ca6893b785829ec"
+},
+{
+"x": "416bc034cdde396a",
+"y": "3cf810454eb6158a",
+"hypot": "416bc034cdde396a"
+},
+{
+"x": "43aecd67b254f71b",
+"y": "3e943d19334fffaa",
+"hypot": "43aecd67b254f71b"
+},
+{
+"x": "3e4ca40e3e80d2cc",
+"y": "40bf549d059ac7f6",
+"hypot": "40bf549d059ac7f6"
+},
+{
+"x": "3ca46155ff3ce9ac",
+"y": "409e20c44dea4cba",
+"hypot": "409e20c44dea4cba"
+},
+{
+"x": "412e7598c63534fa",
+"y": "3ceb3c6a92987d85",
+"hypot": "412e7598c63534fa"
+},
+{
+"x": "400fa2b1ade7bdc1",
+"y": "42a7ad6916ce97ee",
+"hypot": "42a7ad6916ce97ee"
+},
+{
+"x": "3df58f962119f3cc",
+"y": "3f890da9239d1ed2",
+"hypot": "3f890da9239d1ed4"
+},
+{
+"x": "41a267ce8c8f3885",
+"y": "40d2a15c2d3eeebc",
+"hypot": "41a267ce8eeaac3e"
+},
+{
+"x": "425114ced74b220c",
+"y": "3e8ee5c4ca2d95bf",
+"hypot": "425114ced74b220c"
+},
+{
+"x": "3eca538b403c8f34",
+"y": "3cf1ffe159c4797e",
+"hypot": "3eca538b403c8f34"
+},
+{
+"x": "41a8bf8ad19b58ba",
+"y": "3d23f8d6200e59ae",
+"hypot": "41a8bf8ad19b58ba"
+},
+{
+"x": "41bb8973f7d64060",
+"y": "42ab4fecea1e61b3",
+"hypot": "42ab4fecea55e89b"
+},
+{
+"x": "40dcd53c47beb24a",
+"y": "422d5898430c3fc8",
+"hypot": "422d5898430c4353"
+},
+{
+"x": "42da2ac5d5c9012f",
+"y": "3eb923a923829c3d",
+"hypot": "42da2ac5d5c9012f"
+},
+{
+"x": "41aa0dcbda1ef9e0",
+"y": "42438a8ed461cf3a",
+"hypot": "42438a8fea4746cf"
+},
+{
+"x": "3e16705c7ad4fe98",
+"y": "3e36ce117f86d7a2",
+"hypot": "3e377c1aafe4524c"
+},
+{
+"x": "427f54014e844e9c",
+"y": "3ce56e0527795974",
+"hypot": "427f54014e844e9c"
+},
+{
+"x": "3da2eada229cb2ab",
+"y": "425463d130ebce4c",
+"hypot": "425463d130ebce4c"
+},
+{
+"x": "3d6eba7072f17ac8",
+"y": "40646bb7b750166a",
+"hypot": "40646bb7b750166a"
+},
+{
+"x": "3dfa4f7d01e68dc7",
+"y": "402f76cbfca93ccb",
+"hypot": "402f76cbfca93ccb"
+},
+{
+"x": "417a1d3511873f2c",
+"y": "4144be33958284d4",
+"hypot": "417a3e1463a983ca"
+},
+{
+"x": "43af6dc32316b3e2",
+"y": "42f66fcfacfcbc0f",
+"hypot": "43af6dc3431fa1f6"
+},
+{
+"x": "3e25d452d6f5d23c",
+"y": "42756fbf560e4e6f",
+"hypot": "42756fbf560e4e6f"
+},
+{
+"x": "3e5508d32b3a0dc6",
+"y": "4324f2976be1bfaf",
+"hypot": "4324f2976be1bfaf"
+},
+{
+"x": "3e4367f906f7d365",
+"y": "40bc8b10c319f03a",
+"hypot": "40bc8b10c319f03a"
+},
+{
+"x": "3fffe433d50fee4f",
+"y": "4398aa598c3cf826",
+"hypot": "4398aa598c3cf826"
+},
+{
+"x": "3ec8782f8b85f246",
+"y": "4007d069689666ba",
+"hypot": "4007d0696896734c"
+},
+{
+"x": "3ee81b965bd38bae",
+"y": "3f3d0c9a59295911",
+"hypot": "3f3d0f1a75e910d2"
+},
+{
+"x": "412498c047e689f2",
+"y": "429e8b190c531e38",
+"hypot": "429e8b190c531e54"
+},
+{
+"x": "3f81ab27991a8caa",
+"y": "423d07a44d390373",
+"hypot": "423d07a44d390373"
+},
+{
+"x": "3e552498d470702f",
+"y": "4188f4ebf0206700",
+"hypot": "4188f4ebf0206700"
+},
+{
+"x": "3fd9aa8793f1e9dc",
+"y": "3e4aa8c6bc2053f2",
+"hypot": "3fd9aa8793f1e9df"
+},
+{
+"x": "3fe5cd5556cc38ba",
+"y": "401e53f70ce0ada0",
+"hypot": "401e733f7f398267"
+},
+{
+"x": "3dbb62843f7662f0",
+"y": "4086e778e4255519",
+"hypot": "4086e778e4255519"
+},
+{
+"x": "3dc7d723c0b32c82",
+"y": "43b8097e52ecb72f",
+"hypot": "43b8097e52ecb72f"
+},
+{
+"x": "4283a2780079c7e8",
+"y": "42be4b282dd1d595",
+"hypot": "42be649149415da5"
+},
+{
+"x": "41945339509f34ea",
+"y": "3c8e36c8a9f32184",
+"hypot": "41945339509f34ea"
+},
+{
+"x": "3dfdcde2585a5658",
+"y": "3fff29eefbca6279",
+"hypot": "3fff29eefbca6279"
+},
+{
+"x": "3c96f363f092fb09",
+"y": "3f96a8876c7f677c",
+"hypot": "3f96a8876c7f677c"
+},
+{
+"x": "3edc292d1b056aac",
+"y": "41e3102df650657c",
+"hypot": "41e3102df650657c"
+},
+{
+"x": "41fe87ba73157aea",
+"y": "43808db03598a936",
+"hypot": "43808db03598a93d"
+},
+{
+"x": "3eca92e47332c55e",
+"y": "40418fb699d9a736",
+"hypot": "40418fb699d9a74a"
+},
+{
+"x": "3c30d85569b04ace",
+"y": "42dd72390d6c7858",
+"hypot": "42dd72390d6c7858"
+},
+{
+"x": "409efb367e39a442",
+"y": "43b27df3a24b7568",
+"hypot": "43b27df3a24b7568"
+},
+{
+"x": "3ee4806556b3d666",
+"y": "3d70780998bde848",
+"hypot": "3ee4806556b3d680"
+},
+{
+"x": "40c2da208c74efbc",
+"y": "3e5afb1598cbad32",
+"hypot": "40c2da208c74efbc"
+},
+{
+"x": "41d4108881b8ce1a",
+"y": "3f127fad69d52275",
+"hypot": "41d4108881b8ce1a"
+},
+{
+"x": "3ede0c6567ffbc04",
+"y": "3c54f2f874bde95b",
+"hypot": "3ede0c6567ffbc04"
+},
+{
+"x": "4013a30c2f4a0a46",
+"y": "41e4d639b4efbe8d",
+"hypot": "41e4d639b4efbe8d"
+},
+{
+"x": "406065cffda75e6a",
+"y": "41b5b1be4d67148e",
+"hypot": "41b5b1be4d67161b"
+},
+{
+"x": "4232ca931c562278",
+"y": "3ebe6a9579b61ec5",
+"hypot": "4232ca931c562278"
+},
+{
+"x": "3d1484b03744568d",
+"y": "3d8824ec2cd59f98",
+"hypot": "3d88250f0c719939"
+},
+{
+"x": "43545959d97bf8b5",
+"y": "3ed697a8f2fe1016",
+"hypot": "43545959d97bf8b5"
+},
+{
+"x": "4155cb91d73f4ba4",
+"y": "41ef87f512109bac",
+"hypot": "41ef87f6f428db01"
+},
+{
+"x": "3ce5a1c42cf978b3",
+"y": "41cb23465226ee7a",
+"hypot": "41cb23465226ee7a"
+},
+{
+"x": "3f9856b506db5db6",
+"y": "3ce0a1c63c33f8a1",
+"hypot": "3f9856b506db5db6"
+},
+{
+"x": "3d5a89936ff7cb1d",
+"y": "40ef8721379f8d34",
+"hypot": "40ef8721379f8d34"
+},
+{
+"x": "43840dd99ff30ae2",
+"y": "41823bab56042730",
+"hypot": "43840dd99ff30ae2"
+},
+{
+"x": "40f61caaa1243cd3",
+"y": "4243ef8702aa2306",
+"hypot": "4243ef8702aa2617"
+},
+{
+"x": "419a0c15db28e89a",
+"y": "426357d3ada75f38",
+"hypot": "426357d3b209c517"
+},
+{
+"x": "3dfedb9a96f91a28",
+"y": "426b2f8b3b367a7a",
+"hypot": "426b2f8b3b367a7a"
+},
+{
+"x": "3f8ff979092170e1",
+"y": "3fb9f4d83296c9fa",
+"hypot": "3fba4328a7f46b43"
+},
+{
+"x": "3d36db7f8bcdbe22",
+"y": "4235c9f885aea61c",
+"hypot": "4235c9f885aea61c"
+},
+{
+"x": "3da2b6deac2f2392",
+"y": "40851257a07dd05d",
+"hypot": "40851257a07dd05d"
+},
+{
+"x": "4287df44a0b915bf",
+"y": "3e1202f785d678bb",
+"hypot": "4287df44a0b915bf"
+},
+{
+"x": "428a095e3bee3b99",
+"y": "3dc63bf86ca1cd2c",
+"hypot": "428a095e3bee3b99"
+},
+{
+"x": "416d79bc9e85d72c",
+"y": "4031835dd76201ac",
+"hypot": "416d79bc9e85ebfc"
+},
+{
+"x": "3dba1059e9a13838",
+"y": "3df59d5260906354",
+"hypot": "3df5ad039af3ae39"
+},
+{
+"x": "3d42627f216bad0e",
+"y": "4315000c14ab4d08",
+"hypot": "4315000c14ab4d08"
+},
+{
+"x": "3c317d71f6b37a44",
+"y": "3ebdfed22c36b829",
+"hypot": "3ebdfed22c36b829"
+},
+{
+"x": "3f5a2bebb0f495ba",
+"y": "3cb4bd7b49f3a7ea",
+"hypot": "3f5a2bebb0f495ba"
+},
+{
+"x": "4306d97aea9b3566",
+"y": "3ecceb93c727d1a0",
+"hypot": "4306d97aea9b3566"
+},
+{
+"x": "41360f517d69b67c",
+"y": "3e42d868f1e0a8b2",
+"hypot": "41360f517d69b67c"
+},
+{
+"x": "40b91ac8c667f55c",
+"y": "40e6ceeb98bc5892",
+"hypot": "40e705ecf07f7578"
+},
+{
+"x": "42a236da4b56e2d5",
+"y": "3d144dc9b2693b46",
+"hypot": "42a236da4b56e2d5"
+},
+{
+"x": "3efa55a70e9ef737",
+"y": "3fda6ff6b4d9ff00",
+"hypot": "3fda6ff6b5abda8d"
+},
+{
+"x": "40975264702817b6",
+"y": "4100596bcc2af14d",
+"hypot": "410059ae54da1e81"
+},
+{
+"x": "418e3e693b9a969c",
+"y": "42d02726eb94ca4a",
+"hypot": "42d02726eb94d15e"
+},
+{
+"x": "42d45ba4dc982ac8",
+"y": "3e9b31e40d23d674",
+"hypot": "42d45ba4dc982ac8"
+},
+{
+"x": "3dffd67629760f04",
+"y": "435aa91518808178",
+"hypot": "435aa91518808178"
+},
+{
+"x": "400b8b247e9beda5",
+"y": "40e625fcdf1108aa",
+"hypot": "40e625fce0230e88"
+},
+{
+"x": "3d718e0e0ea2d0fd",
+"y": "3d3f9b3a6f6c7f73",
+"hypot": "3d71aa6afc9fa7f4"
+},
+{
+"x": "3d6d225078a9051d",
+"y": "40cfd774bd365464",
+"hypot": "40cfd774bd365464"
+},
+{
+"x": "3f7480512798ab68",
+"y": "3d40337e1b68294a",
+"hypot": "3f7480512798ab68"
+},
+{
+"x": "435b41a2bbabb472",
+"y": "3f23d3ce411714da",
+"hypot": "435b41a2bbabb472"
+},
+{
+"x": "416062d6baa608b9",
+"y": "42b7a2cf4652486e",
+"hypot": "42b7a2cf465249da"
+},
+{
+"x": "423fbab7afb2dc9e",
+"y": "41f2968a8dac984a",
+"hypot": "423fc0291205bd86"
+},
+{
+"x": "414fc8f2acb9803b",
+"y": "3ed5210aaed988f7",
+"hypot": "414fc8f2acb9803b"
+},
+{
+"x": "41ea20d8394d6f89",
+"y": "410b32c1f0ea4832",
+"hypot": "41ea20d83a2feea3"
+},
+{
+"x": "40f9c21b2b11fb4a",
+"y": "419ea386b4b85bde",
+"hypot": "419ea38761f6084b"
+},
+{
+"x": "4384b33742c89754",
+"y": "3fd25ab51fe3d596",
+"hypot": "4384b33742c89754"
+},
+{
+"x": "3e926008c216ae99",
+"y": "41dea5e7db1a7d42",
+"hypot": "41dea5e7db1a7d42"
+},
+{
+"x": "430f74b3f4f1d192",
+"y": "3d41f612beada940",
+"hypot": "430f74b3f4f1d192"
+},
+{
+"x": "3e9b4bdfab2c276c",
+"y": "425cbb8b137e5ea4",
+"hypot": "425cbb8b137e5ea4"
+},
+{
+"x": "4275899a2eb43e8a",
+"y": "43a042247613d7fc",
+"hypot": "43a042247614110c"
+},
+{
+"x": "40f5bfe07e2facdc",
+"y": "3df9b8e1d408b52c",
+"hypot": "40f5bfe07e2facdc"
+},
+{
+"x": "3edc0b3101dc6478",
+"y": "3ea182707287dada",
+"hypot": "3edc2105dec2d6af"
+},
+{
+"x": "3edc62055b563516",
+"y": "426006376f246be4",
+"hypot": "426006376f246be4"
+},
+{
+"x": "426fab11b981a6ca",
+"y": "3db39157cd294b6d",
+"hypot": "426fab11b981a6ca"
+},
+{
+"x": "400d326ce3802e9c",
+"y": "409821f6fb6d39f8",
+"hypot": "409821fb65cb432d"
+},
+{
+"x": "3f29616b2808b164",
+"y": "427f3a905591e40e",
+"hypot": "427f3a905591e40e"
+},
+{
+"x": "3c3c169903a75d84",
+"y": "3d97f4573e471cfc",
+"hypot": "3d97f4573e471e03"
+},
+{
+"x": "400bab5de36617de",
+"y": "429a8ebcfd11041b",
+"hypot": "429a8ebcfd11041b"
+},
+{
+"x": "422da27107e00cb5",
+"y": "3e1db7ce9d28f728",
+"hypot": "422da27107e00cb5"
+},
+{
+"x": "3ca4ae13223c68c2",
+"y": "3dd006d08646f832",
+"hypot": "3dd006d086472d90"
+},
+{
+"x": "40484bde2f7ad32e",
+"y": "42624a167d849192",
+"hypot": "42624a167d849192"
+},
+{
+"x": "3ddeb37ccfa4f4d0",
+"y": "42c36f0b1a944678",
+"hypot": "42c36f0b1a944678"
+},
+{
+"x": "436eaf6aea282d40",
+"y": "3cd093ec555a427c",
+"hypot": "436eaf6aea282d40"
+},
+{
+"x": "3f8d809119e68a3a",
+"y": "41dad88645953ed5",
+"hypot": "41dad88645953ed5"
+},
+{
+"x": "432d3937119329d0",
+"y": "3f193881e2ea7788",
+"hypot": "432d3937119329d0"
+},
+{
+"x": "408f91146e1163ea",
+"y": "414e663119e60f36",
+"hypot": "414e66312a49c86c"
+},
+{
+"x": "3fdb9d602fbc6b98",
+"y": "40a2a9eeb49b63f9",
+"hypot": "40a2a9eeb9b6dc9a"
+},
+{
+"x": "3dcd9863f36b8cb8",
+"y": "3e6cb475adaf9bca",
+"hypot": "3e6cb476a1cab88d"
+},
+{
+"x": "40fd1222c472be64",
+"y": "403a4bfebf0d12fc",
+"hypot": "40fd1222d0578d61"
+},
+{
+"x": "434f9f20e1ccf6b5",
+"y": "410e9873b5015b47",
+"hypot": "434f9f20e1ccf6b5"
+},
+{
+"x": "3fd56a30579a8056",
+"y": "40620d65da7a1de0",
+"hypot": "40620d690763d645"
+},
+{
+"x": "3d833dae717e8664",
+"y": "3c6919d407c07724",
+"hypot": "3d833dae717f8c5b"
+},
+{
+"x": "41a7678b0e891f22",
+"y": "3dd6e2fa85e74654",
+"hypot": "41a7678b0e891f22"
+},
+{
+"x": "42147613d5e351fc",
+"y": "3ef624dcdcf86fdd",
+"hypot": "42147613d5e351fc"
+},
+{
+"x": "418e74e0c48de954",
+"y": "4378eb65624834b1",
+"hypot": "4378eb65624834b1"
+},
+{
+"x": "41879f382a2754a8",
+"y": "3ef1ee25399d8533",
+"hypot": "41879f382a2754a8"
+},
+{
+"x": "431e90d0e5d57386",
+"y": "3c8108cadda39a30",
+"hypot": "431e90d0e5d57386"
+},
+{
+"x": "3fa8f74d2462d5c9",
+"y": "3cf0e07a8155226a",
+"hypot": "3fa8f74d2462d5c9"
+},
+{
+"x": "421536c65428d1ac",
+"y": "3ee1b2742264f730",
+"hypot": "421536c65428d1ac"
+},
+{
+"x": "3d87923fbc15c430",
+"y": "41900e50889c8e8a",
+"hypot": "41900e50889c8e8a"
+},
+{
+"x": "3d1fbcc3829de44a",
+"y": "4284c2e0756e4573",
+"hypot": "4284c2e0756e4573"
+},
+{
+"x": "3fb1b17be8924566",
+"y": "3dacd62a7caa20a0",
+"hypot": "3fb1b17be8924566"
+},
+{
+"x": "4328eace0c21f9b9",
+"y": "41457873e21fc65f",
+"hypot": "4328eace0c21f9b9"
+},
+{
+"x": "419ef625a6e1b8e4",
+"y": "3c6a308132a937fc",
+"hypot": "419ef625a6e1b8e4"
+},
+{
+"x": "3ddb7840e4dc0366",
+"y": "3dd79698ca70353e",
+"hypot": "3de21a93e29cba56"
+},
+{
+"x": "3ed3a6d848e36f5c",
+"y": "4146e7e5f9753872",
+"hypot": "4146e7e5f9753872"
+},
+{
+"x": "3ee916c2bbb79f14",
+"y": "41be881b4e539d80",
+"hypot": "41be881b4e539d80"
+},
+{
+"x": "3c6e0c039cd855f0",
+"y": "3e2360dc22bbca9a",
+"hypot": "3e2360dc22bbca9a"
+},
+{
+"x": "42df77f843fe3417",
+"y": "42ddaab5651314f4",
+"hypot": "42e59fc0c832983b"
+},
+{
+"x": "42c55311f942d577",
+"y": "3d3965b7a672a010",
+"hypot": "42c55311f942d577"
+},
+{
+"x": "41cb899842b76498",
+"y": "4043463518db9a14",
+"hypot": "41cb899842b7649f"
+},
+{
+"x": "418b4d8318f625bc",
+"y": "3e7166d549d0fbb6",
+"hypot": "418b4d8318f625bc"
+},
+{
+"x": "43b335f6f49e12d4",
+"y": "3c98e959fcae5637",
+"hypot": "43b335f6f49e12d4"
+},
+{
+"x": "42ba1f15aa6454bf",
+"y": "3e1366d595813dee",
+"hypot": "42ba1f15aa6454bf"
+},
+{
+"x": "425feece83cb3a5e",
+"y": "3c74bb98530083dd",
+"hypot": "425feece83cb3a5e"
+},
+{
+"x": "3f70e58777ae41f3",
+"y": "3dea2e0ce982b4e1",
+"hypot": "3f70e58777ae41f8"
+},
+{
+"x": "40e9a59ee3cbdd58",
+"y": "3ca0d0fe53bd38e8",
+"hypot": "40e9a59ee3cbdd58"
+},
+{
+"x": "43aeb83c4eaccd7f",
+"y": "3fc0afc9a437f0bc",
+"hypot": "43aeb83c4eaccd7f"
+},
+{
+"x": "40ded235dbab45c0",
+"y": "3c5aef47b6ff54de",
+"hypot": "40ded235dbab45c0"
+},
+{
+"x": "436d7953c51e7b7e",
+"y": "437e9a276161dbef",
+"hypot": "4380fb9cf0e99f5e"
+},
+{
+"x": "429486b2db8eda9e",
+"y": "3c7fb88c82bdd32a",
+"hypot": "429486b2db8eda9e"
+},
+{
+"x": "3ebf84e25158cb41",
+"y": "41feec39d14bd76e",
+"hypot": "41feec39d14bd76e"
+},
+{
+"x": "3fa933154ad4c958",
+"y": "3fc989e7b8c8c159",
+"hypot": "3fca4de30fa58819"
+},
+{
+"x": "430bb48ae7508289",
+"y": "41824118d4311af1",
+"hypot": "430bb48ae750828f"
+},
+{
+"x": "411c1998583ac2e0",
+"y": "3eb99380cbd9195e",
+"hypot": "411c1998583ac2e0"
+},
+{
+"x": "3fb3819a90802cce",
+"y": "3c9fa4cce5e79934",
+"hypot": "3fb3819a90802cce"
+},
+{
+"x": "3edb463753660d00",
+"y": "3c53a855da19bfcf",
+"hypot": "3edb463753660d00"
+},
+{
+"x": "3e3e3291bf280e7c",
+"y": "43687cf13e20a838",
+"hypot": "43687cf13e20a838"
+},
+{
+"x": "42747d18ca3a2796",
+"y": "433346dcf573e626",
+"hypot": "433346dd005750d7"
+},
+{
+"x": "3c858a011e96cc32",
+"y": "40ae3ce75e13ad82",
+"hypot": "40ae3ce75e13ad82"
+},
+{
+"x": "41dc1205e0bf45d4",
+"y": "4064402ee20d1103",
+"hypot": "41dc1205e0bf45f1"
+},
+{
+"x": "3e9443464e9e0602",
+"y": "433f4965592b0e58",
+"hypot": "433f4965592b0e58"
+},
+{
+"x": "3fa8641cb3eddb7c",
+"y": "3d5e49ae8dc90266",
+"hypot": "3fa8641cb3eddb7c"
+},
+{
+"x": "43a6926c840a26b6",
+"y": "41cc35a07f4fa409",
+"hypot": "43a6926c840a26b6"
+},
+{
+"x": "42aa4eef62887e2b",
+"y": "42047a0d3c45c7f6",
+"hypot": "42aa4eefe2092a8c"
+},
+{
+"x": "4048687ce6e8a706",
+"y": "3c93f02cf0b2f423",
+"hypot": "4048687ce6e8a706"
+},
+{
+"x": "3e0b256227415a8c",
+"y": "3d3228555dac2d3e",
+"hypot": "3e0b256228c600dc"
+},
+{
+"x": "4393d2316d9c04e2",
+"y": "40483268107c6cba",
+"hypot": "4393d2316d9c04e2"
+},
+{
+"x": "3c33ab1f98bc7da0",
+"y": "3c7e1fcce7d2d1eb",
+"hypot": "3c7e2637f7876ece"
+},
+{
+"x": "403db014d530aeb0",
+"y": "3e0ab1e80981e4a9",
+"hypot": "403db014d530aeb0"
+},
+{
+"x": "3e8c2f5dba9431fe",
+"y": "419bff35b4962410",
+"hypot": "419bff35b4962410"
+},
+{
+"x": "423bc8ac681a2284",
+"y": "42e0b9722a379fca",
+"hypot": "42e0b9728687e191"
+},
+{
+"x": "3d81d7756258b10e",
+"y": "3c52e8bf01eb7e64",
+"hypot": "3d81d7756258d923"
+},
+{
+"x": "42709088f873816a",
+"y": "408541a18748173d",
+"hypot": "42709088f873816a"
+},
+{
+"x": "414468992098684e",
+"y": "3cd8b0a11c19aa80",
+"hypot": "414468992098684e"
+},
+{
+"x": "3e67639f7e12d6a2",
+"y": "3d6c49301ac7c5a8",
+"hypot": "3e67639f7e23f13b"
+},
+{
+"x": "4346d2dc3452128e",
+"y": "3dbb83fc1ca50722",
+"hypot": "4346d2dc3452128e"
+},
+{
+"x": "42de2a761f3252e0",
+"y": "41c20347bcbd3772",
+"hypot": "42de2a761f33ab10"
+},
+{
+"x": "405bf44d22c5e535",
+"y": "41036d0f64e1926d",
+"hypot": "41036d0fb5559985"
+},
+{
+"x": "3f0b27764026bb88",
+"y": "40fe31f35cb99f06",
+"hypot": "40fe31f35cb99f06"
+},
+{
+"x": "40d5d11bb26f117b",
+"y": "408abd8235c11827",
+"hypot": "40d5d5341b1849d9"
+},
+{
+"x": "402cb178ff8e4dfa",
+"y": "3c73cfa197822d18",
+"hypot": "402cb178ff8e4dfa"
+},
+{
+"x": "3d16a8f5d202d9ae",
+"y": "3cc3b0d1e357c3fb",
+"hypot": "3d16ab19415545bb"
+},
+{
+"x": "3f8ae781f49756c1",
+"y": "42b33662234e6cd8",
+"hypot": "42b33662234e6cd8"
+},
+{
+"x": "3ccb051a37a67a6e",
+"y": "3d4abb1145b557b6",
+"hypot": "3d4abb1eeda9f615"
+},
+{
+"x": "41b2d4d01071bce2",
+"y": "41466271dce3e442",
+"hypot": "41b2d50547941380"
+},
+{
+"x": "42c47287552127f2",
+"y": "427195cb1615458c",
+"hypot": "42c4746b32d54b2e"
+},
+{
+"x": "438a7d095eb2c115",
+"y": "43aa7fb403db3850",
+"hypot": "43ab5051cd041582"
+},
+{
+"x": "3ec008c7efa35f41",
+"y": "4317d158030bee51",
+"hypot": "4317d158030bee51"
+},
+{
+"x": "4309c92a7e663104",
+"y": "426433b1309f1542",
+"hypot": "4309c92afd0456b2"
+},
+{
+"x": "3d920507d0d0cb7a",
+"y": "3f29daf5d43b43c1",
+"hypot": "3f29daf5d43b43c3"
+},
+{
+"x": "3d58a9ebc2bc4e8f",
+"y": "3e2f1ed0c7391ade",
+"hypot": "3e2f1ed0c9aa9979"
+},
+{
+"x": "4199b4bf770dff0e",
+"y": "3d2eda899a3d0eba",
+"hypot": "4199b4bf770dff0e"
+},
+{
+"x": "427ab7cceab7ab09",
+"y": "43b80f1b62c50cab",
+"hypot": "43b80f1b62c51b81"
+},
+{
+"x": "3c7411f778a74103",
+"y": "3dae493885d5197c",
+"hypot": "3dae493885d53416"
+},
+{
+"x": "3c5c62657ef23679",
+"y": "3d447e7372668636",
+"hypot": "3d447e7372b5264d"
+},
+{
+"x": "3c78ef6ecc39ae30",
+"y": "3c4cc874be217df1",
+"hypot": "3c79318a1fb9acf3"
+},
+{
+"x": "40a5e4869784c2da",
+"y": "424f53ccc5e1734e",
+"hypot": "424f53ccc5e1734e"
+},
+{
+"x": "3fe8806aecdbee84",
+"y": "4050c1b2cc6357e1",
+"hypot": "4050c1fa72e883b5"
+},
+{
+"x": "3c7c970dc6503b5c",
+"y": "4235a37019798c48",
+"hypot": "4235a37019798c48"
+},
+{
+"x": "3e66619fadd7be40",
+"y": "41f4ab3c991e1b3a",
+"hypot": "41f4ab3c991e1b3a"
+},
+{
+"x": "432c8ea6175bcfa2",
+"y": "3ced00691281163c",
+"hypot": "432c8ea6175bcfa2"
+},
+{
+"x": "420a8c5d9c598b3a",
+"y": "3c76c3f665afce50",
+"hypot": "420a8c5d9c598b3a"
+},
+{
+"x": "41b60c38bdaf5304",
+"y": "3cd5603c14032747",
+"hypot": "41b60c38bdaf5304"
+},
+{
+"x": "3d4480c9594f6619",
+"y": "411eda74cb286818",
+"hypot": "411eda74cb286818"
+},
+{
+"x": "41de0e038b050fcc",
+"y": "439d014ea139aec8",
+"hypot": "439d014ea139aec8"
+},
+{
+"x": "4195bed9f6c4879c",
+"y": "40f83afef70a926c",
+"hypot": "4195bedacec331a0"
+},
+{
+"x": "3ea628576fe24e79",
+"y": "3f8f2aedae0381a6",
+"hypot": "3f8f2aedae818614"
+},
+{
+"x": "43bc0506ee5aa9d4",
+"y": "3ea3e22ac4c4104a",
+"hypot": "43bc0506ee5aa9d4"
+},
+{
+"x": "3df6c31fec19d100",
+"y": "3cca21be8852aa86",
+"hypot": "3df6c31fec1a0d00"
+},
+{
+"x": "41403173ce167566",
+"y": "3d74e0cfd3100816",
+"hypot": "41403173ce167566"
+},
+{
+"x": "40120387c16f8206",
+"y": "3c48b622748f3e15",
+"hypot": "40120387c16f8206"
+},
+{
+"x": "3fd6892d918842cb",
+"y": "3dbd53e8731971d4",
+"hypot": "3fd6892d918842cb"
+},
+{
+"x": "435f5914d7089828",
+"y": "3f475cb46e2ef344",
+"hypot": "435f5914d7089828"
+},
+{
+"x": "4159c9865b6e6f90",
+"y": "3ec22ef2b017e970",
+"hypot": "4159c9865b6e6f90"
+},
+{
+"x": "43a78d19c0876d35",
+"y": "4078dca9c145bf88",
+"hypot": "43a78d19c0876d35"
+},
+{
+"x": "3d02b99bbb428798",
+"y": "3c8d7286554524f8",
+"hypot": "3d02b9b2e2d25914"
+},
+{
+"x": "3e58746ebb264970",
+"y": "3c4b7e77a597b717",
+"hypot": "3e58746ebb264970"
+},
+{
+"x": "42d40a02eeb68257",
+"y": "428e2436a96d4ede",
+"hypot": "42d40face84641d1"
+},
+{
+"x": "4163c02d61d862d0",
+"y": "4247a6842bb8712f",
+"hypot": "4247a6842c3c64d5"
+},
+{
+"x": "41b26e47f4fb5416",
+"y": "4311ae45b7008437",
+"hypot": "4311ae45b70084d1"
+},
+{
+"x": "3e4e07dc4b6c5040",
+"y": "3c994eca6d083050",
+"hypot": "3e4e07dc4b6c5040"
+},
+{
+"x": "3d1abeaf64be1332",
+"y": "4347ce93c96fb6ff",
+"hypot": "4347ce93c96fb6ff"
+},
+{
+"x": "40df9883eedf30e0",
+"y": "438de6d00be30e7e",
+"hypot": "438de6d00be30e7e"
+},
+{
+"x": "405c44a09a1cf15e",
+"y": "437f1eb6f0c33454",
+"hypot": "437f1eb6f0c33454"
+},
+{
+"x": "3f891db17e83c744",
+"y": "41e12113ee1a6d81",
+"hypot": "41e12113ee1a6d81"
+},
+{
+"x": "412e4ccc136948de",
+"y": "40b38d8cbebd0eb8",
+"hypot": "412e4ce54fa5a746"
+},
+{
+"x": "3eae88031e54c8b0",
+"y": "42941aa73cd4eb26",
+"hypot": "42941aa73cd4eb26"
+},
+{
+"x": "42758e48065ffdca",
+"y": "3ed92cf3317dac50",
+"hypot": "42758e48065ffdca"
+},
+{
+"x": "3d38546260bda063",
+"y": "41d64a05de35197c",
+"hypot": "41d64a05de35197c"
+},
+{
+"x": "42629087ef957352",
+"y": "4262125e4284b928",
+"hypot": "4269e87bb4387853"
+},
+{
+"x": "42ce62050358e6ca",
+"y": "3f7d27d2d2ab3b18",
+"hypot": "42ce62050358e6ca"
+},
+{
+"x": "429894f0ef2654f5",
+"y": "3ef2c83d7a0cbd6e",
+"hypot": "429894f0ef2654f5"
+},
+{
+"x": "3e959f226e97ccca",
+"y": "425cc91f659a4353",
+"hypot": "425cc91f659a4353"
+},
+{
+"x": "43a843bf445273c9",
+"y": "3dddce521a2397b4",
+"hypot": "43a843bf445273c9"
+},
+{
+"x": "43982337b3f9baf8",
+"y": "3ffa709e7afc5a88",
+"hypot": "43982337b3f9baf8"
+},
+{
+"x": "3cf985e5797af7b8",
+"y": "3ca120c316861b30",
+"hypot": "3cf987553fdb158f"
+},
+{
+"x": "3f870790226f64e2",
+"y": "3d14721c35f72658",
+"hypot": "3f870790226f64e2"
+},
+{
+"x": "406d5a8d671124be",
+"y": "3f947532822911fc",
+"hypot": "406d5a8d68d96540"
+},
+{
+"x": "41284d51bbb89044",
+"y": "3dde6b0ec2d415e8",
+"hypot": "41284d51bbb89044"
+},
+{
+"x": "401ba768f256f42d",
+"y": "3cf39981057de356",
+"hypot": "401ba768f256f42d"
+}
+]
+}
