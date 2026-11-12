@@ -14,6 +14,7 @@
 - [FieldCraft in the browser](web.md)
 - [Updates](updates.md)
 - [Crash reports](crash-reports.md)
+- [Load-transfer result histories](load-transfer.md)
 - [Privacy](privacy.md)
 
 # Solver manual

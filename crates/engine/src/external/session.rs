@@ -2,6 +2,7 @@
 use super::{
     archive,
     context::ReceiveContextV1,
+    load_transfer,
     production::IoModelContext,
     receive::{FieldData, ResultEnvelope},
 };
@@ -56,6 +57,21 @@ impl Session {
     }
     pub(crate) fn keep_external(&mut self, record: ArchivedTrajectory) -> Result<()> {
         self.check_external_name(&record.archive_key)?;
+        if load_transfer::is_external_envelope(&record.envelope_json) {
+            let bundle = load_transfer::decode_external_envelope(&record.envelope_json).map_err(|e| EngineError::Params(e.to_string()))?;
+            let decoded = load_transfer::LoadTransferArchive::decode(&bundle).map_err(|e| EngineError::Params(e.to_string()))?;
+            load_transfer::validate_receive_status(&decoded.archive).map_err(EngineError::Params)?;
+            if decoded.archive.identity.archive_key != record.archive_key
+                || decoded.archive.identity.model_revision != record.binding.snapshot.model_revision
+                || decoded.archive.identity.mesh_digest != record.binding.snapshot.reference_mesh_digest
+            {
+                return Err(EngineError::Params("LoadTransferIdentityMismatch".into()));
+            }
+            record.validate_binding(&self.model, &self.sources, &self.run).map_err(|e| EngineError::Params(e.to_string()))?;
+            self.external_results.insert(record.archive_key.clone(), Arc::new(record));
+            self.results_stored = self.results_stored.wrapping_add(1);
+            return Ok(());
+        }
         let current = IoModelContext::new(self.model.clone(), self.sources.clone(), self.run.clone(), record.binding.artifacts.clone());
         archive::reopen(&record, current).map_err(|e| EngineError::Params(e.to_string()))?;
         self.external_results.insert(record.archive_key.clone(), Arc::new(record));
@@ -99,6 +115,34 @@ impl Session {
         let mut rows:Vec<Value>=self.external_results.values().map(|record|{
             let current=record.validate_binding(&self.model,&self.sources,&self.run);
             let content=||->std::result::Result<Value,String>{
+                if load_transfer::is_external_envelope(&record.envelope_json) {
+                    let bundle = load_transfer::decode_external_envelope(&record.envelope_json).map_err(|e| e.to_string())?;
+                    let decoded = load_transfer::LoadTransferArchive::decode(&bundle).map_err(|e| e.to_string())?;
+                    load_transfer::validate_receive_status(&decoded.archive)?;
+                    let backend_status = load_transfer::backend_status(&decoded.archive);
+                    let conservation = decoded
+                        .archive
+                        .frames
+                        .iter()
+                        .zip(&decoded.mapped_frames)
+                        .map(|(frame, mapped)| {
+                            load_transfer::check_conservation(
+                                frame,
+                                mapped,
+                                &decoded.archive.mapping,
+                                &vec![[0.0, 0.0, 0.0]; decoded.archive.mapping.nodes.len()],
+                            )
+                        })
+                        .collect::<std::result::Result<Vec<_>, _>>()
+                        .map_err(|e| e.to_string())?;
+                    let integrals = load_transfer::check_time_integrals(&decoded.archive.frames, &decoded.mapped_frames, decoded.archive.mapping.origin_m)
+                        .map_err(|e| e.to_string())?;
+                    return Ok(json!({"kind":13,"schema":load_transfer::SCHEMA,"archive_key":record.archive_key,"result_id":record.result_id,
+                        "frames":decoded.archive.frames.len(),"conservation":conservation,"time_integrals":integrals,
+                        "applicability":decoded.archive.applicability,"runtime_qualification":decoded.archive.qualification,
+                        "crash":decoded.archive.crash,"backend_status":backend_status,"native_postprocessing":"load_transfer.apply","stale":current.is_err(),
+                        "binding_error":current.as_ref().err().map(ToString::to_string)}));
+                }
                 let context=ReceiveContextV1::decode(&record.context_json).map_err(|e|e.to_string())?;
                 let e:ResultEnvelope=serde_json::from_slice(&record.envelope_json).map_err(|e|e.to_string())?;
                 let admission:Value=serde_json::from_slice(&record.admission_json).map_err(|e|e.to_string())?;

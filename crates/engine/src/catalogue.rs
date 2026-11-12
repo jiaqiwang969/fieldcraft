@@ -822,7 +822,7 @@ pub static CATALOGUE: &[Capability] = &[
         Results,
         "Files",
         "Receive identity-bound trajectories and retain availability and run evidence",
-        &["results.external.list", "results.external.remove"],
+        &["results.external.list", "results.external.remove", "results.external.load_transfer.receive", "results.external.load_transfer.apply"],
     ),
     ready(
         "results.external.static_base.receive",
