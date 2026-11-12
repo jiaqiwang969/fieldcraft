@@ -171,6 +171,7 @@ pub struct Modal<'a> {
 #[derive(Debug)]
 struct ModalData {
     eigenvalues: Vec<f64>,
+    next_eigenvalue: Option<f64>,
     shapes: Vec<Vec<f64>>,
     viscous: Vec<f64>,
     loss: Vec<f64>,
@@ -206,6 +207,9 @@ struct ModalCoordinates {
 impl<'a> Modal<'a> {
     pub fn eigenvalues(&self) -> &[f64] {
         &self.data.eigenvalues
+    }
+    pub fn next_eigenvalue(&self) -> Option<f64> {
+        self.data.next_eigenvalue
     }
     pub fn shapes(&self) -> &[Vec<f64>] {
         &self.data.shapes[..self.data.eigenvalues.len()]
@@ -309,6 +313,7 @@ impl<'a> Modal<'a> {
         let loss = project(matrices.loss, &shapes, n);
         let data = std::sync::Arc::new(ModalData {
             eigenvalues: pairs.values,
+            next_eigenvalue: pairs.next_value,
             shapes,
             factor_entries: factor.entries(),
             lanczos_vectors: pairs.basis,
@@ -524,6 +529,62 @@ impl<'a> Modal<'a> {
                 (u, d)
             })
             .collect()
+    }
+}
+
+/// Warn when the requested modal cut falls inside an unresolved repeated or
+/// nearly repeated pair.  The threshold matches the sensitivity analysis
+/// criterion, while rigid-body modes are excluded by the same relative cutoff.
+pub(crate) fn modal_truncation_warning(eigenvalues: &[f64], next: Option<f64>) -> Option<String> {
+    let retained = eigenvalues.last().copied()?;
+    let next = next?;
+    if !retained.is_finite() || !next.is_finite() {
+        return None;
+    }
+    let rigid_cutoff = retained.abs() * 1e-10;
+    if !(retained > rigid_cutoff && next > rigid_cutoff) {
+        return None;
+    }
+    let scale = retained.abs().max(next.abs());
+    let relative = (retained - next).abs() / scale;
+    if relative > 1e-5 {
+        return None;
+    }
+    let frequency = |lambda: f64| libm::sqrt(lambda) / (2.0 * std::f64::consts::PI);
+    Some(format!(
+        "Modal truncation cuts a close/repeated modal pair: retained mode {} ({:.6} Hz) and next mode {} ({:.6} Hz), relative eigenvalue difference {:.3e}. The response depends on the arbitrary direction within this pair; increase retained modes by one or decrease the retained mode count by one.",
+        eigenvalues.len(),
+        frequency(retained),
+        eigenvalues.len() + 1,
+        frequency(next),
+        relative,
+    ))
+}
+
+#[cfg(test)]
+mod modal_warning_tests {
+    use super::modal_truncation_warning;
+
+    #[test]
+    fn square_section_beam_cut_and_uncut_pairs() {
+        let pi: f64 = std::f64::consts::PI;
+        let e: f64 = 210.0e9;
+        let rho: f64 = 7_850.0;
+        let side: f64 = 0.01;
+        let length: f64 = 1.0;
+        let inertia = side.powi(4) / 12.0;
+        let area = side * side;
+        let scale = (e * inertia / (rho * area)).sqrt() / (2.0 * pi * length * length);
+        let mut modes: Vec<f64> = (1..=15).map(|n| (n as f64 * scale).powi(2)).collect();
+        let retained_frequency = 16.0 * scale;
+        modes.push(retained_frequency.powi(2));
+        let close_next = (retained_frequency * (1.0 + 2.0e-6)).powi(2);
+        let warning = modal_truncation_warning(&modes, Some(close_next)).expect("close square-section beam pair");
+        assert!(warning.contains("retained mode 16"));
+        assert!(warning.contains("next mode 17"));
+        assert!(warning.contains("arbitrary direction"));
+        let separated_next = (retained_frequency * 1.01).powi(2);
+        assert!(modal_truncation_warning(&modes, Some(separated_next)).is_none());
     }
 }
 

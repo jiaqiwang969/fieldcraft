@@ -278,6 +278,9 @@ pub fn solve_with_mass(model: &Model, name: Option<&str>, mass: MassKind, limits
             ));
         }
         let modal = Modal::new(&Matrices { stiffness: &kr, mass: &mr, viscous: None, loss: None }, spec.modes as usize, limits)?;
+        if let Some(warning) = crate::harmonic::modal_truncation_warning(modal.eigenvalues(), modal.next_eigenvalue()) {
+            output.warnings.push(warning);
+        }
         let modes = modal.shapes();
         if modes
             .len()
@@ -441,6 +444,11 @@ pub fn solve_with_mass(model: &Model, name: Option<&str>, mass: MassKind, limits
         } else {
             None
         };
+        if let Some(modal) = modal.as_ref()
+            && let Some(warning) = crate::harmonic::modal_truncation_warning(modal.eigenvalues(), modal.next_eigenvalue())
+        {
+            output.warnings.push(warning);
+        }
         let (ki, mi, ci, ui, vi) = if let Some(modal) = &modal {
             if equilibrium.is_some() && modal.eigenvalues().iter().any(|v| *v < 0.) {
                 return Err(Error::Invalid("base_state transient has a negative squared modal frequency; unstable equilibrium".into()));

@@ -1,0 +1,93 @@
+{
+  "title": "Offset tip-mass beam under harmonic base displacement: Euler–Bernoulli continuum reference",
+  "kind": "theory",
+  "source": "Independent Euler–Bernoulli boundary-value calculation in the case-local reference_bvp.py script, using the published beam, eccentric tip-mass, inertia, damping and 0.01 mm base displacement from Wang Hongjin, Meng Qingfeng and Feng Wuwei (2014), Shock and Vibration 981053, Tables 2–3 and section 4.2; https://doi.org/10.1155/2014/981053.",
+  "slow": true,
+  "quantities": [
+    {
+      "id": "peak_1",
+      "quantity": "Continuum peak displacement at x=0.0364 m",
+      "measure": {
+        "from": "measurements",
+        "pointer": "/nodes/0/samples",
+        "max_by": "/displacement_amplitude/2"
+      },
+      "value": 0.000230891,
+      "tolerance": {
+        "relative": 0.005
+      },
+      "reason": "0.5% predeclared allowance for the finite-element beam discretization and the published rounded geometry; the reference is an independent boundary-value calculation."
+    },
+    {
+      "id": "peak_2",
+      "quantity": "Continuum peak displacement at x=0.0574 m",
+      "measure": {
+        "from": "measurements",
+        "pointer": "/nodes/1/samples",
+        "max_by": "/displacement_amplitude/2"
+      },
+      "value": 0.000537825,
+      "tolerance": {
+        "relative": 0.005
+      },
+      "reason": "0.5% predeclared allowance for the finite-element beam discretization and the published rounded geometry; the reference is an independent boundary-value calculation."
+    },
+    {
+      "id": "peak_3",
+      "quantity": "Continuum peak displacement at x=0.0784 m",
+      "measure": {
+        "from": "measurements",
+        "pointer": "/nodes/2/samples",
+        "max_by": "/displacement_amplitude/2"
+      },
+      "value": 0.000936603,
+      "tolerance": {
+        "relative": 0.005
+      },
+      "reason": "0.5% predeclared allowance for the finite-element beam discretization and the published rounded geometry; the reference is an independent boundary-value calculation."
+    },
+    {
+      "id": "peak_4",
+      "quantity": "Continuum peak displacement at x=0.0994 m",
+      "measure": {
+        "from": "measurements",
+        "pointer": "/nodes/3/samples",
+        "max_by": "/displacement_amplitude/2"
+      },
+      "value": 0.001399176,
+      "tolerance": {
+        "relative": 0.005
+      },
+      "reason": "0.5% predeclared allowance for the finite-element beam discretization and the published rounded geometry; the reference is an independent boundary-value calculation."
+    },
+    {
+      "id": "peak_5",
+      "quantity": "Continuum peak displacement at x=0.1204 m",
+      "measure": {
+        "from": "measurements",
+        "pointer": "/nodes/4/samples",
+        "max_by": "/displacement_amplitude/2"
+      },
+      "value": 0.001898464,
+      "tolerance": {
+        "relative": 0.005
+      },
+      "reason": "0.5% predeclared allowance for the finite-element beam discretization and the published rounded geometry; the reference is an independent boundary-value calculation."
+    },
+    {
+      "id": "resonance",
+      "quantity": "Continuum frequency of sampled tip response maximum",
+      "measure": {
+        "from": "measurements",
+        "pointer": "/nodes/4/samples",
+        "max_by": "/displacement_amplitude/2",
+        "value": "/frequency"
+      },
+      "value": 81.48,
+      "tolerance": {
+        "relative": 0.002
+      },
+      "reason": "0.2% predeclared allowance for finite sweep spacing and the published rounded parameters; the reference frequency is the independent boundary-value resonance."
+    }
+  ]
+}
