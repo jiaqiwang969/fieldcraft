@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 pub const SCHEMA: &str = "fieldcraft-load-transfer/1";
 pub const RESULT_KIND: u8 = 13;
 pub const RELATIVE_TOLERANCE: f64 = 1e-10;
-pub const ABSOLUTE_TOLERANCE: f64 = 1e-12;
+pub const ABSOLUTE_TOLERANCE: f64 = 1e-12; // unit-factors: absolute SI residual tolerance
 pub const ACTIVE_SET_TOLERANCE: f64 = 0.05;
 pub const GAP_TOLERANCE: f64 = 0.02;
 pub const PEAK_SAMPLE_LOSS_TOLERANCE: f64 = 0.01;

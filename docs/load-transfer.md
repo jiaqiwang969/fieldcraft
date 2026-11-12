@@ -138,11 +138,17 @@ backend-status reason; a failed prefix is never treated as a successful structur
 
 ### Saving after application
 
-Receiving a load-transfer result with `project` saves the source record against the model as it
-stood at admission. Applying the record adds generated node sets, loads, amplitudes, and a
-structural step, so that source binding is stale for the edited model. A direct `file.save` after
-application therefore rejects with `ReferenceMeshMismatch`. The supported sequence is: receive
-and save, apply and solve, attempt/save evidence as needed, remove the source record with
-`results.external.remove`, then `file.save_as` to a new project. The solved transient result is
-retained in that new project and is available after `file.open`; the product-entry regression
-test covers this sequence and the rejection text.
+When you receive a load-transfer result with `project`, the source record is saved in the project
+as it stood at admission. Applying the result adds generated node sets, loads, amplitudes, and a
+structural step, so the source record is stale for the edited model. A direct `file.save` after
+application is therefore rejected with `ReferenceMeshMismatch`.
+
+Use this sequence to keep the solved result:
+
+1. Receive the result with `project` so the admission project is saved.
+2. Apply the result and solve the structural step.
+3. Remove the source record with `results.external.remove`.
+4. Save the edited project as a new project with `file.save_as`.
+
+The source record remains in the project saved at admission. After reopening the new project with
+`file.open`, the solved transient result is available for inspection.

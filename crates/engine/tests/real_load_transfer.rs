@@ -163,8 +163,10 @@ fn history_relative_checks(product: &Value, history: &Value, tip_node: u64, far_
 }
 
 #[test]
+#[ignore = "real source fixture is outside the repository; run explicitly with LOAD_TRANSFER_REAL_INPUT"]
 fn real_frozen_point_forces_use_receive_map_conservation_apply_and_impact_gate() {
-    let input_path = std::env::var("LOAD_TRANSFER_REAL_INPUT").map(PathBuf::from).unwrap_or_else(|_| default_real_input_path());
+    let input_path =
+        PathBuf::from(std::env::var("LOAD_TRANSFER_REAL_INPUT").expect("LOAD_TRANSFER_REAL_INPUT is required for this ignored real-fixture test"));
     let input_bytes = fs::read(&input_path).unwrap();
     let input: Value = serde_json::from_slice(&input_bytes).unwrap();
     let mut session = Session::default();
@@ -371,12 +373,7 @@ fn real_frozen_point_forces_run_the_product_receive_apply_solve_chain() {
     });
     report["passed"] = json!(passed);
     fs::write(output_dir.join("historical-comparison.json"), serde_json::to_vec_pretty(&report).unwrap()).unwrap();
-    if !passed {
-        eprintln!(
-            "historical comparison exceeds the frozen pointwise threshold; retaining the accepted source-sampling difference: {}",
-            report["historical_comparison"]
-        );
-    }
+    assert!(passed, "historical comparison failed: actual={} limits={}", report["historical_comparison"], report["historical_limits"]);
 }
 
 #[test]

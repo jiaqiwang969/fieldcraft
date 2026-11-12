@@ -13,7 +13,9 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 
-const LOAD_HISTORY_TIME_TOLERANCE_S: f64 = 1e-12;
+const LOAD_HISTORY_TIME_TOLERANCE_S: f64 = 1e-12; // unit-factors: relative time-grid tolerance in SI seconds
+const LOAD_HISTORY_START_TOLERANCE_S: f64 = 1e-12; // unit-factors: absolute start-time tolerance in SI seconds
+const LOAD_HISTORY_STEP_TOLERANCE: f64 = 1e-12; // unit-factors: relative existing-step time-grid tolerance
 
 pub const RECEIVE: CommandSpec = CommandSpec {
     id: "results.external.receive",
@@ -76,7 +78,7 @@ pub const LOAD_TRANSFER_APPLY: CommandSpec = CommandSpec {
     id: "results.external.load_transfer.apply",
     label: "Apply Mapped Load History",
     params: r#"{"name":"support-load","step"?:"support-load-transient","boundary_conditions"?:["clamp"],"integration"?:{"type":"average_acceleration"|"linear_acceleration"|{"type":"hht","alpha":-0.1}},"method"?:{"type":"direct"|{"type":"modal","modes":8}},"damping"?:{"alpha":0,"beta":0,"loss_factor":0},"output_every"?:1} — recheck conservation, then add each nonzero mapped nodal component as a native structural force and tabular amplitude. An existing transient step is reused with its boundary conditions, integration, method, damping, output cadence and other loads unchanged; a new step accepts existing boundary-condition names and warns when none are supplied. Select consistent or lumped mass at solve time."#,
-    form: None,
+    form: Some(super::forms::LOAD_TRANSFER_APPLY),
     kind: CommandKind::Model,
     requires: &[],
     run: apply_load_transfer,
@@ -324,7 +326,7 @@ fn receive_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
 fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
     let name: String = super::req(p, "name")?;
     let step_name = p.get("step").and_then(Value::as_str).map(str::to_owned).unwrap_or_else(|| format!("{name}-transient"));
-    let record = s.external_results.get(&name).cloned().ok_or_else(|| error(format!("external result `{name}` not found")))?;
+    let record = s.external_results.get(&name).cloned().ok_or_else(|| error(format!("no external result `{name}`")))?;
     let generated_prefix = format!("lt_{name}_");
     if s.model.step(&step_name).is_some()
         && (s.model.sets().keys().any(|candidate| candidate.starts_with(&generated_prefix))
@@ -365,7 +367,7 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
         return Err(error("a structural load history needs 2..=u32::MAX frames"));
     }
     let first_time = decoded.archive.frames[0].time_s;
-    if !first_time.is_finite() || first_time.abs() > 1e-12 {
+    if !first_time.is_finite() || first_time.abs() > LOAD_HISTORY_START_TOLERANCE_S {
         return Err(error(format!("structural load history must start at t=0, got {first_time:.17e}")));
     }
     let mut interval: Option<f64> = None;
@@ -410,7 +412,7 @@ fn apply_load_transfer(s: &mut Session, p: &Value) -> Result<Value> {
                 frame_count - 1
             )));
         }
-        if (existing.time_step - time_step).abs() > existing.time_step.abs().max(time_step.abs()).max(1.0) * 1e-12 {
+        if (existing.time_step - time_step).abs() > existing.time_step.abs().max(time_step.abs()).max(1.0) * LOAD_HISTORY_STEP_TOLERANCE {
             return Err(error(format!(
                 "existing transient step `{step_name}` has time_step={:.17e}, incoming history has {:.17e}; time grid mismatch",
                 existing.time_step, time_step
