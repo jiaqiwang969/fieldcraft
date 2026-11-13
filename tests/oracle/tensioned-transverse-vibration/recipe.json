@@ -1,0 +1,258 @@
+[
+  {
+    "command": "model.units",
+    "params": {
+      "system": "m-kg-s-N-Pa"
+    }
+  },
+  {
+    "command": "mesh.block",
+    "params": {
+      "body": "Beam",
+      "kind": "hex20",
+      "corners": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0
+        ],
+        [
+          1,
+          0.04,
+          0
+        ],
+        [
+          0,
+          0.04,
+          0
+        ],
+        [
+          0,
+          0,
+          0.02
+        ],
+        [
+          1,
+          0,
+          0.02
+        ],
+        [
+          1,
+          0.04,
+          0.02
+        ],
+        [
+          0,
+          0.04,
+          0.02
+        ]
+      ],
+      "divisions": [
+        40,
+        2,
+        2
+      ],
+      "faces": {
+        "6": "root",
+        "4": "tip"
+      }
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "all",
+      "geometry": [
+        {
+          "body": "Beam"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "root",
+      "geometry": [
+        {
+          "body": "Beam",
+          "face": "root"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "tip",
+      "geometry": [
+        {
+          "body": "Beam",
+          "face": "tip"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.material.create",
+    "params": {
+      "name": "Mat",
+      "elastic": {
+        "type": "isotropic",
+        "young": 1000000000.0,
+        "poisson": 0.0
+      },
+      "density": 1000.0
+    }
+  },
+  {
+    "command": "model.section.create",
+    "params": {
+      "name": "beam",
+      "set": "all",
+      "material": "Mat",
+      "kind": {
+        "type": "solid"
+      }
+    }
+  },
+  {
+    "command": "model.boundary_condition.create",
+    "params": {
+      "name": "clamp",
+      "type": "fixed",
+      "target": {
+        "set": "root"
+      }
+    }
+  },
+  {
+    "command": "model.boundary_condition.create",
+    "params": {
+      "name": "pull",
+      "type": "displacement",
+      "target": {
+        "set": "tip"
+      },
+      "values": [
+        0.005,
+        0.0,
+        0.0,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  {
+    "command": "model.boundary_condition.create",
+    "params": {
+      "name": "pull_zero",
+      "type": "displacement",
+      "target": {
+        "set": "tip"
+      },
+      "values": [
+        0.0,
+        0.0,
+        0.0,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  {
+    "command": "model.step.create",
+    "params": {
+      "name": "Stretch",
+      "procedure": {
+        "type": "static"
+      },
+      "boundary_conditions": [
+        "clamp",
+        "pull"
+      ],
+      "loads": []
+    }
+  },
+  {
+    "command": "model.step.create",
+    "params": {
+      "name": "Modes",
+      "procedure": {
+        "type": "frequency",
+        "modes": 3
+      },
+      "base_state": "Stretch",
+      "boundary_conditions": [
+        "clamp",
+        "pull"
+      ],
+      "loads": []
+    }
+  },
+  {
+    "command": "solve.static",
+    "params": {
+      "step": "Stretch"
+    },
+    "id": "stretch"
+  },
+  {
+    "command": "solve.frequency",
+    "params": {
+      "step": "Modes"
+    },
+    "id": "modes_tensioned"
+  },
+  {
+    "command": "model.step.create",
+    "params": {
+      "name": "ControlStretch",
+      "procedure": {
+        "type": "static"
+      },
+      "boundary_conditions": [
+        "clamp",
+        "pull_zero"
+      ],
+      "loads": []
+    }
+  },
+  {
+    "command": "model.step.create",
+    "params": {
+      "name": "ControlModes",
+      "procedure": {
+        "type": "frequency",
+        "modes": 3
+      },
+      "base_state": "ControlStretch",
+      "boundary_conditions": [
+        "clamp",
+        "pull_zero"
+      ],
+      "loads": []
+    }
+  },
+  {
+    "command": "solve.static",
+    "params": {
+      "step": "ControlStretch"
+    },
+    "id": "control"
+  },
+  {
+    "command": "solve.frequency",
+    "params": {
+      "step": "ControlModes"
+    },
+    "id": "modes_control"
+  }
+]

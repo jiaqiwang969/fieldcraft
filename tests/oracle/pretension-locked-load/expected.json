@@ -1,0 +1,46 @@
+{
+  "title": "Locked pretension with an external centre load",
+  "kind": "theory",
+  "source": "Closed-form two-spring equilibrium with a locked compatibility jump; q and the two stresses follow the two equations shown in README.md.",
+  "quantities": [
+    {
+      "id": "locked_adjustment",
+      "quantity": "locked cut adjustment (m)",
+      "measure": {
+        "from": "locked_cut",
+        "pointer": "/adjustment"
+      },
+      "value": 0.015,
+      "tolerance": {
+        "absolute": 1e-08
+      },
+      "reason": "The locked value is the preceding two-segment preload: q = 10(1/1000 + 1/2000) = 0.015 m."
+    },
+    {
+      "id": "lower_stress",
+      "quantity": "lower segment axial stress after the centre load (Pa)",
+      "measure": {
+        "from": "locked_probe",
+        "pointer": "/elements/0/stress/0/2"
+      },
+      "value": 11.0,
+      "tolerance": {
+        "absolute": 1e-06
+      },
+      "reason": "Let y and z be the lower and upper centre displacements. The locked compatibility is y − z = 0.015; the centre equilibrium is σ1 − σ2 = 3 Pa, and compatibility is (σ1 − 10)/1000 + (σ2 − 10)/2000 = 0. Solving gives the independent reference stress."
+    },
+    {
+      "id": "upper_stress",
+      "quantity": "upper segment axial stress after the centre load (Pa)",
+      "measure": {
+        "from": "locked_probe",
+        "pointer": "/elements/1/stress/0/2"
+      },
+      "value": 8.0,
+      "tolerance": {
+        "absolute": 1e-06
+      },
+      "reason": "Let y and z be the lower and upper centre displacements. The locked compatibility is y − z = 0.015; the centre equilibrium is σ1 − σ2 = 3 Pa, and compatibility is (σ1 − 10)/1000 + (σ2 − 10)/2000 = 0. Solving gives the independent reference stress."
+    }
+  ]
+}

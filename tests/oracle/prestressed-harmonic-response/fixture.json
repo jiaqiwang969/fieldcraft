@@ -1,0 +1,13 @@
+{
+  "note": "FieldCraft's accepted results for this case, written by `cargo xtask oracle --bless`. A result outside its band fails CI.",
+  "values": {
+    "amplitude": {
+      "band": 5.75105714843262e-16,
+      "value": 5.751057148432619e-7
+    },
+    "phase": {
+      "band": 2.0481799455650503e-11,
+      "value": -0.00048179945565050104
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "title": "Closed contact with a tangentially free perturbation",
+  "kind": "theory",
+  "source": "Closed-form two-layer shear system with the mass and stiffness matrices shown in README.md.",
+  "quantities": [
+    {
+      "id": "frequency_1",
+      "quantity": "closed tangent-free shear frequency 1 (Hz)",
+      "measure": {
+        "from": "modes",
+        "pointer": "/modes/0/frequency"
+      },
+      "value": 0.3179853895872701,
+      "tolerance": {
+        "relative": 5e-06
+      },
+      "reason": "With λ = 1 − 0.01, s = 500 λ². The two uniform layer translations have K = [[s,-s],[-s,s+4]] and M = [[2,1],[1,2]]/6; solving det(K − ω²M) gives the two displayed roots. The stated tolerance covers the documented finite-element contact closure/penetration tolerance and the resulting small stretch perturbation, rather than changing the closed-form reference."
+    },
+    {
+      "id": "frequency_2",
+      "quantity": "closed tangent-free shear frequency 2 (Hz)",
+      "measure": {
+        "from": "modes",
+        "pointer": "/modes/1/frequency"
+      },
+      "value": 12.217262711358927,
+      "tolerance": {
+        "relative": 5e-06
+      },
+      "reason": "With λ = 1 − 0.01, s = 500 λ². The two uniform layer translations have K = [[s,-s],[-s,s+4]] and M = [[2,1],[1,2]]/6; solving det(K − ω²M) gives the two displayed roots. The stated tolerance covers the documented finite-element contact closure/penetration tolerance and the resulting small stretch perturbation, rather than changing the closed-form reference."
+    }
+  ]
+}

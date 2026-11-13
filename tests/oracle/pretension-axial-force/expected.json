@@ -1,0 +1,46 @@
+{
+  "title": "Axial force and opening of a pretension cut",
+  "kind": "theory",
+  "source": "Closed-form axial-bar series compliance and force equilibrium: q = F Σ L/(EA), with the values and substitution shown in README.md.",
+  "quantities": [
+    {
+      "id": "adjustment",
+      "quantity": "pretension cut opening (m)",
+      "measure": {
+        "from": "cut",
+        "pointer": "/adjustment"
+      },
+      "value": 0.002,
+      "tolerance": {
+        "absolute": 1e-09
+      },
+      "reason": "Two unit-area axial segments of lengths 1 m and E = 1e6 Pa carry F = 1000 N: q = F(L1/(EA) + L2/(EA)) = 0.002 m; the continuous two-hex mesh has this exact linear field."
+    },
+    {
+      "id": "section_force",
+      "quantity": "section force (N)",
+      "measure": {
+        "from": "cut",
+        "pointer": "/section_force"
+      },
+      "value": 1000.0,
+      "tolerance": {
+        "absolute": 1e-08
+      },
+      "reason": "Static equilibrium of the two segments gives the same axial force F = 1000 N on both sides of the cut."
+    },
+    {
+      "id": "applied_force",
+      "quantity": "applied pretension force (N)",
+      "measure": {
+        "from": "cut",
+        "pointer": "/applied_force"
+      },
+      "value": 1000.0,
+      "tolerance": {
+        "absolute": 1e-08
+      },
+      "reason": "The prescribed generalized cut load is F = 1000 N by construction."
+    }
+  ]
+}

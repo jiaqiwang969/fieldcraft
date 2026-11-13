@@ -1,0 +1,85 @@
+{
+  "title": "Transverse vibration of a tensioned rectangular bar",
+  "kind": "theory",
+  "source": "Independent Euler–Bernoulli clamped-clamped beam with axial tension; roots are evaluated by the standard-library bisection in reference.py.",
+  "quantities": [
+    {
+      "id": "tensioned_frequency_1",
+      "quantity": "tensioned weak-axis first frequency (Hz)",
+      "measure": {
+        "from": "modes_tensioned",
+        "pointer": "/modes/0/frequency"
+      },
+      "value": 43.56620368774269,
+      "tolerance": {
+        "relative": 0.005
+      },
+      "reason": "The independent Euler–Bernoulli clamped-clamped tensioned-beam root is the reference. The dimensionless beam-model estimate is 0.13% for the corresponding zero-tension weak-axis first mode, while the measured solid-versus-beam differences are 0.20% without tension and 0.09% with tension; axial tension reduces the bending fraction. The 0.5% band is about twice the larger measured difference for this mode family."
+    },
+    {
+      "id": "tensioned_frequency_2",
+      "quantity": "tensioned strong-axis first frequency (Hz)",
+      "measure": {
+        "from": "modes_tensioned",
+        "pointer": "/modes/1/frequency"
+      },
+      "value": 56.73351468763029,
+      "tolerance": {
+        "relative": 0.015
+      },
+      "reason": "The independent Euler–Bernoulli clamped-clamped tensioned-beam root is the reference. The dimensionless beam-model estimate is 0.51% for the corresponding zero-tension strong-axis first mode, while the measured solid-versus-beam differences are 0.85% without tension and 0.52% with tension; axial tension reduces the bending fraction. The 1.5% band is about twice the larger measured difference for this mode family."
+    },
+    {
+      "id": "tensioned_frequency_3",
+      "quantity": "tensioned weak-axis second frequency (Hz)",
+      "measure": {
+        "from": "modes_tensioned",
+        "pointer": "/modes/2/frequency"
+      },
+      "value": 94.37479727189415,
+      "tolerance": {
+        "relative": 0.01
+      },
+      "reason": "The independent Euler–Bernoulli clamped-clamped tensioned-beam root is the reference. The dimensionless beam-model estimate is 0.35% for the corresponding zero-tension weak-axis second mode, while the measured solid-versus-beam differences are 0.46% without tension and 0.21% with tension; axial tension reduces the bending fraction. The 1% band is about twice the larger measured difference for this mode family."
+    },
+    {
+      "id": "control_frequency_1",
+      "quantity": "zero-tension weak-axis first frequency (Hz)",
+      "measure": {
+        "from": "modes_control",
+        "pointer": "/modes/0/frequency"
+      },
+      "value": 20.55839792172684,
+      "tolerance": {
+        "relative": 0.005
+      },
+      "reason": "The independent Euler–Bernoulli clamped-clamped beam root is the reference. The relative reduction estimate 1/2 (k r)^2 (1 + E/(kappa G)) is 0.13% for this zero-tension weak-axis first mode; the measured solid-versus-beam difference is 0.20%. The 0.5% band is about twice the measured difference and covers the beam-model applicability error."
+    },
+    {
+      "id": "control_frequency_2",
+      "quantity": "zero-tension strong-axis first frequency (Hz)",
+      "measure": {
+        "from": "modes_control",
+        "pointer": "/modes/1/frequency"
+      },
+      "value": 41.11679584345368,
+      "tolerance": {
+        "relative": 0.015
+      },
+      "reason": "The independent Euler–Bernoulli clamped-clamped beam root is the reference. The relative reduction estimate 1/2 (k r)^2 (1 + E/(kappa G)) is 0.51% for this zero-tension strong-axis first mode; the measured solid-versus-beam difference is 0.85%. The 1.5% band is about twice the measured difference and covers the beam-model applicability error."
+    },
+    {
+      "id": "control_frequency_3",
+      "quantity": "zero-tension weak-axis second frequency (Hz)",
+      "measure": {
+        "from": "modes_control",
+        "pointer": "/modes/2/frequency"
+      },
+      "value": 56.67001551552384,
+      "tolerance": {
+        "relative": 0.01
+      },
+      "reason": "The independent Euler–Bernoulli clamped-clamped beam root is the reference. The relative reduction estimate 1/2 (k r)^2 (1 + E/(kappa G)) is 0.35% for this zero-tension weak-axis second mode; the measured solid-versus-beam difference is 0.46%. The 1% band is about twice the measured difference and covers the beam-model applicability error."
+    }
+  ]
+}

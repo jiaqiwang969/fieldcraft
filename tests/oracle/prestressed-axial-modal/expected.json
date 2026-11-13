@@ -1,0 +1,46 @@
+{
+  "title": "Prestressed axial mode and unloaded control",
+  "kind": "theory",
+  "source": "Closed-form one-coordinate axial perturbation: M = 2/3, K = 2(E+F), and the zero-force control, with substitutions in README.md.",
+  "quantities": [
+    {
+      "id": "preload_adjustment",
+      "quantity": "preload adjustment (m)",
+      "measure": {
+        "from": "pre_cut",
+        "pointer": "/adjustment"
+      },
+      "value": 0.002,
+      "tolerance": {
+        "absolute": 1e-09
+      },
+      "reason": "Two equal one-metre unit-area segments: q = F ΣL/(EA) = 1000(2/1e6) = 0.002 m."
+    },
+    {
+      "id": "prestressed_frequency",
+      "quantity": "first prestressed frequency (Hz)",
+      "measure": {
+        "from": "modes",
+        "pointer": "/modes/0/frequency"
+      },
+      "value": 275.8022454939138,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "The one-coordinate axial perturbation has exact discrete mass M = 2/3 kg and tangent K = 2(E + F) = 2,002,000 N/m, so f = sqrt(K/M)/(2π)."
+    },
+    {
+      "id": "unloaded_frequency",
+      "quantity": "first unloaded frequency (Hz)",
+      "measure": {
+        "from": "modes_zero",
+        "pointer": "/modes/0/frequency"
+      },
+      "value": 275.664447710896,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "With F = 0 the same exact discrete coordinate has K = 2E = 2,000,000 N/m and M = 2/3 kg; f = sqrt(K/M)/(2π)."
+    }
+  ]
+}
