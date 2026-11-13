@@ -78,7 +78,7 @@
   {
     "command": "model.spring.create",
     "params": {
-      "name": "k1",
+      "name": "k_ground",
       "type": "spring",
       "first": {
         "set": "n1"
@@ -86,15 +86,18 @@
       "direction": {
         "dof": 1
       },
-      "stiffness": 1
+      "stiffness": 4
     }
   },
   {
     "command": "model.spring.create",
     "params": {
-      "name": "k2",
+      "name": "k_couple",
       "type": "spring",
       "first": {
+        "set": "n1"
+      },
+      "second": {
         "set": "n2"
       },
       "direction": {
@@ -124,22 +127,7 @@
   {
     "command": "model.load.create",
     "params": {
-      "name": "force1",
-      "type": "force",
-      "target": {
-        "set": "n1"
-      },
-      "vector": [
-        1,
-        0,
-        0
-      ]
-    }
-  },
-  {
-    "command": "model.load.create",
-    "params": {
-      "name": "force2",
+      "name": "F",
       "type": "force",
       "target": {
         "set": "n2"
@@ -158,14 +146,14 @@
       "procedure": {
         "type": "transient",
         "time_step": 0.001,
-        "increments": 1000,
+        "increments": 2000,
         "output_every": 500,
         "method": {
           "type": "modal",
           "modes": 2
         },
         "load_amplitudes": {
-          "force1": {
+          "F": {
             "type": "tabular",
             "points": [
               [
@@ -173,20 +161,7 @@
                 1
               ],
               [
-                1,
-                1
-              ]
-            ]
-          },
-          "force2": {
-            "type": "tabular",
-            "points": [
-              [
-                0,
-                1
-              ],
-              [
-                1,
+                2,
                 1
               ]
             ]
@@ -197,8 +172,7 @@
         "guide"
       ],
       "loads": [
-        "force1",
-        "force2"
+        "F"
       ]
     }
   },

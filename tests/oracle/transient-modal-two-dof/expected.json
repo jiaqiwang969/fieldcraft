@@ -1,63 +1,231 @@
 {
-  "title": "Two-DOF modal superposition under a step force",
+  "title": "Coupled two-DOF modal step response against continuous and scheme-exact references",
   "kind": "theory",
-  "source": "Chopra, Dynamics of Structures, 5th ed., §9.4; modal superposition of independent undamped SDOF step responses.",
+  "source": "Chopra, Dynamics of Structures, 5th ed., §9.4; coupled K=[[8,-4],[-4,4]], M=I modal superposition, with an independent average-acceleration discrete-frequency evaluation for the second reference.",
   "quantities": [
     {
-      "id": "u1_1",
-      "quantity": "mode-superposed displacement of DOF 1 at t=0.5 s",
+      "id": "u1_0_5_continuous",
+      "quantity": "mass 1 displacement at t=0.5 s, continuous modal reference",
       "measure": {
         "from": "probe",
         "pointer": "/nodes/0/samples/1/displacement/0"
       },
-      "value": 0.12241743810962724,
+      "value": 0.00942318471240429,
       "tolerance": {
-        "relative": 2e-06,
+        "relative": 1e-05,
         "absolute": 1e-09
       },
-      "reason": "Each uncoupled modal coordinate has the closed-form step response (1-cos(omega t))/omega^2; the retained basis contains both modes exactly and the fixed-step error bound is 2e-6."
+      "reason": "The coupled chain is expanded in both exact modes; the continuous step response is the sum of (1-cos(omega t))/omega^2 terms. The 1e-5 relative allowance follows the largest fixed-step modal phase error over the 2 s record (the observed difference is 5e-8 to 2.5e-7)."
     },
     {
-      "id": "u2_1",
-      "quantity": "mode-superposed displacement of DOF 2 at t=0.5 s",
+      "id": "u2_0_5_continuous",
+      "quantity": "mass 2 displacement at t=0.5 s, continuous modal reference",
       "measure": {
         "from": "probe",
         "pointer": "/nodes/1/samples/1/displacement/0"
       },
-      "value": 0.11492442353296506,
+      "value": 0.11524765391374579,
       "tolerance": {
-        "relative": 2e-06,
+        "relative": 1e-05,
         "absolute": 1e-09
       },
-      "reason": "The second modal coordinate has omega=2 rad/s and the same closed-form step response; both modes are retained."
+      "reason": "The coupled chain is expanded in both exact modes; the continuous step response is the sum of (1-cos(omega t))/omega^2 terms. The 1e-5 relative allowance follows the largest fixed-step modal phase error over the 2 s record (the observed difference is 5e-8 to 2.5e-7)."
     },
     {
-      "id": "u1_2",
-      "quantity": "mode-superposed displacement of DOF 1 at t=1 s",
+      "id": "u1_0_5_scheme",
+      "quantity": "mass 1 displacement at t=0.5 s, scheme-exact modal reference",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/0/samples/1/displacement/0"
+      },
+      "value": 0.009423231599650313,
+      "tolerance": {
+        "relative": 1e-12,
+        "absolute": 1e-12
+      },
+      "reason": "The same two modal terms are evaluated with omega_tilde=(2/dt) atan(omega dt/2), the exact phase of average acceleration for this dt; 1e-12 checks the implementation against the independent discrete formula."
+    },
+    {
+      "id": "u2_0_5_scheme",
+      "quantity": "mass 2 displacement at t=0.5 s, scheme-exact modal reference",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/1/samples/1/displacement/0"
+      },
+      "value": 0.11524759509335336,
+      "tolerance": {
+        "relative": 1e-12,
+        "absolute": 1e-12
+      },
+      "reason": "The same two modal terms are evaluated with omega_tilde=(2/dt) atan(omega dt/2), the exact phase of average acceleration for this dt; 1e-12 checks the implementation against the independent discrete formula."
+    },
+    {
+      "id": "u1_1_continuous",
+      "quantity": "mass 1 displacement at t=1 s, continuous modal reference",
       "measure": {
         "from": "probe",
         "pointer": "/nodes/0/samples/2/displacement/0"
       },
-      "value": 0.45969769413186023,
+      "value": 0.11132802877756055,
       "tolerance": {
-        "relative": 2e-06,
+        "relative": 1e-05,
         "absolute": 1e-09
       },
-      "reason": "Each uncoupled modal coordinate has the closed-form step response (1-cos(omega t))/omega^2; the retained basis contains both modes exactly and the fixed-step error bound is 2e-6."
+      "reason": "The coupled chain is expanded in both exact modes; the continuous step response is the sum of (1-cos(omega t))/omega^2 terms. The 1e-5 relative allowance follows the largest fixed-step modal phase error over the 2 s record (the observed difference is 5e-8 to 2.5e-7)."
     },
     {
-      "id": "u2_2",
-      "quantity": "mode-superposed displacement of DOF 2 at t=1 s",
+      "id": "u2_1_continuous",
+      "quantity": "mass 2 displacement at t=1 s, continuous modal reference",
       "measure": {
         "from": "probe",
         "pointer": "/nodes/1/samples/2/displacement/0"
       },
-      "value": 0.3540367091367856,
+      "value": 0.37068969812002506,
       "tolerance": {
-        "relative": 2e-06,
+        "relative": 1e-05,
         "absolute": 1e-09
       },
-      "reason": "The second modal coordinate has omega=2 rad/s and the same closed-form step response; both modes are retained."
+      "reason": "The coupled chain is expanded in both exact modes; the continuous step response is the sum of (1-cos(omega t))/omega^2 terms. The 1e-5 relative allowance follows the largest fixed-step modal phase error over the 2 s record (the observed difference is 5e-8 to 2.5e-7)."
+    },
+    {
+      "id": "u1_1_scheme",
+      "quantity": "mass 1 displacement at t=1 s, scheme-exact modal reference",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/0/samples/2/displacement/0"
+      },
+      "value": 0.11132797389199246,
+      "tolerance": {
+        "relative": 1e-12,
+        "absolute": 1e-12
+      },
+      "reason": "The same two modal terms are evaluated with omega_tilde=(2/dt) atan(omega dt/2), the exact phase of average acceleration for this dt; 1e-12 checks the implementation against the independent discrete formula."
+    },
+    {
+      "id": "u2_1_scheme",
+      "quantity": "mass 2 displacement at t=1 s, scheme-exact modal reference",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/1/samples/2/displacement/0"
+      },
+      "value": 0.3706896347523891,
+      "tolerance": {
+        "relative": 1e-12,
+        "absolute": 1e-12
+      },
+      "reason": "The same two modal terms are evaluated with omega_tilde=(2/dt) atan(omega dt/2), the exact phase of average acceleration for this dt; 1e-12 checks the implementation against the independent discrete formula."
+    },
+    {
+      "id": "u1_1_5_continuous",
+      "quantity": "mass 1 displacement at t=1.5 s, continuous modal reference",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/0/samples/3/displacement/0"
+      },
+      "value": 0.33785179042105795,
+      "tolerance": {
+        "relative": 1e-05,
+        "absolute": 1e-09
+      },
+      "reason": "The coupled chain is expanded in both exact modes; the continuous step response is the sum of (1-cos(omega t))/omega^2 terms. The 1e-5 relative allowance follows the largest fixed-step modal phase error over the 2 s record (the observed difference is 5e-8 to 2.5e-7)."
+    },
+    {
+      "id": "u2_1_5_continuous",
+      "quantity": "mass 2 displacement at t=1.5 s, continuous modal reference",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/1/samples/3/displacement/0"
+      },
+      "value": 0.6286600456083641,
+      "tolerance": {
+        "relative": 1e-05,
+        "absolute": 1e-09
+      },
+      "reason": "The coupled chain is expanded in both exact modes; the continuous step response is the sum of (1-cos(omega t))/omega^2 terms. The 1e-5 relative allowance follows the largest fixed-step modal phase error over the 2 s record (the observed difference is 5e-8 to 2.5e-7)."
+    },
+    {
+      "id": "u1_1_5_scheme",
+      "quantity": "mass 1 displacement at t=1.5 s, scheme-exact modal reference",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/0/samples/3/displacement/0"
+      },
+      "value": 0.3378515449892351,
+      "tolerance": {
+        "relative": 1e-12,
+        "absolute": 1e-12
+      },
+      "reason": "The same two modal terms are evaluated with omega_tilde=(2/dt) atan(omega dt/2), the exact phase of average acceleration for this dt; 1e-12 checks the implementation against the independent discrete formula."
+    },
+    {
+      "id": "u2_1_5_scheme",
+      "quantity": "mass 2 displacement at t=1.5 s, scheme-exact modal reference",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/1/samples/3/displacement/0"
+      },
+      "value": 0.6286600489443298,
+      "tolerance": {
+        "relative": 1e-12,
+        "absolute": 1e-12
+      },
+      "reason": "The same two modal terms are evaluated with omega_tilde=(2/dt) atan(omega dt/2), the exact phase of average acceleration for this dt; 1e-12 checks the implementation against the independent discrete formula."
+    },
+    {
+      "id": "u1_2_continuous",
+      "quantity": "mass 1 displacement at t=2 s, continuous modal reference",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/0/samples/4/displacement/0"
+      },
+      "value": 0.5214723450894571,
+      "tolerance": {
+        "relative": 1e-05,
+        "absolute": 1e-09
+      },
+      "reason": "The coupled chain is expanded in both exact modes; the continuous step response is the sum of (1-cos(omega t))/omega^2 terms. The 1e-5 relative allowance follows the largest fixed-step modal phase error over the 2 s record (the observed difference is 5e-8 to 2.5e-7)."
+    },
+    {
+      "id": "u2_2_continuous",
+      "quantity": "mass 2 displacement at t=2 s, continuous modal reference",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/1/samples/4/displacement/0"
+      },
+      "value": 0.8454595483552422,
+      "tolerance": {
+        "relative": 1e-05,
+        "absolute": 1e-09
+      },
+      "reason": "The coupled chain is expanded in both exact modes; the continuous step response is the sum of (1-cos(omega t))/omega^2 terms. The 1e-5 relative allowance follows the largest fixed-step modal phase error over the 2 s record (the observed difference is 5e-8 to 2.5e-7)."
+    },
+    {
+      "id": "u1_2_scheme",
+      "quantity": "mass 1 displacement at t=2 s, scheme-exact modal reference",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/0/samples/4/displacement/0"
+      },
+      "value": 0.5214723332204765,
+      "tolerance": {
+        "relative": 1e-12,
+        "absolute": 1e-12
+      },
+      "reason": "The same two modal terms are evaluated with omega_tilde=(2/dt) atan(omega dt/2), the exact phase of average acceleration for this dt; 1e-12 checks the implementation against the independent discrete formula."
+    },
+    {
+      "id": "u2_2_scheme",
+      "quantity": "mass 2 displacement at t=2 s, scheme-exact modal reference",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/1/samples/4/displacement/0"
+      },
+      "value": 0.84545942784828,
+      "tolerance": {
+        "relative": 1e-12,
+        "absolute": 1e-12
+      },
+      "reason": "The same two modal terms are evaluated with omega_tilde=(2/dt) atan(omega dt/2), the exact phase of average acceleration for this dt; 1e-12 checks the implementation against the independent discrete formula."
     }
   ]
 }

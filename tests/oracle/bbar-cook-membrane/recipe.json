@@ -1,0 +1,1161 @@
+[
+  {
+    "command": "file.new",
+    "params": {}
+  },
+  {
+    "command": "model.units",
+    "params": {
+      "system": "m-kg-s-N-Pa"
+    }
+  },
+  {
+    "command": "mesh.block",
+    "params": {
+      "body": "Panel",
+      "kind": "hex8",
+      "corners": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0.048,
+          0.044,
+          0
+        ],
+        [
+          0.048,
+          0.06,
+          0
+        ],
+        [
+          0,
+          0.044,
+          0
+        ],
+        [
+          0,
+          0,
+          0.001
+        ],
+        [
+          0.048,
+          0.044,
+          0.001
+        ],
+        [
+          0.048,
+          0.06,
+          0.001
+        ],
+        [
+          0,
+          0.044,
+          0.001
+        ]
+      ],
+      "divisions": [
+        4,
+        4,
+        1
+      ],
+      "faces": {
+        "6": "left",
+        "4": "right",
+        "1": "zminus",
+        "2": "zplus"
+      }
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "all",
+      "geometry": [
+        {
+          "body": "Panel"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "left",
+      "geometry": [
+        {
+          "body": "Panel",
+          "face": "left"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "right",
+      "geometry": [
+        {
+          "body": "Panel",
+          "face": "right"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "zfaces",
+      "geometry": [
+        {
+          "body": "Panel",
+          "face": "zminus"
+        },
+        {
+          "body": "Panel",
+          "face": "zplus"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.material.create",
+    "params": {
+      "name": "M",
+      "elastic": {
+        "type": "isotropic",
+        "young": 240565000.0,
+        "poisson": 0.4999
+      }
+    }
+  },
+  {
+    "command": "model.section.create",
+    "params": {
+      "name": "S",
+      "set": "all",
+      "material": "M",
+      "kind": {
+        "type": "solid"
+      },
+      "formulation": {
+        "b_bar": true
+      }
+    }
+  },
+  {
+    "command": "model.boundary_condition.create",
+    "params": {
+      "name": "clamp",
+      "type": "displacement",
+      "target": {
+        "set": "left"
+      },
+      "values": [
+        0,
+        0,
+        0,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  {
+    "command": "model.boundary_condition.create",
+    "params": {
+      "name": "plane",
+      "type": "displacement",
+      "target": {
+        "set": "zfaces"
+      },
+      "values": [
+        null,
+        null,
+        0,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  {
+    "command": "model.load.create",
+    "params": {
+      "name": "shear",
+      "type": "traction",
+      "set": "right",
+      "vector": [
+        0,
+        6250000.0,
+        0
+      ]
+    }
+  },
+  {
+    "command": "model.step.create",
+    "params": {
+      "name": "Cook",
+      "procedure": {
+        "type": "static"
+      },
+      "boundary_conditions": [
+        "clamp",
+        "plane"
+      ],
+      "loads": [
+        "shear"
+      ]
+    }
+  },
+  {
+    "command": "solve.static",
+    "params": {
+      "step": "Cook",
+      "threads": 1
+    },
+    "id": "solve_bbar_4"
+  },
+  {
+    "command": "solve.probe",
+    "params": {
+      "step": "Cook",
+      "at": [
+        [
+          0.048,
+          0.06,
+          0.0
+        ]
+      ]
+    },
+    "id": "probe_bbar_4"
+  },
+  {
+    "command": "file.new",
+    "params": {}
+  },
+  {
+    "command": "model.units",
+    "params": {
+      "system": "m-kg-s-N-Pa"
+    }
+  },
+  {
+    "command": "mesh.block",
+    "params": {
+      "body": "Panel",
+      "kind": "hex8",
+      "corners": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0.048,
+          0.044,
+          0
+        ],
+        [
+          0.048,
+          0.06,
+          0
+        ],
+        [
+          0,
+          0.044,
+          0
+        ],
+        [
+          0,
+          0,
+          0.001
+        ],
+        [
+          0.048,
+          0.044,
+          0.001
+        ],
+        [
+          0.048,
+          0.06,
+          0.001
+        ],
+        [
+          0,
+          0.044,
+          0.001
+        ]
+      ],
+      "divisions": [
+        10,
+        10,
+        1
+      ],
+      "faces": {
+        "6": "left",
+        "4": "right",
+        "1": "zminus",
+        "2": "zplus"
+      }
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "all",
+      "geometry": [
+        {
+          "body": "Panel"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "left",
+      "geometry": [
+        {
+          "body": "Panel",
+          "face": "left"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "right",
+      "geometry": [
+        {
+          "body": "Panel",
+          "face": "right"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "zfaces",
+      "geometry": [
+        {
+          "body": "Panel",
+          "face": "zminus"
+        },
+        {
+          "body": "Panel",
+          "face": "zplus"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.material.create",
+    "params": {
+      "name": "M",
+      "elastic": {
+        "type": "isotropic",
+        "young": 240565000.0,
+        "poisson": 0.4999
+      }
+    }
+  },
+  {
+    "command": "model.section.create",
+    "params": {
+      "name": "S",
+      "set": "all",
+      "material": "M",
+      "kind": {
+        "type": "solid"
+      },
+      "formulation": {
+        "b_bar": true
+      }
+    }
+  },
+  {
+    "command": "model.boundary_condition.create",
+    "params": {
+      "name": "clamp",
+      "type": "displacement",
+      "target": {
+        "set": "left"
+      },
+      "values": [
+        0,
+        0,
+        0,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  {
+    "command": "model.boundary_condition.create",
+    "params": {
+      "name": "plane",
+      "type": "displacement",
+      "target": {
+        "set": "zfaces"
+      },
+      "values": [
+        null,
+        null,
+        0,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  {
+    "command": "model.load.create",
+    "params": {
+      "name": "shear",
+      "type": "traction",
+      "set": "right",
+      "vector": [
+        0,
+        6250000.0,
+        0
+      ]
+    }
+  },
+  {
+    "command": "model.step.create",
+    "params": {
+      "name": "Cook",
+      "procedure": {
+        "type": "static"
+      },
+      "boundary_conditions": [
+        "clamp",
+        "plane"
+      ],
+      "loads": [
+        "shear"
+      ]
+    }
+  },
+  {
+    "command": "solve.static",
+    "params": {
+      "step": "Cook",
+      "threads": 1
+    },
+    "id": "solve_bbar_10"
+  },
+  {
+    "command": "solve.probe",
+    "params": {
+      "step": "Cook",
+      "at": [
+        [
+          0.048,
+          0.06,
+          0.0
+        ]
+      ]
+    },
+    "id": "probe_bbar_10"
+  },
+  {
+    "command": "file.new",
+    "params": {}
+  },
+  {
+    "command": "model.units",
+    "params": {
+      "system": "m-kg-s-N-Pa"
+    }
+  },
+  {
+    "command": "mesh.block",
+    "params": {
+      "body": "Panel",
+      "kind": "hex8",
+      "corners": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0.048,
+          0.044,
+          0
+        ],
+        [
+          0.048,
+          0.06,
+          0
+        ],
+        [
+          0,
+          0.044,
+          0
+        ],
+        [
+          0,
+          0,
+          0.001
+        ],
+        [
+          0.048,
+          0.044,
+          0.001
+        ],
+        [
+          0.048,
+          0.06,
+          0.001
+        ],
+        [
+          0,
+          0.044,
+          0.001
+        ]
+      ],
+      "divisions": [
+        30,
+        30,
+        1
+      ],
+      "faces": {
+        "6": "left",
+        "4": "right",
+        "1": "zminus",
+        "2": "zplus"
+      }
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "all",
+      "geometry": [
+        {
+          "body": "Panel"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "left",
+      "geometry": [
+        {
+          "body": "Panel",
+          "face": "left"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "right",
+      "geometry": [
+        {
+          "body": "Panel",
+          "face": "right"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "zfaces",
+      "geometry": [
+        {
+          "body": "Panel",
+          "face": "zminus"
+        },
+        {
+          "body": "Panel",
+          "face": "zplus"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.material.create",
+    "params": {
+      "name": "M",
+      "elastic": {
+        "type": "isotropic",
+        "young": 240565000.0,
+        "poisson": 0.4999
+      }
+    }
+  },
+  {
+    "command": "model.section.create",
+    "params": {
+      "name": "S",
+      "set": "all",
+      "material": "M",
+      "kind": {
+        "type": "solid"
+      },
+      "formulation": {
+        "b_bar": true
+      }
+    }
+  },
+  {
+    "command": "model.boundary_condition.create",
+    "params": {
+      "name": "clamp",
+      "type": "displacement",
+      "target": {
+        "set": "left"
+      },
+      "values": [
+        0,
+        0,
+        0,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  {
+    "command": "model.boundary_condition.create",
+    "params": {
+      "name": "plane",
+      "type": "displacement",
+      "target": {
+        "set": "zfaces"
+      },
+      "values": [
+        null,
+        null,
+        0,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  {
+    "command": "model.load.create",
+    "params": {
+      "name": "shear",
+      "type": "traction",
+      "set": "right",
+      "vector": [
+        0,
+        6250000.0,
+        0
+      ]
+    }
+  },
+  {
+    "command": "model.step.create",
+    "params": {
+      "name": "Cook",
+      "procedure": {
+        "type": "static"
+      },
+      "boundary_conditions": [
+        "clamp",
+        "plane"
+      ],
+      "loads": [
+        "shear"
+      ]
+    }
+  },
+  {
+    "command": "solve.static",
+    "params": {
+      "step": "Cook",
+      "threads": 1
+    },
+    "id": "solve_bbar_30"
+  },
+  {
+    "command": "solve.probe",
+    "params": {
+      "step": "Cook",
+      "at": [
+        [
+          0.048,
+          0.06,
+          0.0
+        ]
+      ]
+    },
+    "id": "probe_bbar_30"
+  },
+  {
+    "command": "file.new",
+    "params": {}
+  },
+  {
+    "command": "model.units",
+    "params": {
+      "system": "m-kg-s-N-Pa"
+    }
+  },
+  {
+    "command": "mesh.block",
+    "params": {
+      "body": "Panel",
+      "kind": "hex8",
+      "corners": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0.048,
+          0.044,
+          0
+        ],
+        [
+          0.048,
+          0.06,
+          0
+        ],
+        [
+          0,
+          0.044,
+          0
+        ],
+        [
+          0,
+          0,
+          0.001
+        ],
+        [
+          0.048,
+          0.044,
+          0.001
+        ],
+        [
+          0.048,
+          0.06,
+          0.001
+        ],
+        [
+          0,
+          0.044,
+          0.001
+        ]
+      ],
+      "divisions": [
+        4,
+        4,
+        1
+      ],
+      "faces": {
+        "6": "left",
+        "4": "right",
+        "1": "zminus",
+        "2": "zplus"
+      }
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "all",
+      "geometry": [
+        {
+          "body": "Panel"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "left",
+      "geometry": [
+        {
+          "body": "Panel",
+          "face": "left"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "right",
+      "geometry": [
+        {
+          "body": "Panel",
+          "face": "right"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "zfaces",
+      "geometry": [
+        {
+          "body": "Panel",
+          "face": "zminus"
+        },
+        {
+          "body": "Panel",
+          "face": "zplus"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.material.create",
+    "params": {
+      "name": "M",
+      "elastic": {
+        "type": "isotropic",
+        "young": 240565000.0,
+        "poisson": 0.4999
+      }
+    }
+  },
+  {
+    "command": "model.section.create",
+    "params": {
+      "name": "S",
+      "set": "all",
+      "material": "M",
+      "kind": {
+        "type": "solid"
+      }
+    }
+  },
+  {
+    "command": "model.boundary_condition.create",
+    "params": {
+      "name": "clamp",
+      "type": "displacement",
+      "target": {
+        "set": "left"
+      },
+      "values": [
+        0,
+        0,
+        0,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  {
+    "command": "model.boundary_condition.create",
+    "params": {
+      "name": "plane",
+      "type": "displacement",
+      "target": {
+        "set": "zfaces"
+      },
+      "values": [
+        null,
+        null,
+        0,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  {
+    "command": "model.load.create",
+    "params": {
+      "name": "shear",
+      "type": "traction",
+      "set": "right",
+      "vector": [
+        0,
+        6250000.0,
+        0
+      ]
+    }
+  },
+  {
+    "command": "model.step.create",
+    "params": {
+      "name": "Cook",
+      "procedure": {
+        "type": "static"
+      },
+      "boundary_conditions": [
+        "clamp",
+        "plane"
+      ],
+      "loads": [
+        "shear"
+      ]
+    }
+  },
+  {
+    "command": "solve.static",
+    "params": {
+      "step": "Cook",
+      "threads": 1
+    },
+    "id": "solve_standard_4"
+  },
+  {
+    "command": "solve.probe",
+    "params": {
+      "step": "Cook",
+      "at": [
+        [
+          0.048,
+          0.06,
+          0.0
+        ]
+      ]
+    },
+    "id": "probe_standard_4"
+  },
+  {
+    "command": "file.new",
+    "params": {}
+  },
+  {
+    "command": "model.units",
+    "params": {
+      "system": "m-kg-s-N-Pa"
+    }
+  },
+  {
+    "command": "mesh.block",
+    "params": {
+      "body": "Panel",
+      "kind": "hex8",
+      "corners": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0.048,
+          0.044,
+          0
+        ],
+        [
+          0.048,
+          0.06,
+          0
+        ],
+        [
+          0,
+          0.044,
+          0
+        ],
+        [
+          0,
+          0,
+          0.001
+        ],
+        [
+          0.048,
+          0.044,
+          0.001
+        ],
+        [
+          0.048,
+          0.06,
+          0.001
+        ],
+        [
+          0,
+          0.044,
+          0.001
+        ]
+      ],
+      "divisions": [
+        10,
+        10,
+        1
+      ],
+      "faces": {
+        "6": "left",
+        "4": "right",
+        "1": "zminus",
+        "2": "zplus"
+      }
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "all",
+      "geometry": [
+        {
+          "body": "Panel"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "left",
+      "geometry": [
+        {
+          "body": "Panel",
+          "face": "left"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "right",
+      "geometry": [
+        {
+          "body": "Panel",
+          "face": "right"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "zfaces",
+      "geometry": [
+        {
+          "body": "Panel",
+          "face": "zminus"
+        },
+        {
+          "body": "Panel",
+          "face": "zplus"
+        }
+      ]
+    }
+  },
+  {
+    "command": "model.material.create",
+    "params": {
+      "name": "M",
+      "elastic": {
+        "type": "isotropic",
+        "young": 240565000.0,
+        "poisson": 0.4999
+      }
+    }
+  },
+  {
+    "command": "model.section.create",
+    "params": {
+      "name": "S",
+      "set": "all",
+      "material": "M",
+      "kind": {
+        "type": "solid"
+      }
+    }
+  },
+  {
+    "command": "model.boundary_condition.create",
+    "params": {
+      "name": "clamp",
+      "type": "displacement",
+      "target": {
+        "set": "left"
+      },
+      "values": [
+        0,
+        0,
+        0,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  {
+    "command": "model.boundary_condition.create",
+    "params": {
+      "name": "plane",
+      "type": "displacement",
+      "target": {
+        "set": "zfaces"
+      },
+      "values": [
+        null,
+        null,
+        0,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  {
+    "command": "model.load.create",
+    "params": {
+      "name": "shear",
+      "type": "traction",
+      "set": "right",
+      "vector": [
+        0,
+        6250000.0,
+        0
+      ]
+    }
+  },
+  {
+    "command": "model.step.create",
+    "params": {
+      "name": "Cook",
+      "procedure": {
+        "type": "static"
+      },
+      "boundary_conditions": [
+        "clamp",
+        "plane"
+      ],
+      "loads": [
+        "shear"
+      ]
+    }
+  },
+  {
+    "command": "solve.static",
+    "params": {
+      "step": "Cook",
+      "threads": 1
+    },
+    "id": "solve_standard_10"
+  },
+  {
+    "command": "solve.probe",
+    "params": {
+      "step": "Cook",
+      "at": [
+        [
+          0.048,
+          0.06,
+          0.0
+        ]
+      ]
+    },
+    "id": "probe_standard_10"
+  }
+]

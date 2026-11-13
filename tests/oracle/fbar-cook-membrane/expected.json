@@ -1,0 +1,90 @@
+{
+  "title": "Cook membrane: finite-strain F-bar convergence, standard-brick setup, and small-load limit",
+  "kind": "benchmark",
+  "source": "OpenGeoSys, Cook's membrane F-bar benchmark (Wang and Nagel, page revised 2024-07-03), https://www.opengeosys.org/stable/docs/benchmarks/large-deformations/cooksmembranefbar/; geometry, material, load and the six published displacement values are transcribed from that page's benchmark code.",
+  "quantities": [
+    {
+      "id": "fbar_4",
+      "quantity": "F-bar top-corner vertical displacement, 4 elements per side",
+      "measure": {
+        "from": "probe_fbar_4",
+        "pointer": "/nodes/0/displacement/1"
+      },
+      "value": 0.006141383357250432,
+      "tolerance": {
+        "absolute": 0.0002
+      },
+      "reason": "The public benchmark itself allows 2e-4 m for the F-bar comparison; this covers the coarse-mesh difference between independent F-bar implementations while the three meshes show convergence."
+    },
+    {
+      "id": "fbar_10",
+      "quantity": "F-bar top-corner vertical displacement, 10 elements per side",
+      "measure": {
+        "from": "probe_fbar_10",
+        "pointer": "/nodes/0/displacement/1"
+      },
+      "value": 0.006746283955378773,
+      "tolerance": {
+        "absolute": 0.0002
+      },
+      "reason": "The public benchmark itself allows 2e-4 m for the F-bar comparison; this covers the coarse-mesh difference between independent F-bar implementations while the three meshes show convergence."
+    },
+    {
+      "id": "fbar_30",
+      "quantity": "F-bar top-corner vertical displacement, 30 elements per side",
+      "measure": {
+        "from": "probe_fbar_30",
+        "pointer": "/nodes/0/displacement/1"
+      },
+      "value": 0.006891409184641067,
+      "tolerance": {
+        "absolute": 0.0002
+      },
+      "reason": "The public benchmark itself allows 2e-4 m for the F-bar comparison; this covers the coarse-mesh difference between independent F-bar implementations while the three meshes show convergence."
+    },
+    {
+      "id": "standard_4",
+      "quantity": "standard-brick top-corner vertical displacement, 4 elements per side",
+      "measure": {
+        "from": "probe_standard_4",
+        "pointer": "/nodes/0/displacement/1"
+      },
+      "value": 0.0022867221436878916,
+      "tolerance": {
+        "relative": 0.0005
+      },
+      "reason": "The same public mesh and loading with F-bar disabled differ from the published standard-brick values by about 1e-4 relative; 5e-4 leaves a bounded comparison margin without masking a setup error."
+    },
+    {
+      "id": "standard_10",
+      "quantity": "standard-brick top-corner vertical displacement, 10 elements per side",
+      "measure": {
+        "from": "probe_standard_10",
+        "pointer": "/nodes/0/displacement/1"
+      },
+      "value": 0.002840692165858716,
+      "tolerance": {
+        "relative": 0.0005
+      },
+      "reason": "The same public mesh and loading with F-bar disabled differ from the published standard-brick values by about 1e-4 relative; 5e-4 leaves a bounded comparison margin without masking a setup error."
+    },
+    {
+      "id": "small_load_ratio",
+      "quantity": "F-bar small-load response times 1000 over linear B-bar response",
+      "measure": {
+        "from": "probe_fbar_small",
+        "pointer": "/nodes/0/displacement/1",
+        "scale": 1000.0,
+        "over": {
+          "from": "probe_bbar_small",
+          "pointer": "/nodes/0/displacement/1"
+        }
+      },
+      "value": 1.0,
+      "tolerance": {
+        "absolute": 0.0005
+      },
+      "reason": "At one-thousandth load the F-bar response is compared with the same 10-per-side mesh solved by linear B-bar; the 5e-4 bound is the requested nonuniform-state small-strain consistency check and is not an independent public reference."
+    }
+  ]
+}

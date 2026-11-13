@@ -1,13 +1,13 @@
 {
-  "title": "HHT-alpha one-step amplification matrix and derived spectral damping",
+  "title": "HHT-alpha one-step and multi-step three-state amplification",
   "kind": "theory",
-  "source": "Hilber, Hughes and Taylor (1977), Improved numerical dissipation for time integration algorithms in structural dynamics, Earthquake Engineering & Structural Dynamics 5, 283–292; the amplification matrix follows directly from the published equilibrium and Newmark kinematics.",
+  "source": "Hilber, Hughes and Taylor (1977), Improved numerical dissipation for time integration algorithms in structural dynamics, Earthquake Engineering & Structural Dynamics 5, 283–292; the three-state amplification recursion follows the published equilibrium and Newmark kinematics.",
   "quantities": [
     {
       "id": "u1",
       "quantity": "HHT one-step displacement column 1",
       "measure": {
-        "from": "probe",
+        "from": "probe_one",
         "pointer": "/nodes/0/samples/1/displacement/0"
       },
       "value": 0.9802154537091078,
@@ -15,13 +15,13 @@
         "relative": 2e-12,
         "absolute": 2e-13
       },
-      "reason": "The value is the corresponding entry of the closed-form HHT amplification matrix obtained from the stated alpha, beta=(1-alpha)^2/4, gamma=0.5-alpha and dt."
+      "reason": "The value is the corresponding entry of the closed-form one-step HHT amplification matrix obtained from the stated alpha, beta=(1-alpha)^2/4, gamma=0.5-alpha and dt. The full state is (u,v,a), so its amplification matrix is 3x3."
     },
     {
       "id": "v1",
       "quantity": "HHT one-step velocity column 1",
       "measure": {
-        "from": "probe",
+        "from": "probe_one",
         "pointer": "/nodes/0/samples/1/velocity/0"
       },
       "value": -0.3957265380011673,
@@ -29,13 +29,13 @@
         "relative": 2e-12,
         "absolute": 2e-13
       },
-      "reason": "The value is the corresponding entry of the closed-form HHT amplification matrix; the matrix eigenvalues give spectral radius 0.999208304757686 and period ratio 3.152202303026974 for this omega*dt."
+      "reason": "The value is the corresponding entry of the closed-form one-step HHT amplification matrix obtained from the stated alpha, beta=(1-alpha)^2/4, gamma=0.5-alpha and dt. The full state is (u,v,a), so its amplification matrix is 3x3."
     },
     {
       "id": "u2",
       "quantity": "HHT one-step displacement column 2",
       "measure": {
-        "from": "probe",
+        "from": "probe_one",
         "pointer": "/nodes/1/samples/1/displacement/0"
       },
       "value": 0.09892273145446093,
@@ -43,13 +43,13 @@
         "relative": 2e-12,
         "absolute": 2e-13
       },
-      "reason": "The value is the corresponding entry of the closed-form HHT amplification matrix obtained from the stated alpha, beta=(1-alpha)^2/4, gamma=0.5-alpha and dt."
+      "reason": "The value is the corresponding entry of the closed-form one-step HHT amplification matrix obtained from the stated alpha, beta=(1-alpha)^2/4, gamma=0.5-alpha and dt. The full state is (u,v,a), so its amplification matrix is 3x3."
     },
     {
       "id": "v2",
       "quantity": "HHT one-step velocity column 2",
       "measure": {
-        "from": "probe",
+        "from": "probe_one",
         "pointer": "/nodes/1/samples/1/velocity/0"
       },
       "value": 0.9786326900058364,
@@ -57,7 +57,231 @@
         "relative": 2e-12,
         "absolute": 2e-13
       },
-      "reason": "The value is the corresponding entry of the closed-form HHT amplification matrix; the matrix eigenvalues give spectral radius 0.999208304757686 and period ratio 3.152202303026974 for this omega*dt."
+      "reason": "The value is the corresponding entry of the closed-form one-step HHT amplification matrix obtained from the stated alpha, beta=(1-alpha)^2/4, gamma=0.5-alpha and dt. The full state is (u,v,a), so its amplification matrix is 3x3."
+    },
+    {
+      "id": "u1_250",
+      "quantity": "HHT displacement for initial-state column 1 after 250 steps",
+      "measure": {
+        "from": "probe_many",
+        "pointer": "/nodes/0/samples/1/displacement/0"
+      },
+      "value": 0.8868359221885074,
+      "tolerance": {
+        "relative": 1e-11,
+        "absolute": 1e-11
+      },
+      "reason": "The independent three-state (u,v,a) HHT recursion is applied for the stated number of steps; 1e-11 checks the stored multi-step result against that recursion."
+    },
+    {
+      "id": "v1_250",
+      "quantity": "HHT velocity for initial-state column 1 after 250 steps",
+      "measure": {
+        "from": "probe_many",
+        "pointer": "/nodes/0/samples/1/velocity/0"
+      },
+      "value": 0.9062076814048814,
+      "tolerance": {
+        "relative": 1e-11,
+        "absolute": 1e-11
+      },
+      "reason": "The independent three-state (u,v,a) HHT recursion is applied for the stated number of steps; 1e-11 checks the stored multi-step result against that recursion."
+    },
+    {
+      "id": "u2_250",
+      "quantity": "HHT displacement for initial-state column 2 after 250 steps",
+      "measure": {
+        "from": "probe_many",
+        "pointer": "/nodes/1/samples/1/displacement/0"
+      },
+      "value": -0.22652843561144,
+      "tolerance": {
+        "relative": 1e-11,
+        "absolute": 1e-11
+      },
+      "reason": "The independent three-state (u,v,a) HHT recursion is applied for the stated number of steps; 1e-11 checks the stored multi-step result against that recursion."
+    },
+    {
+      "id": "v2_250",
+      "quantity": "HHT velocity for initial-state column 2 after 250 steps",
+      "measure": {
+        "from": "probe_many",
+        "pointer": "/nodes/1/samples/1/velocity/0"
+      },
+      "value": 0.8855048882376972,
+      "tolerance": {
+        "relative": 1e-11,
+        "absolute": 1e-11
+      },
+      "reason": "The independent three-state (u,v,a) HHT recursion is applied for the stated number of steps; 1e-11 checks the stored multi-step result against that recursion."
+    },
+    {
+      "id": "u1_500",
+      "quantity": "HHT displacement for initial-state column 1 after 500 steps",
+      "measure": {
+        "from": "probe_many",
+        "pointer": "/nodes/0/samples/2/displacement/0"
+      },
+      "value": 0.5807351557910994,
+      "tolerance": {
+        "relative": 1e-11,
+        "absolute": 1e-11
+      },
+      "reason": "The independent three-state (u,v,a) HHT recursion is applied for the stated number of steps; 1e-11 checks the stored multi-step result against that recursion."
+    },
+    {
+      "id": "v1_500",
+      "quantity": "HHT velocity for initial-state column 1 after 500 steps",
+      "measure": {
+        "from": "probe_many",
+        "pointer": "/nodes/0/samples/2/velocity/0"
+      },
+      "value": 1.6075353735635984,
+      "tolerance": {
+        "relative": 1e-11,
+        "absolute": 1e-11
+      },
+      "reason": "The independent three-state (u,v,a) HHT recursion is applied for the stated number of steps; 1e-11 checks the stored multi-step result against that recursion."
+    },
+    {
+      "id": "u2_500",
+      "quantity": "HHT displacement for initial-state column 2 after 500 steps",
+      "measure": {
+        "from": "probe_many",
+        "pointer": "/nodes/1/samples/2/displacement/0"
+      },
+      "value": -0.4018431643516708,
+      "tolerance": {
+        "relative": 1e-11,
+        "absolute": 1e-11
+      },
+      "reason": "The independent three-state (u,v,a) HHT recursion is applied for the stated number of steps; 1e-11 checks the stored multi-step result against that recursion."
+    },
+    {
+      "id": "v2_500",
+      "quantity": "HHT velocity for initial-state column 2 after 500 steps",
+      "measure": {
+        "from": "probe_many",
+        "pointer": "/nodes/1/samples/2/velocity/0"
+      },
+      "value": 0.5799435993218689,
+      "tolerance": {
+        "relative": 1e-11,
+        "absolute": 1e-11
+      },
+      "reason": "The independent three-state (u,v,a) HHT recursion is applied for the stated number of steps; 1e-11 checks the stored multi-step result against that recursion."
+    },
+    {
+      "id": "u1_750",
+      "quantity": "HHT displacement for initial-state column 1 after 750 steps",
+      "measure": {
+        "from": "probe_many",
+        "pointer": "/nodes/0/samples/3/displacement/0"
+      },
+      "value": 0.15013089929238208,
+      "tolerance": {
+        "relative": 1e-11,
+        "absolute": 1e-11
+      },
+      "reason": "The independent three-state (u,v,a) HHT recursion is applied for the stated number of steps; 1e-11 checks the stored multi-step result against that recursion."
+    },
+    {
+      "id": "v1_750",
+      "quantity": "HHT velocity for initial-state column 1 after 750 steps",
+      "measure": {
+        "from": "probe_many",
+        "pointer": "/nodes/0/samples/3/velocity/0"
+      },
+      "value": 1.95201665359413,
+      "tolerance": {
+        "relative": 1e-11,
+        "absolute": 1e-11
+      },
+      "reason": "The independent three-state (u,v,a) HHT recursion is applied for the stated number of steps; 1e-11 checks the stored multi-step result against that recursion."
+    },
+    {
+      "id": "u2_750",
+      "quantity": "HHT displacement for initial-state column 2 after 750 steps",
+      "measure": {
+        "from": "probe_many",
+        "pointer": "/nodes/1/samples/3/displacement/0"
+      },
+      "value": -0.4879553157786097,
+      "tolerance": {
+        "relative": 1e-11,
+        "absolute": 1e-11
+      },
+      "reason": "The independent three-state (u,v,a) HHT recursion is applied for the stated number of steps; 1e-11 checks the stored multi-step result against that recursion."
+    },
+    {
+      "id": "v2_750",
+      "quantity": "HHT velocity for initial-state column 2 after 750 steps",
+      "measure": {
+        "from": "probe_many",
+        "pointer": "/nodes/1/samples/3/velocity/0"
+      },
+      "value": 0.15004755794278826,
+      "tolerance": {
+        "relative": 1e-11,
+        "absolute": 1e-11
+      },
+      "reason": "The independent three-state (u,v,a) HHT recursion is applied for the stated number of steps; 1e-11 checks the stored multi-step result against that recursion."
+    },
+    {
+      "id": "u1_1000",
+      "quantity": "HHT displacement for initial-state column 1 after 1000 steps",
+      "measure": {
+        "from": "probe_many",
+        "pointer": "/nodes/0/samples/4/displacement/0"
+      },
+      "value": -0.3098892316790796,
+      "tolerance": {
+        "relative": 1e-11,
+        "absolute": 1e-11
+      },
+      "reason": "The independent three-state (u,v,a) HHT recursion is applied for the stated number of steps; 1e-11 checks the stored multi-step result against that recursion."
+    },
+    {
+      "id": "v1_1000",
+      "quantity": "HHT velocity for initial-state column 1 after 1000 steps",
+      "measure": {
+        "from": "probe_many",
+        "pointer": "/nodes/0/samples/4/velocity/0"
+      },
+      "value": 1.8671800261649873,
+      "tolerance": {
+        "relative": 1e-11,
+        "absolute": 1e-11
+      },
+      "reason": "The independent three-state (u,v,a) HHT recursion is applied for the stated number of steps; 1e-11 checks the stored multi-step result against that recursion."
+    },
+    {
+      "id": "u2_1000",
+      "quantity": "HHT displacement for initial-state column 2 after 1000 steps",
+      "measure": {
+        "from": "probe_many",
+        "pointer": "/nodes/1/samples/4/displacement/0"
+      },
+      "value": -0.46674873010872686,
+      "tolerance": {
+        "relative": 1e-11,
+        "absolute": 1e-11
+      },
+      "reason": "The independent three-state (u,v,a) HHT recursion is applied for the stated number of steps; 1e-11 checks the stored multi-step result against that recursion."
+    },
+    {
+      "id": "v2_1000",
+      "quantity": "HHT velocity for initial-state column 2 after 1000 steps",
+      "measure": {
+        "from": "probe_many",
+        "pointer": "/nodes/1/samples/4/velocity/0"
+      },
+      "value": -0.3092517268920656,
+      "tolerance": {
+        "relative": 1e-11,
+        "absolute": 1e-11
+      },
+      "reason": "The independent three-state (u,v,a) HHT recursion is applied for the stated number of steps; 1e-11 checks the stored multi-step result against that recursion."
     }
   ]
 }
