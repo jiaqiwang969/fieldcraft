@@ -24,7 +24,7 @@ use std::sync::Arc;
 
 use fieldcraft_model::{
     Elastic, ElementKind, Hyperelastic, Integration, Load, MaterialOrientation, Model, Resolved, SectionKind, SectionOrientation, Step, Target,
-    centrifugal_acceleration,
+    centrifugal_acceleration, design::MaterialConstant,
 };
 
 use crate::analysis::MassKind;
@@ -41,6 +41,9 @@ pub struct Elem {
     pub formulation: Formulation,
     pub lumped_mass: fieldcraft_model::LumpedMass,
     pub d: Elasticity,
+    /// The material's elastic constants, retained for exact constitutive derivatives.
+    pub elastic: Elastic,
+    pub material: String,
     /// Linear solid material axes; cylindrical frames are evaluated at every stiffness point.
     pub material_axes: Option<(Elastic, MaterialOrientation)>,
     pub density: Option<f64>,
@@ -258,6 +261,21 @@ impl Elem {
         result.map_err(|e| Error::element(self.label, e))
     }
 
+    pub fn stiffness_derivative(&self, constant: MaterialConstant) -> Result<Matrix> {
+        let derivative = fieldcraft_fem::material::elasticity_derivative(&self.elastic, constant)
+            .map_err(|e| Error::element(self.label, e))?
+            .ok_or_else(|| Error::NotSupported("material constant has no constitutive stiffness derivative".into()))?;
+        let k = self.kernel()?;
+        let result = match self.material_axes {
+            Some((elastic, orientation)) => match k {
+                Kernel::Solid(s) => s.stiffness_in_material_axes_derivative(&elastic, constant, &orientation),
+                Kernel::Plane(_) => Err(fieldcraft_fem::Error::NotSupported("material axes in 2D continuum elements".into())),
+            },
+            None => k.stiffness(&derivative),
+        };
+        result.map_err(|e| Error::element(self.label, e))
+    }
+
     pub fn stresses_from(&self, u: &[[f64; 3]], thermal: Option<&ThermalStrain>, initial: Option<&[[f64; 6]]>) -> Result<Vec<PointStress>> {
         let k = self.kernel()?;
         let result = match (k, self.material_axes) {
@@ -345,6 +363,8 @@ struct SolidEntry {
     formulation: Formulation,
     lumped_mass: fieldcraft_model::LumpedMass,
     d: Elasticity,
+    elastic: Elastic,
+    material: String,
     material_axes: Option<(Elastic, MaterialOrientation)>,
     density: Option<f64>,
     theory: Option<Theory>,
@@ -379,6 +399,7 @@ pub struct Structural {
     pub xyz: Vec<[f64; 3]>,
     pub density: Option<f64>,
     pub section: Section,
+    pub material: String,
     /// Mesh-shared director axes, signed along the local element normal.
     /// Capacity for eight directors; tri6 uses only its first six entries.
     pub directors: Option<[[f64; 3]; 8]>,
@@ -466,6 +487,15 @@ impl StructuralKernel {
             StructuralKernel::Mitc8(s) => s.stiffness(),
             StructuralKernel::Mitc6(s) => s.stiffness(),
             StructuralKernel::Beam(b) => Ok(b.stiffness()),
+        }
+    }
+
+    pub fn stiffness_derivative(&self, constant: MaterialConstant) -> fieldcraft_fem::Result<Matrix> {
+        match self {
+            StructuralKernel::Shell(s) => s.stiffness_derivative(constant),
+            StructuralKernel::Axishell(_) | StructuralKernel::Mitc8(_) | StructuralKernel::Mitc6(_) | StructuralKernel::Beam(_) => {
+                Err(fieldcraft_fem::Error::NotSupported("analytic derivative for this structural formulation is not implemented".into()))
+            }
         }
     }
 
@@ -724,7 +754,7 @@ impl Mesh {
                 let body = Section::Axishell { plies: plies.into(), offset };
                 for &label in &set.elements {
                     let el = model.element(label).ok_or_else(|| Error::Invalid("axisymmetric element missing".into()))?;
-                    structural.push((label, el.kind, el.nodes.clone(), density, body.clone()));
+                    structural.push((label, el.kind, el.nodes.clone(), density, body.clone(), String::new()));
                 }
                 continue;
             }
@@ -746,7 +776,7 @@ impl Mesh {
                 }
                 for &label in &set.elements {
                     let el = model.element(label).ok_or_else(|| Error::Invalid(format!("element {label} is missing")))?;
-                    structural.push((label, el.kind, el.nodes.clone(), density, body.clone()));
+                    structural.push((label, el.kind, el.nodes.clone(), density, body.clone(), String::new()));
                 }
                 continue;
             }
@@ -858,7 +888,7 @@ impl Mesh {
             if let Some(body) = shared {
                 for &label in &set.elements {
                     let el = model.element(label).ok_or_else(|| Error::Invalid(format!("element {label} is missing")))?;
-                    structural.push((label, el.kind, el.nodes.clone(), material.density, body.clone()));
+                    structural.push((label, el.kind, el.nodes.clone(), material.density, body.clone(), section.material.clone()));
                 }
                 continue;
             }
@@ -908,6 +938,8 @@ impl Mesh {
                     formulation,
                     lumped_mass: section.formulation.lumped_mass,
                     d,
+                    elastic: *elastic,
+                    material: section.material.clone(),
                     material_axes,
                     density: material.density,
                     theory,
@@ -994,6 +1026,8 @@ impl Mesh {
                 formulation: e.formulation,
                 lumped_mass: e.lumped_mass,
                 d: e.d,
+                elastic: e.elastic,
+                material: e.material,
                 material_axes: e.material_axes,
                 density: e.density,
                 theory: e.theory,
@@ -1007,10 +1041,10 @@ impl Mesh {
             let exyz: Vec<[f64; 3]> = idx.iter().filter_map(|i| mesh.xyz.get(*i).copied()).collect();
             mesh.trusses.push(Bar { label, kind, nodes: idx, xyz: exyz, young, area, density, expansion });
         }
-        for (label, kind, nodes, density, section) in structural {
+        for (label, kind, nodes, density, section, material) in structural {
             let idx: Vec<usize> = nodes.iter().filter_map(|n| mesh.node(*n)).collect();
             let exyz: Vec<[f64; 3]> = idx.iter().filter_map(|i| mesh.xyz.get(*i).copied()).collect();
-            mesh.structural.push(Structural { label, kind, nodes: idx, xyz: exyz, density, section, directors: None });
+            mesh.structural.push(Structural { label, kind, nodes: idx, xyz: exyz, density, section, material, directors: None });
         }
         share_shell_directors(&mut mesh.structural)?;
         mesh.discrete = crate::discrete::Discrete::new(&mesh, resolved)?;

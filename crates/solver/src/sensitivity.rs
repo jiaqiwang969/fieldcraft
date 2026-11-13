@@ -96,8 +96,9 @@ pub fn amplitude_phase(value: [f64; 2], derivative: [f64; 2]) -> Result<[f64; 2]
 
 mod model;
 pub use model::{
-    FrequencyDerivative, FrequencySensitivity, ModeShapeDerivative, StaticObservation, StaticSensitivity, frequency_sensitivity,
-    frequency_sensitivity_with_vectors, static_sensitivity,
+    DifferenceMethod, DifferenceScheme, FrequencyDerivative, FrequencySensitivity, ModeShapeDerivative, StaticObservation, StaticSensitivity,
+    default_method, frequency_sensitivity, frequency_sensitivity_with_vectors, frequency_sensitivity_with_vectors_and_scheme, static_sensitivity,
+    static_sensitivity_with_scheme,
 };
 
 mod inverse;
@@ -106,7 +107,7 @@ pub use inverse::{FrequencyEstimate, FrequencyFit, inverse_frequency, inverse_fr
 mod harmonic;
 pub use harmonic::{
     HarmonicDerivative, HarmonicObservation, HarmonicSensitivity, HarmonicSensitivityBatch, HarmonicSensitivityRequest, harmonic_sensitivity,
-    harmonic_sensitivity_batch, inverse_harmonic,
+    harmonic_sensitivity_batch, harmonic_sensitivity_batch_with_schemes, harmonic_sensitivity_with_scheme, inverse_harmonic,
 };
 
 mod nelson;

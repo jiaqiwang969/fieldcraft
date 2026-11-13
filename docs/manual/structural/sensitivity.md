@@ -26,16 +26,24 @@ name. Grounded springs represent compliant supports. Changing the parameter
 uses the model's ordinary material/section/connector validation. Orthotropic
 reciprocal Poisson ratios therefore follow the existing elasticity model.
 
-The central increment is the positive `relative_increment` (default 1e-5,
-maximum 0.1) times the absolute parameter value. At zero Poisson ratio the
-scale is one. Both perturbed values must remain valid; no one-sided fallback
-silently changes the method. `dof` is 1–6; omitted means x translation.
+If `relative_increment` is present, it is the positive increment fraction
+(maximum 0.1) times the absolute parameter value, and the historical ordinary
+two-point central difference is used bit-for-bit. At zero Poisson ratio the
+scale is one. If the field is omitted, the command selects a parameter-aware
+scheme and reports it in `method`: isotropic Young's modulus, density and
+discrete spring stiffness use a larger linear-operator central step (0.1 of
+the parameter); damping coefficients and the other linear operator entries use
+the same exact central rule; shell thickness uses a cubic-exact extrapolated five-point
+stencil (0.001); Poisson and orthotropic constants use a fourth-order
+sixth-order central stencil (0.01); foundation components use the assembled analytic
+derivative. Both perturbed values must remain valid. `dof` is 1–6; omitted
+means x translation.
 `threads` and work caps are those of `solve.static`.
 
 ## Theory and algorithm
 
-The implementation is semi-analytical: central differences of assembled
-stiffness and loads followed by differentiation of equilibrium. It does not
+The implementation is semi-analytical: the selected difference of assembled
+stiffness and loads is followed by differentiation of equilibrium. It does not
 subtract independently solved static outputs. For fixed constraints,
 K u'=f'−K'u; the reduced right-hand side includes prescribed-displacement
 elimination. One original stiffness factor serves the primal, tangent and
@@ -146,7 +154,9 @@ increment, a direct or modal harmonic step, and an observation `node` / `dof` (1
 Each frame returns complex displacement, direct and transpose-adjoint
 parameter derivatives, magnitude and locally unwrapped phase derivatives.
 Phase is in radians; all derivatives divide by the displayed parameter unit.
-The assembly differences include mass, material Rayleigh/loss damping, loads,
+The assembly differences use the same default scheme selection as static and
+frequency sensitivities; an explicit `relative_increment` keeps the historical
+central stencil. They include mass, material Rayleigh/loss damping, loads,
 and elimination of real prescribed support motion. Step damping is held fixed for physical parameters; explicit damping parameters differentiate it analytically. Try several increments near resonance. A zero response has undefined
 phase; unresolved cancellation or a singular operator returns an error.
 Modal response uses a fixed modal/Ritz basis, with applicability described below.

@@ -6,11 +6,11 @@
 //! point, not at the element centre. Its components are radial, circumferential, axial;
 //! the returned fields remain in global axes, with engineering shear strains.
 
-use fieldcraft_model::{Elastic, MaterialOrientation};
+use fieldcraft_model::{Elastic, MaterialOrientation, design::MaterialConstant};
 
 use crate::dense::Matrix;
 use crate::element::{Formulation, PointStress, Solid, accumulate_symmetric, b_block};
-use crate::material::{elasticity_in_axes, stress};
+use crate::material::{elasticity_derivative_in_axes, elasticity_in_axes, stress};
 use crate::{Error, Result};
 
 impl Solid<'_> {
@@ -40,6 +40,41 @@ impl Solid<'_> {
         };
         if k.data.iter().any(|v| !v.is_finite()) {
             return Err(Error::Invalid("solid stiffness with material axes is not finite".into()));
+        }
+        Ok(k)
+    }
+
+    /// Exact linear stiffness derivative with a spatial material frame.
+    pub fn stiffness_in_material_axes_derivative(
+        &self,
+        elastic: &Elastic,
+        constant: MaterialConstant,
+        orientation: &MaterialOrientation,
+    ) -> Result<Matrix> {
+        elastic.validate().map_err(|e| Error::Invalid(e.to_string()))?;
+        orientation.validate().map_err(|e| Error::Invalid(e.to_string()))?;
+        let k = match orientation {
+            MaterialOrientation::Rectangular { .. } => {
+                let axes = orientation.axes_at([0.0; 3]).map_err(|e| Error::Invalid(e.to_string()))?;
+                let d = elasticity_derivative_in_axes(elastic, constant, &axes)?
+                    .ok_or_else(|| Error::NotSupported("material constant has no constitutive stiffness derivative".into()))?;
+                self.stiffness(&d)?
+            }
+            MaterialOrientation::Cylindrical { .. } => {
+                self.check_varying_material_axes()?;
+                let mut k = Matrix::zeros(3 * self.ty.nodes);
+                for p in self.rule().points() {
+                    let g = self.gradients(p.xi)?;
+                    let axes = orientation.axes_at(self.position_of(g.shape.values())).map_err(|e| Error::Invalid(e.to_string()))?;
+                    let d = elasticity_derivative_in_axes(elastic, constant, &axes)?
+                        .ok_or_else(|| Error::NotSupported("material constant has no constitutive stiffness derivative".into()))?;
+                    accumulate_symmetric(&mut k.data, g.dx.get(..self.ty.nodes).unwrap_or_default(), &d, g.det * p.weight);
+                }
+                k
+            }
+        };
+        if k.data.iter().any(|v| !v.is_finite()) {
+            return Err(Error::Invalid("solid stiffness material derivative is not finite".into()));
         }
         Ok(k)
     }
