@@ -54,8 +54,8 @@ impl DifferenceMethod {
             // (4 D(h) - D(2h)) / 3 is exact for a cubic, written as one
             // five-point stencil.
             Self::ShellCubic => &[(1, 8.0 / 12.0), (-1, -8.0 / 12.0), (2, -1.0 / 12.0), (-2, 1.0 / 12.0)],
-            // Sixth-order central derivative, matching the independent
-            // six-neighbour reference used by the thin-plate acceptance probe.
+            // Sixth-order central derivative: at a 1% step its truncation
+            // error is far below rounding for non-polynomial material constants.
             Self::SixthOrder => &[(1, 45.0 / 60.0), (-1, -45.0 / 60.0), (2, -9.0 / 60.0), (-2, 9.0 / 60.0), (3, 1.0 / 60.0), (-3, -1.0 / 60.0)],
             Self::AnalyticFoundation => &[],
         }
