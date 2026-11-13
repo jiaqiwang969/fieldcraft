@@ -157,6 +157,7 @@ mod tests {
                 line_search: 0.1,
                 closed_nodes: 81,
                 slipping_nodes: 12,
+                retry: 0,
             }],
         };
         let error = EngineError::context(

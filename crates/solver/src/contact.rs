@@ -51,6 +51,13 @@
 //! 79:1354–1391, 2009). The nonlinear solver cuts the increment back when the set alternates
 //! between two states ([`CHATTER_LIMIT`] times: chattering).
 //!
+//! **A failed force increment.** The nonlinear solver first runs the ordinary return map without
+//! a special branch. When that same increment would otherwise be cut back, it may make one retry
+//! with nodes that were open at the last converged increment held on the stick branch. The retry
+//! is accepted only when it converges and every such node stays inside the static Coulomb cone;
+//! otherwise the original cutback and its failure remain authoritative. This is a path aid for a
+//! newly closing interface, not a change to the friction law or its tangent.
+//!
 //! **Small and finite sliding.** Without nonlinear geometry the face pairs (the main faces within
 //! a main element's thickness of each secondary face) and their mortar integrals
 //! D_ai = ∫ Φ_a N_i and M_aj = ∫ Φ_a N_j are found once in the reference configuration, so that
@@ -224,6 +231,10 @@ pub struct Committed {
     pub multipliers: Vec<f64>,
     pub traction: Vec<Vec3>,
     pub slipping: Vec<bool>,
+    /// Whether each secondary node was closed at the last converged increment. This is separate
+    /// from the augmented multipliers: a converged node can have a zero multiplier when its gap
+    /// is already within the penalty tolerance.
+    pub closed: Vec<bool>,
 }
 
 impl Committed {
@@ -231,6 +242,7 @@ impl Committed {
     pub fn commit(&mut self, state: &State) {
         self.traction.clone_from(&state.traction);
         self.slipping.clone_from(&state.slipping);
+        self.closed = state.pressure.iter().map(|p| *p > 0.0).collect();
     }
 }
 
@@ -1578,7 +1590,35 @@ impl Interface {
             multipliers: vec![0.0; n],
             traction: if friction { vec![[0.0; 3]; n] } else { Vec::new() },
             slipping: vec![false; if friction { n } else { 0 }],
+            closed: vec![false; n],
         }
+    }
+
+    /// Nodes eligible for the failed-increment retry: only frictional nodes that were open at
+    /// the last converged increment. The current pressure decides whether a masked node actually
+    /// enters the retry branch.
+    pub(crate) fn retry_stick_nodes(&self, committed: &Committed) -> Vec<bool> {
+        if self.friction.is_none() {
+            return vec![false; self.nodes.len()];
+        }
+        (0..self.nodes.len()).map(|i| !committed.closed.get(i).copied().unwrap_or(false)).collect()
+    }
+
+    /// Check the post-convergence condition for a forced-stick retry: every node that was forced
+    /// onto stick must remain inside the static Coulomb cone.
+    pub(crate) fn retry_stick_valid(&self, state: &State, stick: &[bool]) -> bool {
+        let Some(law) = self.friction else { return true };
+        stick.iter().enumerate().all(|(i, forced)| {
+            if !forced {
+                return true;
+            }
+            let pressure = state.pressure.get(i).copied().unwrap_or(0.0);
+            if pressure <= 0.0 {
+                return true;
+            }
+            let shear = state.traction.get(i).copied().unwrap_or_default();
+            norm(shear) <= law.static_coefficient * pressure
+        })
     }
 
     /// Shared normal mortar derivatives for equilibrium and hard-normal perturbations.
@@ -1653,6 +1693,25 @@ impl Interface {
         u: &[f64],
         reference: &[f64],
         committed: &Committed,
+        band: f64,
+        tangent: bool,
+        internal: &mut [f64],
+        blocks: &mut Blocks,
+    ) -> Result<State> {
+        self.evaluate_with_stick(mesh, u, reference, committed, None, band, tangent, internal, blocks)
+    }
+
+    /// The same contact evaluation with an optional per-node forced-stick mask used only by the
+    /// failed-increment retry in the nonlinear solver. The ordinary path passes `None` and is
+    /// unchanged.
+    #[allow(clippy::too_many_arguments)]
+    pub fn evaluate_with_stick(
+        &self,
+        mesh: &Mesh,
+        u: &[f64],
+        reference: &[f64],
+        committed: &Committed,
+        stick: Option<&[bool]>,
         band: f64,
         tangent: bool,
         internal: &mut [f64],
@@ -1749,7 +1808,7 @@ impl Interface {
             blocks.push((nodes, data));
         }
         if let Some(law) = self.friction {
-            self.friction(mesh, u, reference, committed, (&pairs, &corner_index, &active), law, tangent, &mut state, internal, blocks)?;
+            self.friction(mesh, u, reference, committed, stick, (&pairs, &corner_index, &active), law, tangent, &mut state, internal, blocks)?;
         }
         Ok(state)
     }
@@ -1775,6 +1834,7 @@ impl Interface {
         u: &[f64],
         reference: &[f64],
         committed: &Committed,
+        stick: Option<&[bool]>,
         (pairs, corner_index, active): (&[Vec<Found>], &[Vec<usize>], &[(usize, usize)]),
         law: Friction,
         tangent: bool,
@@ -1839,9 +1899,11 @@ impl Interface {
             let along = dot(old, normal);
             let slip = total.get(i).copied().unwrap_or_default().map(|w| w / area);
             let trial: Vec3 = std::array::from_fn(|k| old[k] - along * normal[k] - eps * slip[k]);
-            let mu = if committed.slipping.get(i).copied().unwrap_or(false) { law.kinetic_coefficient() } else { law.static_coefficient };
+            let forced_stick = stick.and_then(|nodes| nodes.get(i)).copied().unwrap_or(false);
+            let mu =
+                if !forced_stick && committed.slipping.get(i).copied().unwrap_or(false) { law.kinetic_coefficient() } else { law.static_coefficient };
             let (limit, size) = (mu * p, norm(trial));
-            let (traction, slipping, m) = if size <= limit {
+            let (traction, slipping, m) = if forced_stick || size <= limit {
                 (trial, false, std::array::from_fn(|k| std::array::from_fn(|l| if k == l { eps / area } else { 0.0 })))
             } else {
                 let dir = trial.map(|c| c / size);

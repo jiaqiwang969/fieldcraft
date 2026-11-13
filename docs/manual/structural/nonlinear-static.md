@@ -296,6 +296,13 @@ pressures with their current faces.
    quarters. An increment is cut back to a quarter of its size when an element inverts, the
    residual is not finite, the residual grows in two successive iterations, the tangent is
    singular, the contact active set chatters, or it does not converge in `max_iterations`.
+   For a force-loaded frictional increment that fails, the solver retries that same increment once
+   before cutback, holding nodes that were open at the preceding converged increment on the stick
+   branch; it accepts the retry only when it converges and those nodes satisfy the static Coulomb
+   cone, otherwise it keeps the original failure. Force loading from zero can still fail when the
+   solution has broad sliding (for example pressure and shear ramped proportionally near
+   capacity); establish normal load first and then add tangential load, or use displacement
+   control.
 6. **Commit.** A converged increment commits the material history, contact tractions and slip
    states, stores a displacement frame and, with contact, runs the augmentations
    ([contact](contact.md)). With arc length, the tangent at the converged state is factored for

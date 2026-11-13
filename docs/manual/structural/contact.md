@@ -91,6 +91,13 @@ rate γ̇ (the exponential decay of Rabinowicz's observations):
 A static step has no slip rate: a node takes the static coefficient while it sticks and the
 kinetic one once it slips.
 
+For a force-loaded frictional increment that fails, the solver retries that same increment once
+before cutback, holding nodes that were open at the preceding converged increment on the stick
+branch; it accepts the retry only when it converges and those nodes satisfy the static Coulomb
+cone, otherwise it keeps the original failure. Force loading from zero can still fail when the
+solution has broad sliding (for example pressure and shear ramped proportionally near capacity);
+establish normal load first and then add tangential load, or use displacement control.
+
 ### Shared geometry
 
 `fieldcraft_fem::contact` gives the closest point of a triangle (exact region tests) or of a
