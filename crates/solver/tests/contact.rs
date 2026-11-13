@@ -703,6 +703,93 @@ fn sheared_blocks(kind: ElementKind, down: f64, side: f64, friction: Friction, f
     (-sum(2), sum(0), r)
 }
 
+/// Two blocks with a force-loaded frictional interface. The dimensions and traction are the
+/// 100 × 100 × 10 mm preload case, but the mesh is deliberately smaller for a fast
+/// regression: the total normal and tangential loads remain 10000 N and 2700 N.
+fn force_loaded_friction(guided: bool, shear: Option<f64>) -> (Blocks, std::result::Result<StaticResult, Error>) {
+    let mut b = Blocks::default();
+    let lower = b.block(ElementKind::Hex8, [3, 3, 2], |p| [0.1 * p[0], 0.1 * p[1], 0.01 * p[2]]);
+    let upper = b.block(ElementKind::Hex8, [3, 3, 2], |p| [0.1 * p[0], 0.1 * p[1], 0.01 + 0.01 * p[2]]);
+    b.define(
+        210.0e9,
+        0.3,
+        NonlinearStatic {
+            nonlinear_geometry: true,
+            initial_increment: 0.1,
+            max_increment: 0.1,
+            max_increments: 80,
+            max_iterations: 30,
+            line_search: true,
+            ..NonlinearStatic::default()
+        },
+    );
+    b.face_set("lower_top", &lower, |x| near(x[2], 0.01));
+    b.face_set("upper_bottom", &upper, |x| near(x[2], 0.01));
+    b.face_set("top", &upper, |x| near(x[2], 0.02));
+    let mut contact = Contact::new(ContactSurfaces::Pair { main: "lower_top".into(), secondary: "upper_bottom".into() });
+    contact.friction = Friction::coulomb(0.3);
+    b.model.add_contact("interface", contact).unwrap();
+    b.bc("base", [Some(0.0), Some(0.0), Some(0.0)], |x| near(x[2], 0.0));
+    if guided {
+        b.bc("guide", [Some(0.0), Some(0.0), None], |x| near(x[2], 0.02));
+    }
+    b.model.add_load("pressure", Load::Traction { set: "top".into(), vector: [0.0, 0.0, -1.0e6] }).unwrap();
+    b.model.set_load_active("Step", "pressure", true).unwrap();
+    if let Some(shear) = shear {
+        b.model.add_load("shear", Load::Traction { set: "top".into(), vector: [shear * 1.0e6, 0.0, 0.0] }).unwrap();
+        b.model.set_load_active("Step", "shear", true).unwrap();
+        let mut step = b.model.step("Step").unwrap().clone();
+        if let Procedure::NonlinearStatic(settings) = &mut step.procedure {
+            settings.load_paths = BTreeMap::from([
+                ("pressure".into(), vec![[0.0, 0.0], [0.5, 1.0], [1.0, 1.0]]),
+                ("shear".into(), vec![[0.0, 0.0], [0.5, 0.0], [1.0, 1.0]]),
+            ]);
+        }
+        b.model.replace_step(step).unwrap();
+    }
+    let result = solve_nonlinear(&b.model, Some("Step"), &Limits::default());
+    (b, result)
+}
+
+/// Force-loaded friction regression: guided and unguided preload both converge with every
+/// contact node sticking, and the guided reaction equals the prescribed 10000 N load.
+#[test]
+fn force_loaded_preload_guided_and_unguided_sticks() {
+    for guided in [true, false] {
+        let (_, result) = force_loaded_friction(guided, None);
+        let result = result.unwrap();
+        let contact = &result.contacts[0];
+        let tolerance = if guided { 1e-8 } else { 1e-5 };
+        assert!((contact.normal_force - 10000.0).abs() <= tolerance * 10000.0, "guided {guided}: {}", contact.normal_force);
+        assert!(contact.status.iter().all(|status| *status == Status::Stick), "guided {guided}: {:?}", contact.status);
+        assert!(contact.closed() > 0, "guided {guided}: no closed contact nodes");
+    }
+}
+
+/// Force-loaded friction regression: after the normal traction is established, 90% of the
+/// friction capacity is carried and the contact has sliding nodes.
+#[test]
+fn force_loaded_shear_ninety_percent_slips() {
+    let (_, result) = force_loaded_friction(false, Some(0.27));
+    let result = result.unwrap();
+    let contact = &result.contacts[0];
+    assert!((contact.force[0].abs() - 2700.0).abs() <= 1e-8 * 2700.0, "{:?}", contact.force);
+    assert!(contact.status.contains(&Status::Slip), "no sliding nodes: {:?}", contact.status);
+}
+
+/// Force-loaded friction regression: a demand above the static capacity has no equilibrium and
+/// the retained failure stops no later than the pressure-then-shear capacity point.
+#[test]
+fn force_loaded_shear_one_hundred_ten_percent_stops_at_capacity() {
+    let (_, result) = force_loaded_friction(false, Some(0.33));
+    let error = result.unwrap_err();
+    let diagnostic = error.nonlinear_diagnostic().expect("the failed 110% solve keeps diagnostics");
+    let capacity = 0.5 + 0.5 * 0.3 / 0.33;
+    // The retained diagnostic is the failed trial before the final minimum-size cutback, so it
+    // can be one 1e-5 step above the closed-form capacity.
+    assert!(diagnostic.load_factor <= capacity + 1e-5, "load factor {} exceeds capacity {capacity}", diagnostic.load_factor);
+}
+
 /// Coulomb's law across a frictional interface: a tangential demand below μ N sticks (the blocks
 /// shear as one, nothing slips), above it the interface slips and carries exactly μ N; with a
 /// kinetic coefficient the slipping interface carries μ_k N.
