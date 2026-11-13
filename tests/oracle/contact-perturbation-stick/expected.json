@@ -1,0 +1,20 @@
+{
+  "title": "Closed contact with stick perturbation",
+  "kind": "theory",
+  "source": "Closed-form uniform-layer shear mode with bonded contact, shown with substitution in README.md.",
+  "quantities": [
+    {
+      "id": "frequency",
+      "quantity": "first bonded-contact perturbation frequency (Hz)",
+      "measure": {
+        "from": "modes",
+        "pointer": "/modes/0/frequency"
+      },
+      "value": 6.1272586108204,
+      "tolerance": {
+        "relative": 5e-06
+      },
+      "reason": "For the prescribed 1% compression, λ = 1 − 0.01. The closed stick shear mode has K = 500 λ² + 4 N/m per layer and M = 1/3 kg, hence f = sqrt(3(500 λ² + 4))/(2π). The stated tolerance covers the documented finite-element contact closure/penetration tolerance and the resulting small stretch perturbation, rather than changing the closed-form reference."
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+# Prestressed axial mode and unloaded control
+
+Two equal one-metre, unit-area elastic segments (E = 1,000,000 Pa, density = 1 kg/m³) are fixed at their outer ends and coupled through one axial centre coordinate. A 1,000 N cut force is locked before the frequency step. The exact reduced mass is `M = 2/3 kg`; the prestressed tangent is `K = 2(E + F) = 2,002,000 N/m`, giving `f = sqrt(K/M)/(2π) = 275.802245494 Hz`. A second predecessor with zero force gives `K = 2E` and `f = 275.664447711 Hz`. These are the closed-form axial perturbation equations described by Bathe, *Finite Element Procedures*, 2nd ed. (2014), §6.8.2.

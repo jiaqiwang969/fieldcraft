@@ -1,0 +1,59 @@
+{
+  "title": "Open contact perturbation",
+  "kind": "theory",
+  "source": "Closed-form separated-layer eigenproblem: the cubic and axial root are written in README.md.",
+  "quantities": [
+    {
+      "id": "frequency_1",
+      "quantity": "open-contact frequency 1 (Hz)",
+      "measure": {
+        "from": "modes",
+        "pointer": "/modes/0/frequency"
+      },
+      "value": 0.31767404729895593,
+      "tolerance": {
+        "relative": 3e-06
+      },
+      "reason": "The separated pair has zero contact stiffness. The three shear roots are the positive roots of ((z−15016)z+27168000)z−108000000 = 0 and the axial root is z = 3000; f = sqrt(z)/(2π)."
+    },
+    {
+      "id": "frequency_2",
+      "quantity": "open-contact frequency 2 (Hz)",
+      "measure": {
+        "from": "modes",
+        "pointer": "/modes/1/frequency"
+      },
+      "value": 7.292264712123203,
+      "tolerance": {
+        "relative": 3e-06
+      },
+      "reason": "The separated pair has zero contact stiffness. The three shear roots are the positive roots of ((z−15016)z+27168000)z−108000000 = 0 and the axial root is z = 3000; f = sqrt(z)/(2π)."
+    },
+    {
+      "id": "frequency_3",
+      "quantity": "open-contact frequency 3 (Hz)",
+      "measure": {
+        "from": "modes",
+        "pointer": "/modes/2/frequency"
+      },
+      "value": 8.717275246988208,
+      "tolerance": {
+        "relative": 3e-06
+      },
+      "reason": "The separated pair has zero contact stiffness. The three shear roots are the positive roots of ((z−15016)z+27168000)z−108000000 = 0 and the axial root is z = 3000; f = sqrt(z)/(2π)."
+    },
+    {
+      "id": "frequency_4",
+      "quantity": "open-contact frequency 4 (Hz)",
+      "measure": {
+        "from": "modes",
+        "pointer": "/modes/7/frequency"
+      },
+      "value": 18.085399690394773,
+      "tolerance": {
+        "relative": 3e-06
+      },
+      "reason": "The separated pair has zero contact stiffness. The three shear roots are the positive roots of ((z−15016)z+27168000)z−108000000 = 0 and the axial root is z = 3000; f = sqrt(z)/(2π)."
+    }
+  ]
+}

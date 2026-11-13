@@ -1,0 +1,33 @@
+{
+  "title": "Harmonic response about a prestressed equilibrium",
+  "kind": "theory",
+  "source": "Closed-form single-degree-of-freedom impedance response, with K, M, damping and substitution in README.md.",
+  "quantities": [
+    {
+      "id": "amplitude",
+      "quantity": "centre displacement amplitude at 100 Hz (m)",
+      "measure": {
+        "from": "harmonic_probe",
+        "pointer": "/nodes/0/samples/0/displacement_amplitude/2"
+      },
+      "value": 5.751057148432617e-07,
+      "tolerance": {
+        "relative": 2e-06
+      },
+      "reason": "The locked axial coordinate has impedance Z = K − ω²M + iωαM with K = 2,002,000 N/m, M = 2/3 kg, α = 2 N s/m, and unit force at 100 Hz; |U| = 1/|Z|."
+    },
+    {
+      "id": "phase",
+      "quantity": "centre displacement phase at 100 Hz (rad)",
+      "measure": {
+        "from": "harmonic_probe",
+        "pointer": "/nodes/0/samples/0/displacement_phase/2"
+      },
+      "value": -0.00048179945565050104,
+      "tolerance": {
+        "absolute": 2e-08
+      },
+      "reason": "For Re(U exp(iωt)), phase = atan2(−ωαM, K − ω²M) from the same scalar impedance."
+    }
+  ]
+}

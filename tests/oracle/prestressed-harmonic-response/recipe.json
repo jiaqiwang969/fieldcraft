@@ -1,0 +1,556 @@
+[
+  {
+    "command": "model.units",
+    "params": {
+      "system": "m-kg-s-N-Pa"
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 1,
+      "xyz": [
+        0,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 2,
+      "xyz": [
+        1,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 3,
+      "xyz": [
+        1,
+        1,
+        0
+      ]
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 4,
+      "xyz": [
+        0,
+        1,
+        0
+      ]
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 5,
+      "xyz": [
+        0,
+        0,
+        1
+      ]
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 6,
+      "xyz": [
+        1,
+        0,
+        1
+      ]
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 7,
+      "xyz": [
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 8,
+      "xyz": [
+        0,
+        1,
+        1
+      ]
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 9,
+      "xyz": [
+        0,
+        0,
+        2
+      ]
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 10,
+      "xyz": [
+        1,
+        0,
+        2
+      ]
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 11,
+      "xyz": [
+        1,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 12,
+      "xyz": [
+        0,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 13,
+      "xyz": [
+        0,
+        0,
+        1
+      ]
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 14,
+      "xyz": [
+        1,
+        0,
+        1
+      ]
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 15,
+      "xyz": [
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 16,
+      "xyz": [
+        0,
+        1,
+        1
+      ]
+    }
+  },
+  {
+    "command": "mesh.element.add",
+    "params": {
+      "label": 1,
+      "kind": "hex8",
+      "nodes": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ]
+    }
+  },
+  {
+    "command": "mesh.element.add",
+    "params": {
+      "label": 2,
+      "kind": "hex8",
+      "nodes": [
+        13,
+        14,
+        15,
+        16,
+        9,
+        10,
+        11,
+        12
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "All",
+      "elements": [
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "Lower",
+      "elements": [
+        1
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "Upper",
+      "elements": [
+        2
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "Ends",
+      "nodes": [
+        1,
+        2,
+        3,
+        4,
+        9,
+        10,
+        11,
+        12
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "Mid",
+      "nodes": [
+        5,
+        6,
+        7,
+        8
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "OtherCut",
+      "nodes": [
+        13,
+        14,
+        15,
+        16
+      ]
+    }
+  },
+  {
+    "command": "model.material.create",
+    "params": {
+      "name": "LowerMat",
+      "elastic": {
+        "type": "isotropic",
+        "young": 1000000.0,
+        "poisson": 0.0
+      },
+      "density": 1
+    }
+  },
+  {
+    "command": "model.material.create",
+    "params": {
+      "name": "UpperMat",
+      "elastic": {
+        "type": "isotropic",
+        "young": 1000000.0,
+        "poisson": 0.0
+      },
+      "density": 1
+    }
+  },
+  {
+    "command": "model.section.create",
+    "params": {
+      "name": "LowerSec",
+      "set": "Lower",
+      "material": "LowerMat",
+      "kind": {
+        "type": "solid"
+      }
+    }
+  },
+  {
+    "command": "model.section.create",
+    "params": {
+      "name": "UpperSec",
+      "set": "Upper",
+      "material": "UpperMat",
+      "kind": {
+        "type": "solid"
+      }
+    }
+  },
+  {
+    "command": "model.reference_point.create",
+    "params": {
+      "name": "Control",
+      "label": 100,
+      "xyz": [
+        0.5,
+        0.5,
+        1
+      ]
+    }
+  },
+  {
+    "command": "model.reference_point.create",
+    "params": {
+      "name": "Motion",
+      "label": 101,
+      "xyz": [
+        0.5,
+        0.5,
+        1
+      ]
+    }
+  },
+  {
+    "command": "model.coupling.create",
+    "params": {
+      "name": "Plane",
+      "reference_point": "Motion",
+      "set": "Mid",
+      "kind": "kinematic"
+    }
+  },
+  {
+    "command": "model.pretension.create",
+    "params": {
+      "name": "Cut",
+      "first": "Mid",
+      "second": "OtherCut",
+      "normal": [
+        0,
+        0,
+        1
+      ],
+      "control": "Control"
+    }
+  },
+  {
+    "command": "model.boundary_condition.create",
+    "params": {
+      "name": "Ends",
+      "type": "fixed",
+      "target": {
+        "set": "Ends"
+      }
+    }
+  },
+  {
+    "command": "model.boundary_condition.create",
+    "params": {
+      "name": "Guide",
+      "type": "displacement",
+      "target": {
+        "reference_point": "Motion"
+      },
+      "values": [
+        0,
+        0,
+        null,
+        0,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "command": "model.load.create",
+    "params": {
+      "name": "Probe",
+      "type": "force",
+      "target": {
+        "reference_point": "Motion"
+      },
+      "vector": [
+        0,
+        0,
+        1
+      ]
+    }
+  },
+  {
+    "command": "model.step.create",
+    "params": {
+      "name": "Preload",
+      "procedure": {
+        "type": "static"
+      },
+      "boundary_conditions": [
+        "Ends",
+        "Guide"
+      ]
+    }
+  },
+  {
+    "command": "model.step.create",
+    "params": {
+      "name": "Locked",
+      "procedure": {
+        "type": "static"
+      },
+      "boundary_conditions": [
+        "Ends",
+        "Guide"
+      ],
+      "loads": [
+        "Probe"
+      ]
+    }
+  },
+  {
+    "command": "model.pretension.force",
+    "params": {
+      "name": "Cut",
+      "step": "Preload",
+      "value": 1000
+    }
+  },
+  {
+    "command": "solve.static",
+    "params": {
+      "step": "Preload"
+    },
+    "id": "preload"
+  },
+  {
+    "command": "model.pretension.lock",
+    "params": {
+      "name": "Cut",
+      "step": "Locked",
+      "from": "Preload"
+    },
+    "id": "lock"
+  },
+  {
+    "command": "solve.static",
+    "params": {
+      "step": "Locked"
+    },
+    "id": "locked"
+  },
+  {
+    "command": "solve.pretension",
+    "params": {
+      "name": "Cut",
+      "step": "Preload"
+    },
+    "id": "pre_cut"
+  },
+  {
+    "command": "solve.pretension",
+    "params": {
+      "name": "Cut",
+      "step": "Locked"
+    },
+    "id": "locked_cut"
+  },
+  {
+    "command": "solve.probe",
+    "params": {
+      "step": "Locked",
+      "nodes": [
+        5,
+        13
+      ],
+      "elements": [
+        1,
+        2
+      ]
+    },
+    "id": "locked_probe"
+  },
+  {
+    "command": "model.step.create",
+    "params": {
+      "name": "Response",
+      "procedure": {
+        "type": "harmonic",
+        "frequencies": [
+          100.0
+        ],
+        "method": {
+          "type": "direct"
+        },
+        "damping": {
+          "alpha": 2.0
+        }
+      },
+      "base_state": "Locked",
+      "boundary_conditions": [
+        "Ends",
+        "Guide"
+      ],
+      "loads": [
+        "Probe"
+      ]
+    }
+  },
+  {
+    "command": "solve.harmonic",
+    "params": {
+      "step": "Response"
+    },
+    "id": "harmonic"
+  },
+  {
+    "command": "solve.probe",
+    "params": {
+      "step": "Response",
+      "nodes": [
+        5
+      ]
+    },
+    "id": "harmonic_probe"
+  }
+]
