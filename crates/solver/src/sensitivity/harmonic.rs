@@ -398,9 +398,18 @@ fn harmonic_sensitivity_cached_with_scheme(
             (da, db, df)
         };
         let primal = complex::solve(&a, &b, &rhs, limits)?;
+        if let Some(warning) = complex::backward_warning(&format!("Harmonic sensitivity primal at {frequency} Hz"), &primal) {
+            warnings.push(warning);
+        }
         let tangent = super::tangent_load(&da, &db, &primal.displacement, &df, limits)?;
         let derivative = super::direct(&a, &b, &tangent, limits)?;
-        let adjoint = super::adjoint(&a, &b, &weights, &tangent, limits)?;
+        if let Some(warning) = complex::backward_warning(&format!("Harmonic sensitivity derivative at {frequency} Hz"), &derivative) {
+            warnings.push(warning);
+        }
+        let (adjoint, adjoint_solution) = super::adjoint_with_solution(&a, &b, &weights, &tangent, limits)?;
+        if let Some(warning) = complex::backward_warning(&format!("Harmonic sensitivity adjoint at {frequency} Hz"), &adjoint_solution) {
+            warnings.push(warning);
+        }
         let extract = |u: &Vector, prescribed: bool| -> Result<[f64; 2]> {
             let real = red.expand(&u.real, prescribed);
             let imaginary = red.expand(&u.imaginary, false);

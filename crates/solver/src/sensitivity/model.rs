@@ -765,6 +765,7 @@ pub fn frequency_sensitivity_with_vectors_and_scheme(
     drop(assembled_samples);
     let mut out = Vec::new();
     let mut skipped = Vec::new();
+    let mut nelson_warnings = Vec::new();
     for (index, mode) in result.modes.iter().take(requested).enumerate() {
         let rigid = mode.eigenvalue <= rigid_cutoff;
         if rigid {
@@ -818,8 +819,15 @@ pub fn frequency_sensitivity_with_vectors_and_scheme(
                     Ok(m)
                 })
                 .transpose()?;
-            let (dq, equation_relative_residual, normalization_derivative_residual) =
+            let (dq, equation_relative_residual, normalization_derivative_residual, backward) =
                 super::nelson::derivative(super::nelson::Operators { k: kr, m: mr, dk: &dkr, dm: dmr.as_ref() }, &q, mode.eigenvalue, dl, limits)?;
+            if let Some((relative, componentwise)) = backward {
+                nelson_warnings.push(crate::complex::backward_warning_text(
+                    &format!("Nelson mode-shape derivative at {:.6} Hz", mode.frequency),
+                    relative,
+                    componentwise,
+                ));
+            }
             let full = red.expand(&dq, false);
             let (shape_si, rotation_si, points_si) = analysis::split(&normalized, &mesh);
             let (derivative_si, rotation_derivative_si, points_derivative_si) = analysis::split(&full, &mesh);
@@ -848,6 +856,7 @@ pub fn frequency_sensitivity_with_vectors_and_scheme(
         });
     }
     let mut warnings = result.warnings;
+    warnings.extend(nelson_warnings);
     if !skipped.is_empty() {
         warnings.push(format!("Skipped near-zero mode derivatives (zero-based indices): {skipped:?}; cutoff eigenvalue {rigid_cutoff}"));
     }

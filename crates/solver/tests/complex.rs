@@ -1,7 +1,7 @@
 //! Analytic checks for the complex symmetric direct kernel. These matrices are
 //! written here from oscillator equations; no external solver data is used.
 
-use fieldcraft_solver::complex::{Vector, residual, solve, solve_equivalent};
+use fieldcraft_solver::complex::{Vector, componentwise_backward_error, residual, solve, solve_equivalent};
 use fieldcraft_solver::sparse::Csr;
 use fieldcraft_solver::{Error, Limits};
 
@@ -274,4 +274,72 @@ fn native_panel_pivots_match_manufactured_solution_and_real_equivalent_at_all_th
         let out = fieldcraft_parallel::with_threads(threads, || solve(&a, &b, &rhs, &Limits::default()).unwrap());
         assert_eq!(out, reference);
     }
+}
+
+fn spring_chain(n: usize, eta: f64) -> (Csr, Csr, Vector, Vec<(f64, f64)>) {
+    let k = 1.0e6;
+    let q = 1.0;
+    let mut ptr = Vec::with_capacity(n + 1);
+    let mut idx = Vec::with_capacity(3 * n - 2);
+    let mut values = Vec::with_capacity(3 * n - 2);
+    ptr.push(0);
+    for row in 0..n {
+        if row > 0 {
+            idx.push(row - 1);
+            values.push(-k);
+        }
+        idx.push(row);
+        values.push(if row + 1 == n { k } else { 2.0 * k });
+        if row + 1 < n {
+            idx.push(row + 1);
+            values.push(-k);
+        }
+        ptr.push(idx.len());
+    }
+    let a = Csr { n, ptr, idx, val: values };
+    let b = Csr { val: a.val.iter().map(|value| eta * value).collect(), ..a.clone() };
+    let rhs = Vector { real: vec![q; n], imaginary: vec![0.0; n] };
+    let exact = (0..n)
+        .map(|row| {
+            let i = (row + 1) as f64;
+            let numerator = (i * n as f64 - i * (i - 1.0) / 2.0) * q / k;
+            let denominator = 1.0 + eta * eta;
+            (numerator / denominator, -eta * numerator / denominator)
+        })
+        .collect();
+    (a, b, rhs, exact)
+}
+
+#[test]
+fn fixed_free_spring_chain_accepts_double_precision_residual_floor() {
+    for (n, expects_fallback) in [(20_000, true), (2_000, false)] {
+        for eta in [0.05, 0.0] {
+            let (a, b, rhs, exact) = spring_chain(n, eta);
+            let out = solve_equivalent(&a, &b, &rhs, &Limits::default()).unwrap();
+            let omega = componentwise_backward_error(&a, &b, &rhs, &out.displacement, &Limits::default()).unwrap();
+            assert_eq!(out.accepted_by_componentwise_backward(), expects_fallback, "n={n}, eta={eta}");
+            assert_eq!(out.residual.relative > 1e-8, expects_fallback, "n={n}, eta={eta}");
+            assert!(omega <= 1e-13, "n={n}, eta={eta}, omega={omega:e}");
+            let max_exact = exact.iter().map(|(real, imag)| libm::hypot(*real, *imag)).fold(0.0_f64, f64::max);
+            let max_error = out
+                .displacement
+                .real
+                .iter()
+                .zip(&out.displacement.imaginary)
+                .zip(&exact)
+                .map(|((real, imag), (expected_real, expected_imag))| libm::hypot(real - expected_real, imag - expected_imag))
+                .fold(0.0_f64, f64::max);
+            assert!(max_error / max_exact <= 1e-8, "n={n}, eta={eta}, relative error={}", max_error / max_exact);
+        }
+    }
+}
+
+#[test]
+fn componentwise_certificate_rejects_a_deliberately_wrong_candidate() {
+    let a = dense(&[2.0, 0.0, 0.0, 3.0], 2);
+    let b = dense(&[0.0; 4], 2);
+    let rhs = Vector { real: vec![1.0, 1.0], imaginary: vec![0.0, 0.0] };
+    let candidate = Vector { real: vec![0.5 * 1.001, 1.0 / 3.0], imaginary: vec![0.0, 0.0] };
+    let omega = componentwise_backward_error(&a, &b, &rhs, &candidate, &Limits::default()).unwrap();
+    assert!(omega > 1e-13, "deliberately wrong candidate was accepted: omega={omega:e}");
 }

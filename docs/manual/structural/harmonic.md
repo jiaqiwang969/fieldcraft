@@ -120,8 +120,20 @@ The solve summary gives natural frequencies for modal runs, matrix sizes, warnin
 per forcing frequency, `relative_residual`, `projected_residual` when applicable, input power
 and dissipated power. Residuals use the infinity norm of the full reduced equations divided
 by the force norm. With modal ratios, the full residual includes the reconstructed modal
-damping force. Direct residuals above `1e-8` are refused; modal truncation residuals are
-reported without concealing omitted response.
+damping force.
+
+Direct complex solves use three convergence tiers. A load-relative residual at or below
+`1e-8` passes without a warning. If it is larger, the solver evaluates the componentwise
+Oettli–Prager backward error
+`omega = max_i |r_i| / (sum_j |Z_ij| |u_j| + |f_i|)`, using complex moduli in each row.
+`omega <= 1e-13` passes with a warning naming the frequency, both values and the reason:
+the load makes the equation ill-conditioned at the double-precision floor, so the returned
+solution is exact for a coefficient-perturbed equation whose relative perturbation is no
+larger than `omega`. If neither tier passes, the solve is refused and the error includes
+both the load-relative residual and `omega`. The componentwise test is deliberately used
+instead of a global backward norm: an unstable factorization or an unresolved near-resonant
+solve produces a much larger `omega`. Modal truncation residuals are reported without
+concealing omitted response.
 
 `residual_norm_si` also reports the algebraic Euclidean norm of the same full residual,
 in the internal SI equation scaling. It is a numerical diagnostic and is not converted

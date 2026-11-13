@@ -54,7 +54,7 @@ pub(super) struct Sweep<'a> {
     pub increment: f64,
     pub warnings: Vec<String>,
 }
-pub(super) fn solve(s: Sweep<'_>, limits: &Limits) -> Result<HarmonicSensitivity> {
+pub(super) fn solve(mut s: Sweep<'_>, limits: &Limits) -> Result<HarmonicSensitivity> {
     let basis = s.basis;
     let n = basis.len();
     if n == 0 {
@@ -141,14 +141,23 @@ pub(super) fn solve(s: Sweep<'_>, limits: &Limits) -> Result<HarmonicSensitivity
         let b = dense(n, b);
         let db = dense(n, db);
         let primal = complex::solve(&a, &b, &f, limits)?;
+        if let Some(warning) = complex::backward_warning(&format!("Projected harmonic sensitivity primal at {frequency} Hz"), &primal) {
+            s.warnings.push(warning);
+        }
         let tangent = super::tangent_load(&da, &db, &primal.displacement, &df, limits)?;
         let derivative = complex::solve(&a, &b, &tangent, limits)?;
+        if let Some(warning) = complex::backward_warning(&format!("Projected harmonic sensitivity derivative at {frequency} Hz"), &derivative) {
+            s.warnings.push(warning);
+        }
         let contract = |u: &Vector| -> [f64; 2] {
             [weights.real.iter().zip(&u.real).map(|(w, u)| w * u).sum(), weights.real.iter().zip(&u.imaginary).map(|(w, u)| w * u).sum()]
         };
         let value = contract(&primal.displacement);
         let direct = contract(&derivative.displacement);
-        let adjoint = super::adjoint(&a, &b, &weights, &tangent, limits)?;
+        let (adjoint, adjoint_solution) = super::adjoint_with_solution(&a, &b, &weights, &tangent, limits)?;
+        if let Some(warning) = complex::backward_warning(&format!("Projected harmonic sensitivity adjoint at {frequency} Hz"), &adjoint_solution) {
+            s.warnings.push(warning);
+        }
         let [amplitude_derivative, phase_derivative] = super::amplitude_phase(value, direct)?;
         frames.push(HarmonicDerivative {
             frequency,

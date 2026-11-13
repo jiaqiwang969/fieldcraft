@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{Matrices, Modal};
 use crate::analysis::{self, Setup, Stats};
-use crate::complex::Vector;
+use crate::complex::{self, Vector};
 use crate::sparse::{Csr, NodeGraph, add_block, add_diagonal, add_entry, add_scalar};
 use crate::system::{self, Mesh, StructuralKernel};
 use crate::{Error, Limits, MassKind, Result};
@@ -539,6 +539,9 @@ fn solve_harmonic_impl(
         } else {
             let out = matrices.direct(omega, h.damping, &f, limits).map_err(|e| at_frequency(e, frequency))?;
             stats.factor_entries = stats.factor_entries.max(out.factor_entries);
+            if let Some(warning) = complex::backward_warning(&format!("Direct harmonic solve at {frequency} Hz"), &out) {
+                warnings.push(warning);
+            }
             (out.displacement, out.residual.relative, out.residual.norm, None, 0.0, None)
         };
         let input_power = 0.5
