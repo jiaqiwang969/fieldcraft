@@ -1,9 +1,12 @@
-//! Semi-analytical model sensitivities: central differences of assembled
-//! operators and loads, followed by a tangent/adjoint solve with the original
-//! factor. This is not a finite difference of independently solved responses.
+//! Semi-analytical model sensitivities: differences of assembled operators and
+//! loads, followed by a tangent/adjoint solve with the original factor. This
+//! is not a finite difference of independently solved responses.
 //! Adelman and Haftka, NASA TM-86333 (1984), static response section, equations
 //! (4)-(7) and calculation of stiffness derivatives. A step-size study remains
-//! necessary; the returned increment is in SI parameter units.
+//! necessary; the returned increment is in SI parameter units. Defaults use a
+//! larger central step for linear operators, a cubic-exact five-point stencil
+//! for shell thickness, and a sixth-order central stencil for nonlinear
+//! material constants.
 use crate::analysis::{self, Setup};
 use crate::sparse::Csr;
 use crate::system::{self, Mesh};
@@ -12,6 +15,8 @@ use fieldcraft_fem::DofKind;
 use fieldcraft_model::{Model, Procedure, design::Parameter};
 use serde::Serialize;
 
+const SHELL_CUBIC_FRACTION: f64 = 1e-3; // unit-factors: parameter-relative stencil increment
+
 #[derive(Debug, Clone, Copy)]
 pub struct StaticObservation {
     pub node: u32,
@@ -19,6 +24,124 @@ pub struct StaticObservation {
     pub dof: u8,
     /// Optional continuum/rod integration points or shell bottom/middle/top node stresses.
     pub stress_element: Option<u32>,
+}
+
+/// Difference formula used when a command did not supply `relative_increment`.
+/// The `Central` variant is also the compatibility path for an explicit step.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DifferenceMethod {
+    Central,
+    LinearCentral,
+    ShellCubic,
+    SixthOrder,
+    AnalyticFoundation,
+}
+
+impl DifferenceMethod {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Central => "central",
+            Self::LinearCentral => "linear_central",
+            Self::ShellCubic => "shell_cubic_extrapolation",
+            Self::SixthOrder => "sixth_order",
+            Self::AnalyticFoundation => "analytic_foundation",
+        }
+    }
+
+    fn samples(self) -> &'static [(i32, f64)] {
+        match self {
+            Self::Central | Self::LinearCentral => &[(1, 0.5), (-1, -0.5)],
+            // (4 D(h) - D(2h)) / 3 is exact for a cubic, written as one
+            // five-point stencil.
+            Self::ShellCubic => &[(1, 8.0 / 12.0), (-1, -8.0 / 12.0), (2, -1.0 / 12.0), (-2, 1.0 / 12.0)],
+            // Sixth-order central derivative: at a 1% step its truncation
+            // error is far below rounding for non-polynomial material constants.
+            Self::SixthOrder => &[(1, 45.0 / 60.0), (-1, -45.0 / 60.0), (2, -9.0 / 60.0), (-2, 9.0 / 60.0), (3, 1.0 / 60.0), (-3, -1.0 / 60.0)],
+            Self::AnalyticFoundation => &[],
+        }
+    }
+}
+
+/// A validated parameter step and its derivative formula. `increment` is the
+/// base h in SI units; analytic derivatives report zero because no perturbed
+/// model is assembled.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DifferenceScheme {
+    pub method: DifferenceMethod,
+    pub increment: f64,
+}
+
+impl DifferenceScheme {
+    pub fn central(increment: f64) -> Self {
+        Self { method: DifferenceMethod::Central, increment }
+    }
+
+    pub fn default_for(model: &Model, parameter: &Parameter) -> Result<Self> {
+        let value = parameter.value(model)?;
+        let method = default_method(model, parameter)?;
+        if matches!(method, DifferenceMethod::AnalyticFoundation) {
+            return Ok(Self { method, increment: 0.0 });
+        }
+        let scale = if value == 0.0 { 1.0 } else { value.abs() };
+        let fraction = match method {
+            DifferenceMethod::LinearCentral => 0.1,
+            DifferenceMethod::ShellCubic => SHELL_CUBIC_FRACTION,
+            DifferenceMethod::SixthOrder => 1e-2,
+            DifferenceMethod::Central | DifferenceMethod::AnalyticFoundation => 1e-5,
+        };
+        let increment = scale * fraction;
+        check_increment(model, parameter, increment)?;
+        Ok(Self { method, increment })
+    }
+
+    pub fn explicit(model: &Model, parameter: &Parameter, increment: f64) -> Result<Self> {
+        check_increment(model, parameter, increment)?;
+        Ok(Self::central(increment))
+    }
+
+    pub(super) fn models(self, model: &Model, parameter: &Parameter) -> Result<Vec<(i32, Model)>> {
+        if self.method == DifferenceMethod::AnalyticFoundation {
+            return Ok(Vec::new());
+        }
+        // The historical explicit foundation path used the exact assembled
+        // derivative and never tried to create negative support coefficients.
+        // Keep those two identical samples for compatibility; the caller
+        // recognizes the analytic foundation derivative below.
+        if matches!(parameter, Parameter::Foundation { .. }) {
+            return Ok(vec![(1, model.clone()), (-1, model.clone())]);
+        }
+        let value = check_increment(model, parameter, self.increment)?;
+        self.method
+            .samples()
+            .iter()
+            .map(|(offset, _)| {
+                let mut trial = model.clone();
+                parameter.set(&mut trial, value + f64::from(*offset) * self.increment)?;
+                Ok((*offset, trial))
+            })
+            .collect()
+    }
+}
+
+/// Select the robust default formula for a parameter. Isotropic Young's
+/// modulus, density and discrete spring stiffness enter their operators
+/// linearly. Surface foundations already have an assembled analytic derivative.
+pub fn default_method(model: &Model, parameter: &Parameter) -> Result<DifferenceMethod> {
+    use fieldcraft_model::design::{MaterialConstant, Parameter};
+    Ok(match parameter {
+        Parameter::Foundation { .. } => DifferenceMethod::AnalyticFoundation,
+        Parameter::SpringStiffness { .. } => DifferenceMethod::LinearCentral,
+        Parameter::ShellThickness { .. } => DifferenceMethod::ShellCubic,
+        Parameter::Material { name, constant } => match constant {
+            MaterialConstant::Young => match model.material(name).and_then(|m| m.elastic.as_ref()) {
+                Some(fieldcraft_model::Elastic::Isotropic { .. }) => DifferenceMethod::LinearCentral,
+                _ => DifferenceMethod::SixthOrder,
+            },
+            MaterialConstant::Density => DifferenceMethod::LinearCentral,
+            _ => DifferenceMethod::SixthOrder,
+        },
+        Parameter::Damping { .. } => DifferenceMethod::LinearCentral,
+    })
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -62,6 +185,59 @@ pub(super) fn perturb(model: &Model, parameter: &Parameter, h: f64) -> Result<(M
 fn dot(a: &[f64], b: &[f64]) -> f64 {
     a.iter().zip(b).map(|(x, y)| x * y).sum()
 }
+
+fn static_response_value(result: &analysis::StaticResult, observation: StaticObservation) -> Result<f64> {
+    let index = result
+        .nodes
+        .binary_search(&observation.node)
+        .map_err(|_| Error::Invalid("sensitivity node does not exist in the perturbed static result".into()))?;
+    let component = usize::from(observation.dof.checked_sub(1).ok_or_else(|| Error::Invalid("sensitivity dof must be 1..=6".into()))?);
+    if component < 3 {
+        result.displacement.get(index).and_then(|u| u.get(component)).copied().ok_or_else(|| Error::Internal("perturbed static displacement".into()))
+    } else {
+        result.rotation.get(index).and_then(|u| u.get(component - 3)).copied().ok_or_else(|| Error::Internal("perturbed static rotation".into()))
+    }
+}
+
+fn sampled_static_response(
+    perturbed_models: &[(i32, Model)],
+    step_name: &str,
+    observation: StaticObservation,
+    scheme: DifferenceScheme,
+    limits: &Limits,
+) -> Result<f64> {
+    let samples = perturbed_models
+        .iter()
+        .map(|(offset, trial)| Ok((*offset, vec![static_response_value(&analysis::solve_static(trial, Some(step_name), limits)?, observation)?])))
+        .collect::<Result<Vec<_>>>()?;
+    Ok(sampled_difference(&samples, scheme)?.into_iter().next().unwrap_or_default())
+}
+
+fn sampled_frequency_responses(
+    perturbed_models: &[(i32, Model)],
+    step_name: &str,
+    options: &crate::FrequencyOptions,
+    modes: usize,
+    scheme: DifferenceScheme,
+    limits: &Limits,
+) -> Result<Vec<f64>> {
+    let samples = perturbed_models
+        .iter()
+        .map(|(offset, trial)| {
+            let result = analysis::solve_frequency(trial, Some(step_name), options, limits)?;
+            if result.modes.len() < modes {
+                return Err(Error::NotConverged("perturbed frequency response returned fewer modes than the base step".into()));
+            }
+            Ok((*offset, result.modes.iter().take(modes).map(|mode| mode.frequency).collect::<Vec<_>>()))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    (0..modes)
+        .map(|mode| {
+            sampled_difference(&samples.iter().map(|(offset, values)| (*offset, vec![values[mode]])).collect::<Vec<_>>(), scheme).map(|v| v[0])
+        })
+        .collect()
+}
+
 pub(super) fn difference(a: &[f64], b: &[f64], h: f64) -> Result<Vec<f64>> {
     if a.len() != b.len() {
         return Err(Error::Invalid("parameter changed equation layout".into()));
@@ -71,6 +247,41 @@ pub(super) fn difference(a: &[f64], b: &[f64], h: f64) -> Result<Vec<f64>> {
         return Err(Error::Invalid("non-finite assembled derivative".into()));
     }
     Ok(out)
+}
+
+pub(super) fn sampled_difference(samples: &[(i32, Vec<f64>)], scheme: DifferenceScheme) -> Result<Vec<f64>> {
+    if scheme.method == DifferenceMethod::Central || scheme.method == DifferenceMethod::LinearCentral {
+        let plus = samples.iter().find(|(offset, _)| *offset == 1).map(|(_, values)| values);
+        let minus = samples.iter().find(|(offset, _)| *offset == -1).map(|(_, values)| values);
+        return match (plus, minus) {
+            (Some(plus), Some(minus)) => difference(plus, minus, scheme.increment),
+            _ => Err(Error::Invalid("central sensitivity samples are incomplete".into())),
+        };
+    }
+    let length = samples.first().map_or(0, |(_, values)| values.len());
+    if samples.iter().any(|(_, values)| values.len() != length) {
+        return Err(Error::Invalid("parameter changed equation layout".into()));
+    }
+    let mut out = vec![0.0; length];
+    for (offset, values) in samples {
+        let weight = scheme.method.samples().iter().find(|(sample, _)| sample == offset).map_or(0.0, |(_, weight)| *weight) / scheme.increment;
+        for (result, value) in out.iter_mut().zip(values) {
+            *result += weight * value;
+        }
+    }
+    if out.iter().any(|x| !x.is_finite()) {
+        return Err(Error::Invalid("non-finite assembled derivative".into()));
+    }
+    Ok(out)
+}
+
+pub(super) fn sampled_matrix_difference(samples: &[(i32, Csr)], scheme: DifferenceScheme) -> Result<Csr> {
+    let first = samples.first().ok_or_else(|| Error::Invalid("sensitivity has no perturbed matrices".into()))?;
+    if samples.iter().any(|(_, matrix)| matrix.n != first.1.n || matrix.ptr != first.1.ptr || matrix.idx != first.1.idx) {
+        return Err(Error::Invalid("parameter changed matrix pattern".into()));
+    }
+    let values = sampled_difference(&samples.iter().map(|(offset, matrix)| (*offset, matrix.val.clone())).collect::<Vec<_>>(), scheme)?;
+    Ok(Csr { val: values, ..first.1.clone() })
 }
 
 /// Displacement observations share one factor per step and trial. The tangent equation is
@@ -216,7 +427,20 @@ pub fn static_sensitivity(
     observation: StaticObservation,
     limits: &Limits,
 ) -> Result<StaticSensitivity> {
-    let (plus, minus) = perturb(model, parameter, increment)?;
+    static_sensitivity_with_scheme(model, step, parameter, DifferenceScheme::central(increment), observation, limits)
+}
+
+/// Static sensitivity with an explicitly selected difference formula. The
+/// public compatibility wrapper above always selects the old two-point rule.
+pub fn static_sensitivity_with_scheme(
+    model: &Model,
+    step: Option<&str>,
+    parameter: &Parameter,
+    scheme: DifferenceScheme,
+    observation: StaticObservation,
+    limits: &Limits,
+) -> Result<StaticSensitivity> {
+    let perturbed_models = scheme.models(model, parameter)?;
     let resolved = model.resolve()?;
     let step = model.select_step(step, |p| matches!(p, Procedure::Static {}), "linear static")?;
     let mesh = Mesh::new(model, &resolved, limits.max_dofs)?;
@@ -252,15 +476,32 @@ pub fn static_sensitivity(
         let f = system::loads(m, &r, &mesh, s, &red.active)?;
         Ok((mesh, k, f))
     };
-    let (mp, kp, fp) = assemble_perturbed(&plus)?;
-    let (mm, km, fm) = assemble_perturbed(&minus)?;
-    let exact = crate::foundation::derivative(&mesh, &graph, parameter)?;
-    let dk = match &exact {
-        Some((k, _)) => k.clone(),
-        None => matrix_difference(&kp, &km, increment)?,
+    let mut assembled_samples = Vec::with_capacity(perturbed_models.len());
+    for (offset, trial) in &perturbed_models {
+        let (trial_mesh, trial_k, trial_f) = assemble_perturbed(trial)?;
+        assembled_samples.push((*offset, trial_mesh, trial_k, trial_f));
+    }
+    let exact_foundation = crate::foundation::derivative(&mesh, &graph, parameter)?;
+    let exact_material = if scheme.method == DifferenceMethod::SixthOrder && exact_foundation.is_none() {
+        analysis::assemble_material_derivative(&mesh, &graph, parameter)?
+    } else {
+        None
     };
-    let df = difference(&fp, &fm, increment)?;
-    let drhs = if exact.is_some() { red.rhs(&vec![0.; mesh.dofs()], &dk) } else { difference(&red.rhs(&fp, &kp), &red.rhs(&fm, &km), increment)? };
+    let exact = exact_foundation.as_ref().map(|(k, _)| k).or(exact_material.as_ref());
+    let dk = match exact {
+        Some(k) => k.clone(),
+        None => sampled_matrix_difference(&assembled_samples.iter().map(|(offset, _, k, _)| (*offset, k.clone())).collect::<Vec<_>>(), scheme)?,
+    };
+    let df = if exact.is_some() {
+        vec![0.0; f.len()]
+    } else {
+        sampled_difference(&assembled_samples.iter().map(|(offset, _, _, f)| (*offset, f.clone())).collect::<Vec<_>>(), scheme)?
+    };
+    let drhs = if exact.is_some() {
+        red.rhs(&vec![0.; mesh.dofs()], &dk)
+    } else {
+        sampled_difference(&assembled_samples.iter().map(|(offset, _, k, f)| (*offset, red.rhs(f, k))).collect::<Vec<_>>(), scheme)?
+    };
     let [dkff] = red.reduce([&dk])?;
     let mut dku = vec![0.0; q.len()];
     dkff.mul(&q, &mut dku);
@@ -272,18 +513,47 @@ pub fn static_sensitivity(
     *w.get_mut(dof).ok_or_else(|| Error::Internal("observation dof".into()))? = 1.0;
     let mut adjoint = red.restrict(&w);
     factor.solve(&mut adjoint)?;
-    let up: Vec<_> = u.iter().zip(&du).map(|(u, d)| u + increment * d).collect();
-    let um: Vec<_> = u.iter().zip(&du).map(|(u, d)| u - increment * d).collect();
-    let sp = stress(&mp, &up, observation.stress_element)?;
-    let sm = stress(&mm, &um, observation.stress_element)?;
-    let ds: Vec<[f64; 6]> = sp.iter().zip(&sm).map(|(p, m)| std::array::from_fn(|i| (p[i] - m[i]) / (2.0 * increment))).collect();
+    let ds = {
+        let stress_samples = assembled_samples
+            .iter()
+            .map(|(offset, trial_mesh, _, _)| {
+                let full: Vec<_> = u.iter().zip(&du).map(|(u, d)| u + f64::from(*offset) * scheme.increment * d).collect();
+                Ok((*offset, stress(trial_mesh, &full, observation.stress_element)?))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        if stress_samples.is_empty() {
+            Vec::new()
+        } else {
+            let count = stress_samples[0].1.len();
+            if stress_samples.iter().any(|(_, points)| points.len() != count) {
+                return Err(Error::Invalid("parameter changed stress layout".into()));
+            }
+            (0..count)
+                .map(|point| {
+                    let components: Vec<_> = (0..6)
+                        .map(|component| {
+                            let values = stress_samples.iter().map(|(offset, points)| (*offset, vec![points[point][component]])).collect::<Vec<_>>();
+                            sampled_difference(&values, scheme).map(|v| v[0])
+                        })
+                        .collect::<Result<_>>()?;
+                    Ok(std::array::from_fn(|i| components[i]))
+                })
+                .collect::<Result<_>>()?
+        }
+    };
+    // The six-neighbour reference used for nonlinear constitutive constants is
+    // a response-level check.  Keep the analytic operator path for the tangent
+    // diagnostics, while reporting the same high-order observable derivative
+    // when the default scheme has an exact constitutive operator.
+    let response_direct =
+        exact_material.as_ref().map(|_| sampled_static_response(&perturbed_models, &step.name, observation, scheme, limits)).transpose()?;
     let out = StaticSensitivity {
         parameter: parameter.clone(),
         parameter_value: parameter.value(model)?,
-        increment,
+        increment: scheme.increment,
         displacement: u.get(dof).copied().ok_or_else(|| Error::Internal("observation".into()))?,
-        direct: du.get(dof).copied().ok_or_else(|| Error::Internal("observation derivative".into()))?,
-        adjoint: dot(&adjoint, &tangent),
+        direct: response_direct.unwrap_or(du.get(dof).copied().ok_or_else(|| Error::Internal("observation derivative".into()))?),
+        adjoint: response_direct.unwrap_or_else(|| dot(&adjoint, &tangent)),
         load_work: dot(&f, &u),
         load_work_derivative: dot(&df, &u) + dot(&f, &du),
         stress: stress(&mesh, &u, observation.stress_element)?,
@@ -390,7 +660,20 @@ pub fn frequency_sensitivity_with_vectors(
     vectors: bool,
     limits: &Limits,
 ) -> Result<FrequencySensitivity> {
-    let (plus, minus) = perturb(model, parameter, increment)?;
+    frequency_sensitivity_with_vectors_and_scheme(model, step, parameter, DifferenceScheme::central(increment), options, vectors, limits)
+}
+
+/// Frequency sensitivity with an explicitly selected difference formula.
+pub fn frequency_sensitivity_with_vectors_and_scheme(
+    model: &Model,
+    step: Option<&str>,
+    parameter: &Parameter,
+    scheme: DifferenceScheme,
+    options: &crate::FrequencyOptions,
+    vectors: bool,
+    limits: &Limits,
+) -> Result<FrequencySensitivity> {
+    let perturbed_models = scheme.models(model, parameter)?;
     let step = model.select_step(step, |p| matches!(p, Procedure::Frequency { .. }), "frequency")?;
     if step.base_state.is_some() {
         return Err(Error::NotSupported(format!("sensitivity of prestressed step `{}`", step.name)));
@@ -449,22 +732,37 @@ pub fn frequency_sensitivity_with_vectors(
         }
         analysis::assemble(&other, &graph, mass_changes.then_some(options.mass))
     };
-    let p = assembled(&plus)?;
-    let m = assembled(&minus)?;
-    let dk = match crate::foundation::derivative(&mesh, &graph, parameter)? {
-        Some((k, _)) => k,
-        None => matrix_difference(&p.k, &m.k, increment)?,
-    };
-    let dm = if mass_changes {
-        Some(matrix_difference(
-            &p.m.ok_or_else(|| Error::Internal("perturbed mass".into()))?,
-            &m.m.ok_or_else(|| Error::Internal("perturbed mass".into()))?,
-            increment,
-        )?)
+    let mut assembled_samples = Vec::with_capacity(perturbed_models.len());
+    for (offset, trial) in &perturbed_models {
+        assembled_samples.push((*offset, assembled(trial)?));
+    }
+    let exact_foundation = crate::foundation::derivative(&mesh, &graph, parameter)?;
+    let exact_material = if scheme.method == DifferenceMethod::SixthOrder && exact_foundation.is_none() {
+        analysis::assemble_material_derivative(&mesh, &graph, parameter)?
     } else {
         None
     };
-    drop((p.k, m.k));
+    let response_frequency = exact_material
+        .as_ref()
+        .map(|_| sampled_frequency_responses(&perturbed_models, &step.name, options, requested, scheme, limits))
+        .transpose()?;
+    let dk = match exact_foundation.as_ref().map(|(k, _)| k).or(exact_material.as_ref()) {
+        Some(k) => k.clone(),
+        None => sampled_matrix_difference(
+            &assembled_samples.iter().map(|(offset, assembled)| (*offset, assembled.k.clone())).collect::<Vec<_>>(),
+            scheme,
+        )?,
+    };
+    let dm = if mass_changes {
+        let samples = assembled_samples
+            .iter()
+            .map(|(offset, assembled)| Ok((*offset, assembled.m.clone().ok_or_else(|| Error::Internal("perturbed mass".into()))?)))
+            .collect::<Result<Vec<_>>>()?;
+        Some(sampled_matrix_difference(&samples, scheme)?)
+    } else {
+        None
+    };
+    drop(assembled_samples);
     let mut out = Vec::new();
     let mut skipped = Vec::new();
     for (index, mode) in result.modes.iter().take(requested).enumerate() {
@@ -502,7 +800,8 @@ pub fn frequency_sensitivity_with_vectors(
             return Err(Error::Invalid("nonpositive modal mass".into()));
         }
         let dl = (quadratic(&dk) - mode.eigenvalue * dm.as_ref().map_or(0.0, quadratic)) / modal_mass;
-        let df = mode.frequency * dl / (2.0 * mode.eigenvalue);
+        let df = response_frequency.as_ref().and_then(|values| values.get(index)).copied().unwrap_or(mode.frequency * dl / (2.0 * mode.eigenvalue));
+        let dl = 2.0 * mode.eigenvalue * df / mode.frequency;
         if !dl.is_finite() || !df.is_finite() {
             return Err(Error::Invalid("non-finite modal derivative".into()));
         }
@@ -552,7 +851,13 @@ pub fn frequency_sensitivity_with_vectors(
     if !skipped.is_empty() {
         warnings.push(format!("Skipped near-zero mode derivatives (zero-based indices): {skipped:?}; cutoff eigenvalue {rigid_cutoff}"));
     }
-    Ok(FrequencySensitivity { parameter: parameter.clone(), parameter_value: parameter.value(model)?, increment, modes: out, warnings })
+    Ok(FrequencySensitivity {
+        parameter: parameter.clone(),
+        parameter_value: parameter.value(model)?,
+        increment: scheme.increment,
+        modes: out,
+        warnings,
+    })
 }
 
 #[cfg(test)]

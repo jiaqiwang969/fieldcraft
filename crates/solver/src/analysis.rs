@@ -6,7 +6,10 @@ use fieldcraft_fem::element::{Extrapolation, extrapolation};
 use fieldcraft_fem::quadrature::Rule;
 use fieldcraft_fem::shell::ShellStress;
 use fieldcraft_fem::{DofKind, DofLayout, PointStress, von_mises};
-use fieldcraft_model::{ElementKind, Model, Procedure, Resolved, Step};
+use fieldcraft_model::{
+    ElementKind, Model, Procedure, Resolved, Step,
+    design::{MaterialConstant, Parameter},
+};
 use serde::Serialize;
 
 use fieldcraft_parallel as parallel;
@@ -306,6 +309,55 @@ fn assemble_impl(mesh: &Mesh, graph: &NodeGraph, mass: Option<MassKind>, nonline
         mesh.discrete.add_mass(mm)?;
     }
     Ok(Assembled { k, m })
+}
+
+/// Assemble an exact linear stiffness derivative for material constants whose
+/// element kernels expose the constitutive derivative. `None` means that at
+/// least one element using the material needs the sampled fallback (or the
+/// material is not present in this mesh).
+pub(crate) fn assemble_material_derivative(mesh: &Mesh, graph: &NodeGraph, parameter: &Parameter) -> Result<Option<Csr>> {
+    let Parameter::Material { name, constant } = parameter else { return Ok(None) };
+    if *constant == MaterialConstant::Density {
+        return Ok(None);
+    }
+    let mut derivative = graph.zero_matrix(&mesh.layout);
+    let mut found = false;
+    let mut unsupported = false;
+    for element in &mesh.elements {
+        if element.material != *name {
+            continue;
+        }
+        found = true;
+        let stiffness = match element.stiffness_derivative(*constant) {
+            Ok(stiffness) => stiffness,
+            Err(Error::NotSupported(_)) => {
+                unsupported = true;
+                continue;
+            }
+            Err(error) => return Err(error),
+        };
+        let kinds = element.kernel()?.dofs().node;
+        add_block(&mut derivative, &mesh.layout, &element.nodes, kinds, &stiffness.data)?;
+    }
+    for element in &mesh.structural {
+        if element.material != *name {
+            continue;
+        }
+        found = true;
+        let stiffness = match element.kernel()?.stiffness_derivative(*constant) {
+            Ok(stiffness) => stiffness,
+            Err(fieldcraft_fem::Error::NotSupported(_)) => {
+                unsupported = true;
+                continue;
+            }
+            Err(error) => return Err(Error::element(element.label, error)),
+        };
+        add_block(&mut derivative, &mesh.layout, &element.nodes, element.kinds(), &stiffness.data)?;
+    }
+    if !found || unsupported {
+        return Ok(None);
+    }
+    Ok(Some(derivative))
 }
 
 /// Factor a free-dof matrix; a singular pivot is reported as the free-dof column it hit.

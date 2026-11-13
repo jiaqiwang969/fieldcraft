@@ -1,0 +1,621 @@
+[
+ {
+  "command": "model.units",
+  "params": {
+   "system": "m-kg-s-N-Pa"
+  }
+ },
+ {
+  "command": "mesh.node.add",
+  "params": {
+   "label": 1,
+   "xyz": [
+    0.0,
+    0,
+    0
+   ]
+  }
+ },
+ {
+  "command": "mesh.node.add",
+  "params": {
+   "label": 2,
+   "xyz": [
+    0.0,
+    0,
+    1
+   ]
+  }
+ },
+ {
+  "command": "mesh.node.add",
+  "params": {
+   "label": 3,
+   "xyz": [
+    0.0,
+    1,
+    0
+   ]
+  }
+ },
+ {
+  "command": "mesh.node.add",
+  "params": {
+   "label": 4,
+   "xyz": [
+    0.0,
+    1,
+    1
+   ]
+  }
+ },
+ {
+  "command": "mesh.node.add",
+  "params": {
+   "label": 5,
+   "xyz": [
+    0.25,
+    0,
+    0
+   ]
+  }
+ },
+ {
+  "command": "mesh.node.add",
+  "params": {
+   "label": 6,
+   "xyz": [
+    0.25,
+    0,
+    1
+   ]
+  }
+ },
+ {
+  "command": "mesh.node.add",
+  "params": {
+   "label": 7,
+   "xyz": [
+    0.25,
+    1,
+    0
+   ]
+  }
+ },
+ {
+  "command": "mesh.node.add",
+  "params": {
+   "label": 8,
+   "xyz": [
+    0.25,
+    1,
+    1
+   ]
+  }
+ },
+ {
+  "command": "mesh.node.add",
+  "params": {
+   "label": 9,
+   "xyz": [
+    0.5,
+    0,
+    0
+   ]
+  }
+ },
+ {
+  "command": "mesh.node.add",
+  "params": {
+   "label": 10,
+   "xyz": [
+    0.5,
+    0,
+    1
+   ]
+  }
+ },
+ {
+  "command": "mesh.node.add",
+  "params": {
+   "label": 11,
+   "xyz": [
+    0.5,
+    1,
+    0
+   ]
+  }
+ },
+ {
+  "command": "mesh.node.add",
+  "params": {
+   "label": 12,
+   "xyz": [
+    0.5,
+    1,
+    1
+   ]
+  }
+ },
+ {
+  "command": "mesh.node.add",
+  "params": {
+   "label": 13,
+   "xyz": [
+    0.75,
+    0,
+    0
+   ]
+  }
+ },
+ {
+  "command": "mesh.node.add",
+  "params": {
+   "label": 14,
+   "xyz": [
+    0.75,
+    0,
+    1
+   ]
+  }
+ },
+ {
+  "command": "mesh.node.add",
+  "params": {
+   "label": 15,
+   "xyz": [
+    0.75,
+    1,
+    0
+   ]
+  }
+ },
+ {
+  "command": "mesh.node.add",
+  "params": {
+   "label": 16,
+   "xyz": [
+    0.75,
+    1,
+    1
+   ]
+  }
+ },
+ {
+  "command": "mesh.node.add",
+  "params": {
+   "label": 17,
+   "xyz": [
+    1.0,
+    0,
+    0
+   ]
+  }
+ },
+ {
+  "command": "mesh.node.add",
+  "params": {
+   "label": 18,
+   "xyz": [
+    1.0,
+    0,
+    1
+   ]
+  }
+ },
+ {
+  "command": "mesh.node.add",
+  "params": {
+   "label": 19,
+   "xyz": [
+    1.0,
+    1,
+    0
+   ]
+  }
+ },
+ {
+  "command": "mesh.node.add",
+  "params": {
+   "label": 20,
+   "xyz": [
+    1.0,
+    1,
+    1
+   ]
+  }
+ },
+ {
+  "command": "mesh.element.add",
+  "params": {
+   "label": 1,
+   "kind": "hex8",
+   "nodes": [
+    1,
+    5,
+    7,
+    3,
+    2,
+    6,
+    8,
+    4
+   ]
+  }
+ },
+ {
+  "command": "mesh.element.add",
+  "params": {
+   "label": 2,
+   "kind": "hex8",
+   "nodes": [
+    5,
+    9,
+    11,
+    7,
+    6,
+    10,
+    12,
+    8
+   ]
+  }
+ },
+ {
+  "command": "mesh.element.add",
+  "params": {
+   "label": 3,
+   "kind": "hex8",
+   "nodes": [
+    9,
+    13,
+    15,
+    11,
+    10,
+    14,
+    16,
+    12
+   ]
+  }
+ },
+ {
+  "command": "mesh.element.add",
+  "params": {
+   "label": 4,
+   "kind": "hex8",
+   "nodes": [
+    13,
+    17,
+    19,
+    15,
+    14,
+    18,
+    20,
+    16
+   ]
+  }
+ },
+ {
+  "command": "model.set.create",
+  "params": {
+   "name": "all",
+   "elements": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "nodes": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
+   ]
+  }
+ },
+ {
+  "command": "model.set.create",
+  "params": {
+   "name": "allnodes",
+   "nodes": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
+   ]
+  }
+ },
+ {
+  "command": "model.set.create",
+  "params": {
+   "name": "left",
+   "faces": [
+    {
+     "element": 1,
+     "face": 6
+    }
+   ]
+  }
+ },
+ {
+  "command": "model.set.create",
+  "params": {
+   "name": "right",
+   "faces": [
+    {
+     "element": 4,
+     "face": 4
+    }
+   ]
+  }
+ },
+ {
+  "command": "model.material.create",
+  "params": {
+   "name": "Rod",
+   "elastic": {
+    "type": "isotropic",
+    "young": 1000.0,
+    "poisson": 0.0
+   },
+   "density": 2.0
+  }
+ },
+ {
+  "command": "model.section.create",
+  "params": {
+   "name": "Solid",
+   "set": "all",
+   "material": "Rod",
+   "kind": {
+    "type": "solid"
+   }
+  }
+ },
+ {
+  "command": "model.boundary_condition.create",
+  "params": {
+   "name": "clamp",
+   "type": "fixed",
+   "target": {
+    "set": "left"
+   }
+  }
+ },
+ {
+  "command": "model.boundary_condition.create",
+  "params": {
+   "name": "guide",
+   "type": "displacement",
+   "target": {
+    "set": "allnodes"
+   },
+   "values": [
+    null,
+    0,
+    0,
+    null,
+    null,
+    null
+   ]
+  }
+ },
+ {
+  "command": "model.load.create",
+  "params": {
+   "name": "tip",
+   "type": "pressure",
+   "set": "right",
+   "magnitude": 1.0
+  }
+ },
+ {
+  "command": "model.step.create",
+  "params": {
+   "name": "Load",
+   "procedure": {
+    "type": "static"
+   },
+   "boundary_conditions": [
+    "clamp",
+    "guide"
+   ],
+   "loads": [
+    "tip"
+   ]
+  }
+ },
+ {
+  "command": "solve.static",
+  "params": {
+   "step": "Load"
+  },
+  "id": "static"
+ },
+ {
+  "command": "solve.probe",
+  "params": {
+   "step": "Load",
+   "nodes": [
+    17
+   ]
+  },
+  "id": "static_probe"
+ },
+ {
+  "command": "solve.sensitivity.static",
+  "params": {
+   "step": "Load",
+   "parameter": {
+    "type": "material",
+    "name": "Rod",
+    "constant": "young"
+   },
+   "node": 17,
+   "dof": 1
+  },
+  "id": "static_E"
+ },
+ {
+  "command": "solve.sensitivity.static",
+  "params": {
+   "step": "Load",
+   "parameter": {
+    "type": "material",
+    "name": "Rod",
+    "constant": "density"
+   },
+   "node": 17,
+   "dof": 1
+  },
+  "id": "static_density"
+ },
+ {
+  "command": "model.step.create",
+  "params": {
+   "name": "Modes",
+   "procedure": {
+    "type": "frequency",
+    "modes": 1
+   },
+   "boundary_conditions": [
+    "clamp",
+    "guide"
+   ]
+  }
+ },
+ {
+  "command": "solve.frequency",
+  "params": {
+   "step": "Modes"
+  },
+  "id": "frequency"
+ },
+ {
+  "command": "solve.sensitivity.frequency",
+  "params": {
+   "step": "Modes",
+   "parameter": {
+    "type": "material",
+    "name": "Rod",
+    "constant": "young"
+   }
+  },
+  "id": "frequency_E"
+ },
+ {
+  "command": "solve.sensitivity.frequency",
+  "params": {
+   "step": "Modes",
+   "parameter": {
+    "type": "material",
+    "name": "Rod",
+    "constant": "density"
+   }
+  },
+  "id": "frequency_density"
+ },
+ {
+  "command": "model.step.create",
+  "params": {
+   "name": "Harmonic",
+   "procedure": {
+    "type": "harmonic",
+    "frequencies": [
+     1.0
+    ],
+    "method": {
+     "type": "direct"
+    },
+    "damping": {
+     "loss_factor": 0.02
+    }
+   },
+   "boundary_conditions": [
+    "clamp",
+    "guide"
+   ],
+   "loads": [
+    "tip"
+   ],
+   "output": [
+    "displacement"
+   ]
+  }
+ },
+ {
+  "command": "solve.harmonic",
+  "params": {
+   "step": "Harmonic"
+  },
+  "id": "harmonic"
+ },
+ {
+  "command": "solve.probe",
+  "params": {
+   "step": "Harmonic",
+   "nodes": [
+    17
+   ]
+  },
+  "id": "harmonic_probe"
+ },
+ {
+  "command": "solve.sensitivity.harmonic",
+  "params": {
+   "step": "Harmonic",
+   "parameter": {
+    "type": "material",
+    "name": "Rod",
+    "constant": "young"
+   },
+   "node": 17,
+   "dof": 1
+  },
+  "id": "harmonic_E"
+ },
+ {
+  "command": "solve.sensitivity.harmonic",
+  "params": {
+   "step": "Harmonic",
+   "parameter": {
+    "type": "material",
+    "name": "Rod",
+    "constant": "density"
+   },
+   "node": 17,
+   "dof": 1
+  },
+  "id": "harmonic_density"
+ }
+]

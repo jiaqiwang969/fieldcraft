@@ -1,0 +1,29 @@
+{
+  "note": "FieldCraft's accepted results for this case, written by `cargo xtask oracle --bless`. A result outside its band fails CI.",
+  "values": {
+    "frequency_E_identity": {
+      "band": 1e-9,
+      "value": 0.9999999999999939
+    },
+    "frequency_density_identity": {
+      "band": 1.0000000000000009e-9,
+      "value": 1.0000000000000009
+    },
+    "harmonic_imag_identity": {
+      "band": 1e-8,
+      "value": -2.1345230270808369e-19
+    },
+    "harmonic_real_identity": {
+      "band": 1e-8,
+      "value": 1.951563910473908e-18
+    },
+    "static_E_identity": {
+      "band": 1e-9,
+      "value": -0.9999999999999946
+    },
+    "static_density_zero": {
+      "band": 1e-10,
+      "value": 0.0
+    }
+  }
+}

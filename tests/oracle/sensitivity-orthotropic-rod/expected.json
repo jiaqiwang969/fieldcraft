@@ -1,0 +1,43 @@
+{
+  "title": "Orthotropic axial modulus sensitivity",
+  "kind": "theory",
+  "source": "Independent orthotropic uniaxial scaling: with nu=0, guided transverse motion and load along material axis 1, the axial response is proportional to 1/E1 and the modal frequency is proportional to sqrt(E1).",
+  "quantities": [
+    {
+      "id": "static_e1_ratio",
+      "quantity": "E1 times static tip derivative divided by tip displacement",
+      "measure": {
+        "from": "static_e1",
+        "pointer": "/direct",
+        "scale": 1000.0,
+        "over": {
+          "from": "probe",
+          "pointer": "/nodes/0/displacement/0"
+        }
+      },
+      "value": -1.0,
+      "tolerance": {
+        "relative": 1e-08
+      },
+      "reason": "Exact guided uniaxial scaling of the orthotropic constitutive matrix in direction 1."
+    },
+    {
+      "id": "frequency_e1_ratio",
+      "quantity": "2E1 times first frequency derivative divided by frequency",
+      "measure": {
+        "from": "frequency_e1",
+        "pointer": "/modes/0/frequency_derivative",
+        "scale": 2000.0,
+        "over": {
+          "from": "frequency",
+          "pointer": "/modes/0/frequency"
+        }
+      },
+      "value": 1.0,
+      "tolerance": {
+        "relative": 1e-08
+      },
+      "reason": "The guided eigenproblem has stiffness proportional to E1 and fixed mass."
+    }
+  ]
+}

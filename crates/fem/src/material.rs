@@ -10,7 +10,7 @@
 //! S₁₁ = 1/E₁, S₁₂ = −ν₁₂/E₁, S₁₃ = −ν₁₃/E₁, S₂₃ = −ν₂₃/E₂ (ν_ji/E_j = ν_ij/E_i), and
 //! 1/G on the shear diagonal.
 
-use fieldcraft_model::Elastic;
+use fieldcraft_model::{Elastic, design::MaterialConstant};
 
 use crate::dense::inverse3;
 use crate::{Error, Result};
@@ -54,6 +54,104 @@ pub fn isotropic(young: f64, poisson: f64) -> Result<Elasticity> {
     Ok(d)
 }
 
+/// The exact derivative of a constitutive matrix with respect to one elastic
+/// design constant.  The returned matrix is `∂D/∂p`; density has no
+/// constitutive derivative and therefore returns `None`.
+pub fn elasticity_derivative(elastic: &Elastic, constant: MaterialConstant) -> Result<Option<Elasticity>> {
+    use MaterialConstant as C;
+    match *elastic {
+        Elastic::Isotropic { young, poisson } => {
+            check_isotropic(young, poisson)?;
+            let (dlambda, dmu) = match constant {
+                C::Young => {
+                    let lambda = young * poisson / ((1.0 + poisson) * (1.0 - 2.0 * poisson));
+                    let mu = young / (2.0 * (1.0 + poisson));
+                    (lambda / young, mu / young)
+                }
+                C::Poisson => {
+                    let denominator = (1.0 + poisson) * (1.0 - 2.0 * poisson);
+                    let dlambda = young * (1.0 + 2.0 * poisson * poisson) / (denominator * denominator);
+                    let dmu = -young / (2.0 * (1.0 + poisson) * (1.0 + poisson));
+                    (dlambda, dmu)
+                }
+                _ => return Ok(None),
+            };
+            let mut derivative = [[0.0; 6]; 6];
+            for i in 0..3 {
+                for j in 0..3 {
+                    derivative[i][j] = dlambda;
+                }
+                derivative[i][i] = dlambda + 2.0 * dmu;
+                derivative[i + 3][i + 3] = dmu;
+            }
+            Ok(Some(derivative))
+        }
+        Elastic::EngineeringConstants { young, poisson, shear } => {
+            let [e1, e2, e3] = young;
+            let [n12, n13, n23] = poisson;
+            let compliance = [[1.0 / e1, -n12 / e1, -n13 / e1], [-n12 / e1, 1.0 / e2, -n23 / e2], [-n13 / e1, -n23 / e2, 1.0 / e3]];
+            let Some((normal, _)) = inverse3(&compliance) else { return Err(Error::Invalid("the orthotropic compliance is singular".into())) };
+            let mut derivative = [[0.0; 6]; 6];
+            let mut d_compliance = [[0.0; 3]; 3];
+            match constant {
+                C::E1 => {
+                    let inv = 1.0 / (e1 * e1);
+                    d_compliance[0][0] = -inv;
+                    d_compliance[0][1] = n12 * inv;
+                    d_compliance[1][0] = n12 * inv;
+                    d_compliance[0][2] = n13 * inv;
+                    d_compliance[2][0] = n13 * inv;
+                }
+                C::E2 => {
+                    let inv = 1.0 / (e2 * e2);
+                    d_compliance[1][1] = -inv;
+                    d_compliance[1][2] = n23 * inv;
+                    d_compliance[2][1] = n23 * inv;
+                }
+                C::E3 => d_compliance[2][2] = -1.0 / (e3 * e3),
+                C::Nu12 => {
+                    d_compliance[0][1] = -1.0 / e1;
+                    d_compliance[1][0] = -1.0 / e1;
+                }
+                C::Nu13 => {
+                    d_compliance[0][2] = -1.0 / e1;
+                    d_compliance[2][0] = -1.0 / e1;
+                }
+                C::Nu23 => {
+                    d_compliance[1][2] = -1.0 / e2;
+                    d_compliance[2][1] = -1.0 / e2;
+                }
+                C::G12 => {
+                    derivative[5][5] = 1.0;
+                    return Ok(Some(derivative));
+                }
+                C::G13 => {
+                    derivative[4][4] = 1.0;
+                    return Ok(Some(derivative));
+                }
+                C::G23 => {
+                    derivative[3][3] = 1.0;
+                    return Ok(Some(derivative));
+                }
+                _ => return Ok(None),
+            }
+            // d(S⁻¹) = −S⁻¹ (dS) S⁻¹.
+            for i in 0..3 {
+                for j in 0..3 {
+                    derivative[i][j] = -(0..3).map(|a| (0..3).map(|b| normal[i][a] * d_compliance[a][b] * normal[b][j]).sum::<f64>()).sum::<f64>();
+                }
+            }
+            if derivative.iter().flatten().any(|v| !v.is_finite()) {
+                return Err(Error::Invalid("orthotropic constitutive derivative is not finite".into()));
+            }
+            // `orthotropic` validates the base constants; repeat that check so
+            // this helper never silently accepts a singular engineering set.
+            let _ = orthotropic(young, poisson, shear)?;
+            Ok(Some(derivative))
+        }
+    }
+}
+
 /// Engineering constants whose compliance's determinant is below this fraction of the product of
 /// its diagonal are not positive definite (or as good as singular).
 const SINGULAR_COMPLIANCE: f64 = 1e-12; // unit-factors: relative to the diagonal's product
@@ -86,13 +184,7 @@ pub fn elasticity(e: &Elastic) -> Result<Elasticity> {
     }
 }
 
-/// Linear elasticity in global axes from material axes stored as rows in global components.
-/// Rotate the strain tensor (engineering shear halved), apply the local constitutive law,
-/// then rotate the stress tensor back. This is the fourth-order tensor transformation of
-/// Jones (1999), §2.4, implemented on the six independent unit-strain states; stress and
-/// engineering strain intentionally do not share a Voigt transformation matrix.
-pub fn elasticity_in_axes(e: &Elastic, axes: &crate::frame::Axes) -> Result<Elasticity> {
-    e.validate().map_err(|err| Error::Invalid(err.to_string()))?;
+fn check_axes(axes: &crate::frame::Axes) -> Result<()> {
     for i in 0..3 {
         for j in 0..3 {
             let dot = crate::frame::dot(axes[i], axes[j]);
@@ -104,7 +196,10 @@ pub fn elasticity_in_axes(e: &Elastic, axes: &crate::frame::Axes) -> Result<Elas
     if crate::frame::dot(crate::frame::cross(axes[0], axes[1]), axes[2]) <= 0.0 {
         return Err(Error::Invalid("material axes must be right handed".into()));
     }
-    let local = elasticity(e)?;
+    Ok(())
+}
+
+fn rotate_elasticity(local: &Elasticity, axes: &crate::frame::Axes) -> Elasticity {
     let pairs = [(0, 0), (1, 1), (2, 2), (0, 1), (0, 2), (1, 2)];
     let mut d = [[0.0; 6]; 6];
     for (column, &(a, b)) in pairs.iter().enumerate() {
@@ -115,7 +210,7 @@ pub fn elasticity_in_axes(e: &Elastic, axes: &crate::frame::Axes) -> Result<Elas
             }
         }
         let strain = [tensor[0][0], tensor[1][1], tensor[2][2], 2.0 * tensor[0][1], 2.0 * tensor[0][2], 2.0 * tensor[1][2]];
-        let [xx, yy, zz, xy, xz, yz] = stress(&local, &strain);
+        let [xx, yy, zz, xy, xz, yz] = stress(local, &strain);
         let global = crate::frame::tensor_to_global(axes, [[xx, xy, xz], [xy, yy, yz], [xz, yz, zz]]);
         for row in 0..6 {
             d[row][column] = global[row];
@@ -128,10 +223,30 @@ pub fn elasticity_in_axes(e: &Elastic, axes: &crate::frame::Axes) -> Result<Elas
             d[j][i] = value;
         }
     }
+    d
+}
+
+/// Linear elasticity in global axes from material axes stored as rows in global components.
+/// Rotate the strain tensor (engineering shear halved), apply the local constitutive law,
+/// then rotate the stress tensor back. This is the fourth-order tensor transformation of
+/// Jones (1999), §2.4, implemented on the six independent unit-strain states; stress and
+/// engineering strain intentionally do not share a Voigt transformation matrix.
+pub fn elasticity_in_axes(e: &Elastic, axes: &crate::frame::Axes) -> Result<Elasticity> {
+    e.validate().map_err(|err| Error::Invalid(err.to_string()))?;
+    check_axes(axes)?;
+    let local = elasticity(e)?;
+    let d = rotate_elasticity(&local, axes);
     if d.iter().flatten().any(|v| !v.is_finite()) {
         return Err(Error::Invalid("rotated solid elasticity is not finite".into()));
     }
     Ok(d)
+}
+
+/// The exact constitutive derivative in a fixed material frame.
+pub fn elasticity_derivative_in_axes(e: &Elastic, constant: MaterialConstant, axes: &crate::frame::Axes) -> Result<Option<Elasticity>> {
+    e.validate().map_err(|err| Error::Invalid(err.to_string()))?;
+    check_axes(axes)?;
+    Ok(elasticity_derivative(e, constant)?.map(|local| rotate_elasticity(&local, axes)))
 }
 
 /// The von Mises equivalent stress of a stress 6-vector.

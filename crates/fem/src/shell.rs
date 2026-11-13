@@ -57,7 +57,7 @@
 //!   the nodes (triangle, constant membrane and bending fields). Transverse shear stresses are
 //!   reported at the mid-surface as the peak of the parabolic distribution, 3/2 Q/t.
 
-use fieldcraft_model::{Elastic, ElementKind, MaterialOrientation};
+use fieldcraft_model::{Elastic, ElementKind, MaterialOrientation, design::MaterialConstant};
 
 use crate::dense::Matrix;
 use crate::dof::{DofSet, ElementDofs};
@@ -146,6 +146,39 @@ impl ShellSection {
     fn shear(&self) -> f64 {
         SHEAR_CORRECTION * self.shear_modulus() * self.thickness
     }
+
+    /// Derivatives of the homogeneous section's membrane/bending and shear
+    /// stiffnesses with respect to an elastic material constant.
+    fn derivatives(&self, constant: MaterialConstant) -> Option<([[f64; 6]; 6], f64, f64)> {
+        let (e, nu) = (self.young, self.poisson);
+        let c = e / (1.0 - nu * nu);
+        let (dq, dg) = match constant {
+            MaterialConstant::Young => {
+                let q = self.plane_stress();
+                (q.map(|row| row.map(|v| v / e)), self.shear_modulus() / e)
+            }
+            MaterialConstant::Poisson => {
+                let dc = 2.0 * e * nu / (1.0 - nu * nu).powi(2);
+                let dg = -e / (2.0 * (1.0 + nu).powi(2));
+                ([[dc, dc * nu + c, 0.0], [dc * nu + c, dc, 0.0], [0.0, 0.0, dc * (1.0 - nu) / 2.0 - c / 2.0]], dg)
+            }
+            _ => return None,
+        };
+        let (t, eccentricity) = (self.thickness, self.eccentricity);
+        let (a, b, d) = (t, t * eccentricity, t * t * t / 12.0 + t * eccentricity * eccentricity);
+        let mut dabd = [[0.0; 6]; 6];
+        for i in 0..3 {
+            for j in 0..3 {
+                dabd[i][j] = a * dq[i][j];
+                dabd[i][j + 3] = b * dq[i][j];
+                dabd[i + 3][j] = b * dq[i][j];
+                dabd[i + 3][j + 3] = d * dq[i][j];
+            }
+        }
+        let dshear = SHEAR_CORRECTION * t * dg;
+        let ddrill = DRILLING * t * dg;
+        Some((dabd, dshear, ddrill))
+    }
 }
 
 /// The existing homogeneous shell path is kept intact so existing isotropic models do not
@@ -168,6 +201,13 @@ impl Constitutive {
         match self {
             Self::Homogeneous(s) => DRILLING * s.shear_modulus() * s.thickness,
             Self::Laminated(s) => s.drilling(),
+        }
+    }
+
+    fn homogeneous_shear(&self) -> f64 {
+        match self {
+            Self::Homogeneous(s) => s.shear(),
+            Self::Laminated(_) => 0.0,
         }
     }
 
@@ -483,10 +523,8 @@ impl Shell {
     }
 
     /// The stiffness matrix in global axes, 6n × 6n, degrees of freedom node by node.
-    pub fn stiffness(&self) -> Result<Matrix> {
+    fn stiffness_with(&self, abd: [[f64; 6]; 6], shear: f64, drill: f64) -> Result<Matrix> {
         let n = self.size();
-        let abd = self.section.abd();
-        let drill = self.section.drilling();
         let tying = self.tying()?;
         let mut k = Matrix::zeros(n);
         for p in self.rule().points() {
@@ -498,7 +536,7 @@ impl Shell {
                 for j in i..n {
                     let mut v: f64 = (0..6).map(|a| b[a][i] * cb[a][j]).sum();
                     v += match &self.section {
-                        Constitutive::Homogeneous(s) => s.shear() * (b[6][i] * b[6][j] + b[7][i] * b[7][j]),
+                        Constitutive::Homogeneous(_) => shear * (b[6][i] * b[6][j] + b[7][i] * b[7][j]),
                         Constitutive::Laminated(s) => {
                             let ks = s.shear();
                             b[6][i] * (ks[0][0] * b[6][j] + ks[0][1] * b[7][j]) + b[7][i] * (ks[1][0] * b[6][j] + ks[1][1] * b[7][j])
@@ -515,6 +553,23 @@ impl Shell {
             }
         }
         finite_matrix(rotate_matrix(&k, &self.axes), "stiffness")
+    }
+
+    pub fn stiffness(&self) -> Result<Matrix> {
+        self.stiffness_with(self.section.abd(), self.section.homogeneous_shear(), self.section.drilling())
+    }
+
+    /// Exact stiffness derivative for a homogeneous isotropic shell. Laminates
+    /// need ply-level parameter ownership and are intentionally left to the
+    /// sampled path.
+    pub fn stiffness_derivative(&self, constant: MaterialConstant) -> Result<Matrix> {
+        let Constitutive::Homogeneous(section) = &self.section else {
+            return Err(Error::NotSupported("analytic shell material derivatives for laminates are not implemented".into()));
+        };
+        let Some((abd, shear, drill)) = section.derivatives(constant) else {
+            return Err(Error::NotSupported("analytic shell derivative is only defined for Young or Poisson".into()));
+        };
+        self.stiffness_with(abd, shear, drill)
     }
 
     /// Initial-membrane-stress stiffness for small-slope buckling of a flat plate:

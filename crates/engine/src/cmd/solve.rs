@@ -2069,27 +2069,34 @@ pub const SENSITIVITY_STATIC: CommandSpec = CommandSpec {
 
 fn run_sensitivity_static(s: &mut Session, p: &Value) -> Result<Value> {
     use fieldcraft_model::design::Parameter;
-    use fieldcraft_solver::sensitivity::{StaticObservation, static_sensitivity};
+    use fieldcraft_solver::sensitivity::{DifferenceScheme, StaticObservation, static_sensitivity_with_scheme};
     let parameter: Parameter = super::req(p, "parameter")?;
     let node = super::req(p, "node")?;
     let dof = opt::<u8>(p, "dof")?.unwrap_or(1);
+    let value = parameter.value(&s.model)?;
+    let scale = if value == 0.0 { 1.0 } else { value.abs() };
+    let explicit = p.get("relative_increment").is_some();
     let fraction = opt::<f64>(p, "relative_increment")?.unwrap_or(1e-5);
     if !fraction.is_finite() || fraction <= 0.0 || fraction > 0.1 {
         return Err(EngineError::Params("relative_increment must be in (0, 0.1]".into()));
     }
-    let value = parameter.value(&s.model)?;
-    let scale = if value == 0.0 { 1.0 } else { value.abs() };
+    let scheme = if explicit {
+        DifferenceScheme::explicit(&s.model, &parameter, scale * fraction)?
+    } else {
+        DifferenceScheme::default_for(&s.model, &parameter)?
+    };
     let quantity = parameter.quantity(&s.model)?;
     let step = opt::<String>(p, "step")?;
     let observation = StaticObservation { node, dof, stress_element: opt(p, "stress_element")? };
     let limits = limits(p)?;
-    let result = with_threads(threads(s, p)?, || static_sensitivity(&s.model, step.as_deref(), &parameter, scale * fraction, observation, &limits))?;
+    let result =
+        with_threads(threads(s, p)?, || static_sensitivity_with_scheme(&s.model, step.as_deref(), &parameter, scheme, observation, &limits))?;
     let mut out = serde_json::to_value(result).map_err(|e| EngineError::Params(e.to_string()))?;
     out["parameter_quantity"] = json!(quantity.name());
     out["response_quantity"] = json!(if dof <= 3 { "length" } else { "angle" });
     out["node"] = json!(node);
     out["dof"] = json!(dof);
-    out["method"] = json!("semi_analytical");
+    out["method"] = json!(scheme.method.name());
     Ok(out)
 }
 
@@ -2105,38 +2112,48 @@ pub const SENSITIVITY_HARMONIC: CommandSpec = CommandSpec {
 
 fn run_sensitivity_harmonic(s: &mut Session, p: &Value) -> Result<Value> {
     use fieldcraft_model::design::Parameter;
-    use fieldcraft_solver::sensitivity::{HarmonicObservation, harmonic_sensitivity};
+    use fieldcraft_solver::sensitivity::{DifferenceScheme, HarmonicObservation, harmonic_sensitivity_with_scheme};
     if let Some(requests) = p.get("requests") {
-        use fieldcraft_solver::sensitivity::{HarmonicSensitivityRequest, harmonic_sensitivity_batch};
+        use fieldcraft_solver::sensitivity::{HarmonicSensitivityRequest, harmonic_sensitivity_batch_with_schemes};
         let requests = requests.as_array().ok_or_else(|| EngineError::Params("requests must be an array".into()))?;
         if requests.is_empty() || requests.len() > 16 {
             return Err(EngineError::Params("harmonic batch requires 1..=16 requests".into()));
         }
         let mut inputs = Vec::new();
+        let mut schemes = Vec::new();
         for r in requests {
             let parameter: Parameter = super::req(r, "parameter")?;
+            let explicit = r.get("relative_increment").is_some();
             let fraction = opt::<f64>(r, "relative_increment")?.unwrap_or(1e-5);
             if !fraction.is_finite() || fraction <= 0.0 || fraction > 0.1 {
                 return Err(EngineError::Params("relative_increment must be in (0, 0.1]".into()));
             }
             let value = parameter.value(&s.model)?;
+            let scale = if value == 0.0 { 1.0 } else { value.abs() };
+            let scheme = if explicit {
+                DifferenceScheme::explicit(&s.model, &parameter, scale * fraction)?
+            } else {
+                DifferenceScheme::default_for(&s.model, &parameter)?
+            };
             inputs.push(HarmonicSensitivityRequest {
                 step: opt(r, "step")?,
-                increment: (if value == 0.0 { 1.0 } else { value.abs() }) * fraction,
+                increment: scheme.increment,
                 parameter,
                 observation: HarmonicObservation { node: super::req(r, "node")?, dof: opt::<u8>(r, "dof")?.unwrap_or(1) },
             });
+            schemes.push(scheme);
         }
         let limits = limits(p)?;
-        let batch = with_threads(threads(s, p)?, || harmonic_sensitivity_batch(&s.model, &inputs, &limits))?;
+        let batch = with_threads(threads(s, p)?, || harmonic_sensitivity_batch_with_schemes(&s.model, &inputs, &schemes, &limits))?;
         let mut out = serde_json::to_value(&batch).map_err(|e| EngineError::Params(e.to_string()))?;
         if let Some(results) = out.get_mut("results").and_then(Value::as_array_mut) {
-            for (result, request) in results.iter_mut().zip(&inputs) {
+            for ((result, request), scheme) in results.iter_mut().zip(&inputs).zip(&schemes) {
                 result["parameter_quantity"] = json!(request.parameter.quantity(&s.model)?.name());
                 result["response_quantity"] = json!(if request.observation.dof <= 3 { "length" } else { "angle" });
                 result["node"] = json!(request.observation.node);
                 result["dof"] = json!(request.observation.dof);
-                result["method"] = json!(if matches!(request.parameter, Parameter::Damping { .. }) { "analytic_damping" } else { "semi_analytical" });
+                result["method"] =
+                    json!(if matches!(request.parameter, Parameter::Damping { .. }) { "analytic_damping" } else { scheme.method.name() });
             }
         }
         out["units"] = json!("per_result");
@@ -2146,24 +2163,30 @@ fn run_sensitivity_harmonic(s: &mut Session, p: &Value) -> Result<Value> {
     let parameter: Parameter = super::req(p, "parameter")?;
     let node = super::req(p, "node")?;
     let dof = opt::<u8>(p, "dof")?.unwrap_or(1);
+    let explicit = p.get("relative_increment").is_some();
     let fraction = opt::<f64>(p, "relative_increment")?.unwrap_or(1e-5);
     if !fraction.is_finite() || fraction <= 0.0 || fraction > 0.1 {
         return Err(EngineError::Params("relative_increment must be in (0, 0.1]".into()));
     }
     let value = parameter.value(&s.model)?;
     let scale = if value == 0.0 { 1.0 } else { value.abs() };
+    let scheme = if explicit {
+        DifferenceScheme::explicit(&s.model, &parameter, scale * fraction)?
+    } else {
+        DifferenceScheme::default_for(&s.model, &parameter)?
+    };
     let quantity = parameter.quantity(&s.model)?;
     let step = opt::<String>(p, "step")?;
     let observation = HarmonicObservation { node, dof };
     let limits = limits(p)?;
     let result =
-        with_threads(threads(s, p)?, || harmonic_sensitivity(&s.model, step.as_deref(), &parameter, scale * fraction, observation, &limits))?;
+        with_threads(threads(s, p)?, || harmonic_sensitivity_with_scheme(&s.model, step.as_deref(), &parameter, scheme, observation, &limits))?;
     let mut out = serde_json::to_value(result).map_err(|e| EngineError::Params(e.to_string()))?;
     out["parameter_quantity"] = json!(quantity.name());
     out["response_quantity"] = json!(if dof <= 3 { "length" } else { "angle" });
     out["node"] = json!(node);
     out["dof"] = json!(dof);
-    out["method"] = json!(if matches!(parameter, Parameter::Damping { .. }) { "analytic_damping" } else { "semi_analytical" });
+    out["method"] = json!(if matches!(parameter, Parameter::Damping { .. }) { "analytic_damping" } else { scheme.method.name() });
     out["units"] = json!("SI");
     Ok(out)
 }
@@ -2181,20 +2204,26 @@ pub const SENSITIVITY_FREQUENCY: CommandSpec = CommandSpec {
 fn run_sensitivity_frequency(s: &mut Session, p: &Value) -> Result<Value> {
     let parameter: fieldcraft_model::design::Parameter = req(p, "parameter")?;
     let value = parameter.value(&s.model)?;
+    let explicit = p.get("relative_increment").is_some();
     let fraction = opt::<f64>(p, "relative_increment")?.unwrap_or(1e-5);
     if !fraction.is_finite() || fraction <= 0.0 || fraction > 0.1 {
         return Err(EngineError::Params("relative_increment must be in (0, 0.1]".into()));
     }
-    let increment = if value == 0.0 { fraction } else { value.abs() * fraction };
+    let scale = if value == 0.0 { 1.0 } else { value.abs() };
+    let scheme = if explicit {
+        fieldcraft_solver::sensitivity::DifferenceScheme::explicit(&s.model, &parameter, scale * fraction)?
+    } else {
+        fieldcraft_solver::sensitivity::DifferenceScheme::default_for(&s.model, &parameter)?
+    };
     let step = opt::<String>(p, "step")?;
     let limits = limits(p)?;
     let vectors = opt::<bool>(p, "mode_shapes")?.unwrap_or(false);
     let result = with_threads(threads(s, p)?, || {
-        fieldcraft_solver::sensitivity::frequency_sensitivity_with_vectors(
+        fieldcraft_solver::sensitivity::frequency_sensitivity_with_vectors_and_scheme(
             &s.model,
             step.as_deref(),
             &parameter,
-            increment,
+            scheme,
             &FrequencyOptions::default(),
             vectors,
             &limits,
@@ -2203,7 +2232,7 @@ fn run_sensitivity_frequency(s: &mut Session, p: &Value) -> Result<Value> {
     let mut out = serde_json::to_value(result).map_err(|e| EngineError::Params(e.to_string()))?;
     out["parameter_quantity"] = json!(parameter.quantity(&s.model)?.name());
     out["response_quantity"] = json!("frequency");
-    out["method"] = json!("semi_analytical");
+    out["method"] = json!(scheme.method.name());
     Ok(out)
 }
 

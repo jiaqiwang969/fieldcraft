@@ -9,7 +9,7 @@ use fieldcraft_model::{
 };
 use serde::Serialize;
 
-use super::model::{cold, difference, matrix_difference, perturb};
+use super::model::{DifferenceMethod, DifferenceScheme, cold, sampled_difference, sampled_matrix_difference};
 use crate::analysis::{self, Setup};
 use crate::complex::{self, Vector};
 use crate::harmonic::{self, Matrices};
@@ -69,13 +69,28 @@ struct CachedBasis {
 /// Reuse modal/Ritz bases only within this immutable-model call. All assembly,
 /// basis extraction and projections occur here; no cross-call cache is accepted.
 pub fn harmonic_sensitivity_batch(model: &Model, requests: &[HarmonicSensitivityRequest], limits: &Limits) -> Result<HarmonicSensitivityBatch> {
+    let schemes = requests.iter().map(|r| DifferenceScheme::central(r.increment)).collect::<Vec<_>>();
+    harmonic_sensitivity_batch_with_schemes(model, requests, &schemes, limits)
+}
+
+/// Batch harmonic sensitivities with one already validated scheme per request.
+/// The compatibility batch above always uses the historical two-point rule.
+pub fn harmonic_sensitivity_batch_with_schemes(
+    model: &Model,
+    requests: &[HarmonicSensitivityRequest],
+    schemes: &[DifferenceScheme],
+    limits: &Limits,
+) -> Result<HarmonicSensitivityBatch> {
     if requests.is_empty() || requests.len() > 16 {
         return Err(Error::Invalid("harmonic batch requires 1..=16 requests".into()));
     }
+    if schemes.len() != requests.len() {
+        return Err(Error::Invalid("harmonic batch scheme count must match request count".into()));
+    }
     let mut cache = Vec::new();
     let mut results = Vec::new();
-    for r in requests {
-        results.push(harmonic_sensitivity_cached(model, r.step.as_deref(), &r.parameter, r.increment, r.observation, limits, &mut cache)?);
+    for (r, scheme) in requests.iter().zip(schemes) {
+        results.push(harmonic_sensitivity_cached_with_scheme(model, r.step.as_deref(), &r.parameter, *scheme, r.observation, limits, &mut cache)?);
     }
     Ok(HarmonicSensitivityBatch { results, modal_basis_builds: cache.len() })
 }
@@ -89,19 +104,32 @@ pub fn harmonic_sensitivity(
     observation: HarmonicObservation,
     limits: &Limits,
 ) -> Result<HarmonicSensitivity> {
-    harmonic_sensitivity_cached(model, step, parameter, increment, observation, limits, &mut Vec::new())
+    harmonic_sensitivity_with_scheme(model, step, parameter, DifferenceScheme::central(increment), observation, limits)
 }
-fn harmonic_sensitivity_cached(
+
+/// Harmonic sensitivity with an explicitly selected difference formula.
+pub fn harmonic_sensitivity_with_scheme(
     model: &Model,
     step: Option<&str>,
     parameter: &Parameter,
-    increment: f64,
+    scheme: DifferenceScheme,
+    observation: HarmonicObservation,
+    limits: &Limits,
+) -> Result<HarmonicSensitivity> {
+    harmonic_sensitivity_cached_with_scheme(model, step, parameter, scheme, observation, limits, &mut Vec::new())
+}
+
+fn harmonic_sensitivity_cached_with_scheme(
+    model: &Model,
+    step: Option<&str>,
+    parameter: &Parameter,
+    scheme: DifferenceScheme,
     observation: HarmonicObservation,
     limits: &Limits,
     cache: &mut Vec<CachedBasis>,
 ) -> Result<HarmonicSensitivity> {
     let damping_parameter = if let Parameter::Damping { step, component } = parameter { Some((step, *component)) } else { None };
-    let mut perturbed = if damping_parameter.is_none() { Some(perturb(model, parameter, increment)?) } else { None };
+    let perturbed_models = if damping_parameter.is_none() { scheme.models(model, parameter)? } else { Vec::new() };
     let resolved = model.resolve()?;
     let step = model.select_step(step, |p| matches!(p, Procedure::Harmonic(_)), "harmonic")?;
     if step.base_state.is_some() {
@@ -110,17 +138,6 @@ fn harmonic_sensitivity_cached(
     let Procedure::Harmonic(h) = &step.procedure else {
         return Err(Error::Internal("harmonic sensitivity step".into()));
     };
-    // The shared perturbation helper leaves foundations unchanged for analytic
-    // physical derivatives. Fixed-basis modal operators instead need actual
-    // parameter perturbations before projection (the basis remains fixed).
-    if matches!(h.method, Method::Modal { .. })
-        && matches!(parameter, Parameter::Foundation { .. })
-        && let Some((plus, minus)) = &mut perturbed
-    {
-        let value = parameter.value(model)?;
-        parameter.set(plus, value + increment)?;
-        parameter.set(minus, value - increment)?;
-    }
     if let Some((parameter_step, component)) = damping_parameter {
         if parameter_step != &step.name {
             return Err(Error::Invalid("damping parameter belongs to a different harmonic step".into()));
@@ -162,7 +179,21 @@ fn harmonic_sensitivity_cached(
         Ok((k, mass, c, g, f))
     };
     let original = assemble(model)?;
-    let perturbed_operators = perturbed.as_ref().map(|(p, m)| -> Result<_> { Ok((assemble(p)?, assemble(m)?)) }).transpose()?;
+    let perturbed_operators = if perturbed_models.is_empty() {
+        None
+    } else {
+        let mut operators = Vec::with_capacity(perturbed_models.len());
+        for (offset, trial) in &perturbed_models {
+            operators.push((*offset, assemble(trial)?));
+        }
+        Some(operators)
+    };
+    let exact_foundation = crate::foundation::derivative(&mesh, &graph, parameter)?;
+    let exact_material = if scheme.method == DifferenceMethod::SixthOrder && exact_foundation.is_none() {
+        analysis::assemble_material_derivative(&mesh, &graph, parameter)?
+    } else {
+        None
+    };
     let reduced_modal = if matches!(h.method, Method::Modal { .. }) {
         if red.largest_prescribed() != 0.0 {
             return Err(Error::NotSupported("fixed-basis modal derivatives require homogeneous support motion".into()));
@@ -222,27 +253,52 @@ fn harmonic_sensitivity_cached(
     *weights.get_mut(dof).ok_or_else(|| Error::Internal("harmonic observation dof".into()))? = 1.0;
     let weights = Vector { real: red.restrict(&weights), imaginary: vec![0.0; red.neq()] };
     if let (Some(modal), Some(matrices)) = (&modal, matrices) {
-        let derivative = if let Some((p, m)) = &perturbed_operators {
-            let reduce = |a: &crate::sparse::Csr| -> Result<_> {
-                let [mut r] = red.reduce([a])?;
-                r.mirror_lower();
-                Ok(r)
-            };
-            let optional = |p: Option<&crate::sparse::Csr>, m: Option<&crate::sparse::Csr>| -> Result<_> {
-                match (p, m) {
-                    (None, None) => Ok(None),
-                    (Some(p), Some(m)) => Ok(Some(reduce(&matrix_difference(p, m, increment)?)?)),
-                    _ => Err(Error::NotSupported("parameter changes modal damping sparsity".into())),
+        let reduce = |a: &crate::sparse::Csr| -> Result<_> {
+            let [mut r] = red.reduce([a])?;
+            r.mirror_lower();
+            Ok(r)
+        };
+        let derivative = if let Some((dk, dh)) = &exact_foundation {
+            let zero = crate::sparse::Csr { val: vec![0.0; dk.val.len()], ..dk.clone() };
+            Some(super::projected::Operators { k: reduce(dk)?, m: reduce(&zero)?, c: None, g: Some(reduce(dh)?), f: Vector::zeros(red.neq()) })
+        } else if let Some(dk) = &exact_material {
+            let zero = crate::sparse::Csr { val: vec![0.0; dk.val.len()], ..dk.clone() };
+            Some(super::projected::Operators { k: reduce(dk)?, m: reduce(&zero)?, c: None, g: None, f: Vector::zeros(red.neq()) })
+        } else if let Some(samples) = &perturbed_operators {
+            let k_samples = samples.iter().map(|(offset, operators)| (*offset, operators.0.clone())).collect::<Vec<_>>();
+            let m_samples = samples.iter().map(|(offset, operators)| (*offset, operators.1.clone())).collect::<Vec<_>>();
+            let optional = |which: fn(
+                &(crate::sparse::Csr, crate::sparse::Csr, Option<crate::sparse::Csr>, Option<crate::sparse::Csr>, Vector),
+            ) -> Option<&crate::sparse::Csr>|
+             -> Result<_> {
+                let mut present = Vec::new();
+                for (offset, operators) in samples {
+                    if let Some(value) = which(operators) {
+                        present.push((*offset, value.clone()));
+                    }
                 }
+                if present.is_empty() {
+                    return Ok(None);
+                }
+                if present.len() != samples.len() {
+                    return Err(Error::NotSupported("parameter changes modal damping sparsity".into()));
+                }
+                Ok(Some(reduce(&sampled_matrix_difference(&present, scheme)?)?))
             };
             Some(super::projected::Operators {
-                k: reduce(&matrix_difference(&p.0, &m.0, increment)?)?,
-                m: reduce(&matrix_difference(&p.1, &m.1, increment)?)?,
-                c: optional(p.2.as_ref(), m.2.as_ref())?,
-                g: optional(p.3.as_ref(), m.3.as_ref())?,
+                k: reduce(&sampled_matrix_difference(&k_samples, scheme)?)?,
+                m: reduce(&sampled_matrix_difference(&m_samples, scheme)?)?,
+                c: optional(|operators| operators.2.as_ref())?,
+                g: optional(|operators| operators.3.as_ref())?,
                 f: Vector {
-                    real: red.restrict(&difference(&p.4.real, &m.4.real, increment)?),
-                    imaginary: red.restrict(&difference(&p.4.imaginary, &m.4.imaginary, increment)?),
+                    real: red.restrict(&sampled_difference(
+                        &samples.iter().map(|(offset, operators)| (*offset, operators.4.real.clone())).collect::<Vec<_>>(),
+                        scheme,
+                    )?),
+                    imaginary: red.restrict(&sampled_difference(
+                        &samples.iter().map(|(offset, operators)| (*offset, operators.4.imaginary.clone())).collect::<Vec<_>>(),
+                        scheme,
+                    )?),
                 },
             })
         } else {
@@ -261,7 +317,7 @@ fn harmonic_sensitivity_cached(
                 harmonic: h,
                 parameter,
                 value: parameter.value(model)?,
-                increment,
+                increment: scheme.increment,
                 warnings,
             },
             limits,
@@ -306,7 +362,7 @@ fn harmonic_sensitivity_cached(
             db.mirror_lower();
             let da = crate::sparse::Csr { val: vec![0.0; db.val.len()], ..db.clone() };
             (da, db, df)
-        } else if let Some((dk, mut dh)) = crate::foundation::derivative(&mesh, &graph, parameter)? {
+        } else if let Some((dk, mut dh)) = exact_foundation.clone() {
             // Step Rayleigh beta and structural loss multiply the total stiffness.
             for (g, k) in dh.val.iter_mut().zip(&dk.val) {
                 *g += (omega * h.damping.beta + h.damping.loss_factor) * k;
@@ -316,15 +372,30 @@ fn harmonic_sensitivity_cached(
             da.mirror_lower();
             db.mirror_lower();
             (da, db, df)
+        } else if let Some(dk) = exact_material.clone() {
+            let mut dh = dk.clone();
+            for value in &mut dh.val {
+                *value *= omega * h.damping.beta + h.damping.loss_factor;
+            }
+            let df = Vector { real: red.rhs(&vec![0.; mesh.dofs()], &dk), imaginary: red.rhs(&vec![0.; mesh.dofs()], &dh) };
+            let [mut da, mut db] = red.reduce([&dk, &dh])?;
+            da.mirror_lower();
+            db.mirror_lower();
+            (da, db, df)
         } else {
-            let (p, m) = perturbed_operators.as_ref().ok_or_else(|| Error::Internal("missing perturbed harmonic operators".into()))?;
-            let (ap, bp, fp) = dynamic(p)?;
-            let (am, bm, fm) = dynamic(m)?;
-            (
-                matrix_difference(&ap, &am, increment)?,
-                matrix_difference(&bp, &bm, increment)?,
-                Vector { real: difference(&fp.real, &fm.real, increment)?, imaginary: difference(&fp.imaginary, &fm.imaginary, increment)? },
-            )
+            let samples = perturbed_operators.as_ref().ok_or_else(|| Error::Internal("missing perturbed harmonic operators".into()))?;
+            let dynamic_samples =
+                samples.iter().map(|(offset, operators)| dynamic(operators).map(|(a, b, f)| (*offset, (a, b, f)))).collect::<Result<Vec<_>>>()?;
+            let da = sampled_matrix_difference(&dynamic_samples.iter().map(|(offset, (a, _, _))| (*offset, a.clone())).collect::<Vec<_>>(), scheme)?;
+            let db = sampled_matrix_difference(&dynamic_samples.iter().map(|(offset, (_, b, _))| (*offset, b.clone())).collect::<Vec<_>>(), scheme)?;
+            let df = Vector {
+                real: sampled_difference(&dynamic_samples.iter().map(|(offset, (_, _, f))| (*offset, f.real.clone())).collect::<Vec<_>>(), scheme)?,
+                imaginary: sampled_difference(
+                    &dynamic_samples.iter().map(|(offset, (_, _, f))| (*offset, f.imaginary.clone())).collect::<Vec<_>>(),
+                    scheme,
+                )?,
+            };
+            (da, db, df)
         };
         let primal = complex::solve(&a, &b, &rhs, limits)?;
         let tangent = super::tangent_load(&da, &db, &primal.displacement, &df, limits)?;
@@ -354,7 +425,7 @@ fn harmonic_sensitivity_cached(
             tangent_relative_residual: derivative.residual.relative,
         });
     }
-    Ok(HarmonicSensitivity { parameter: parameter.clone(), parameter_value: parameter.value(model)?, increment, frames, warnings })
+    Ok(HarmonicSensitivity { parameter: parameter.clone(), parameter_value: parameter.value(model)?, increment: scheme.increment, frames, warnings })
 }
 
 /// Bounded fit to complex physical displacements, ordered as real, imaginary
