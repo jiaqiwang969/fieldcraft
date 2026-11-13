@@ -307,7 +307,7 @@ fn real_frozen_point_forces_run_the_product_receive_apply_solve_chain() {
         reopened.execute("solve.transient", &json!({"step":"real-load-transient","mass":"consistent","threads":8,"max_memory_gib":8.0})).unwrap();
     let product_probe = reopened.execute("solve.probe", &json!({"step":"real-load-transient","nodes":probe_nodes})).unwrap();
     // Persist the raw product reply before any comparison assertion so a
-    // mismatch leaves the exact new-path result for the coordinator.
+    // mismatch leaves the exact new-path result on disk for inspection.
     fs::write(output_dir.join("product-probe.json"), serde_json::to_vec_pretty(&product_probe).unwrap()).unwrap();
     fs::write(
         output_dir.join("real-chain-replies.json"),
@@ -352,7 +352,7 @@ fn real_frozen_point_forces_run_the_product_receive_apply_solve_chain() {
     fs::write(output_dir.join("real-chain-replies.json"), serde_json::to_vec_pretty(&report).unwrap()).unwrap();
     let checks = &report["historical_comparison"];
     // The sampled incoming history is 16x sparser than the frozen historical
-    // source. The coordinator accepted that source-sampling difference on
+    // source. That source-sampling difference was accepted on
     // 2026-11-11; retain the original values while keeping independent limits
     // for the ordinary four checks and node-595 stress.
     let limits = [

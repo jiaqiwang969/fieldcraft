@@ -37,6 +37,13 @@ fn save(m: &Model, a: &ArchivedTrajectory) -> fieldcraft_io::Result<Vec<u8>> {
 fn project_disk_reopen_and_canonical_roundtrip_preserve_all_bytes() {
     let (m, a) = fixture();
     let bytes = save(&m, &a).unwrap();
+    let mut archive = zip::ZipArchive::new(std::io::Cursor::new(&bytes)).unwrap();
+    let mut manifest = String::new();
+    use std::io::Read;
+    archive.by_name("fieldcraft.json").unwrap().read_to_string(&mut manifest).unwrap();
+    let manifest: serde_json::Value = serde_json::from_str(&manifest).unwrap();
+    assert!(manifest.get("identity").is_some(), "external projects retain identity metadata");
+    assert!(manifest.get("capabilities").is_some(), "external projects retain capability metadata");
     let dir = std::env::var_os("FIELDCRAFT_KIND13_EVIDENCE").map(std::path::PathBuf::from).unwrap_or_else(std::env::temp_dir);
     fs::create_dir_all(&dir).unwrap();
     let path = dir.join(format!("external-archive-{}.fieldcraft", std::process::id()));

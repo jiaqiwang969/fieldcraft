@@ -70,6 +70,7 @@ fn at_frequency(error: Error, frequency: f64) -> Error {
         Error::Singular(message) => Error::Singular(context(message)),
         Error::Limit(message) => Error::Limit(context(message)),
         Error::NotConverged(message) => Error::NotConverged(context(message)),
+        Error::NotConvergedWithDiagnostics { message, diagnostic } => Error::NotConvergedWithDiagnostics { message: context(message), diagnostic },
         Error::Internal(message) => Error::Internal(context(message)),
         other => other,
     }

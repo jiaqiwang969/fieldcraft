@@ -3,8 +3,11 @@
 use sha2::{Digest, Sha256};
 use std::fs::File;
 use std::io::{self, Read};
+use std::sync::OnceLock;
 
 const BUFFER_BYTES: usize = 64 * 1024;
+
+static PROGRAM_SHA256: OnceLock<Result<String, String>> = OnceLock::new();
 
 fn hash_exact(reader: &mut impl Read, expected_bytes: u64) -> io::Result<String> {
     let mut buffer = [0_u8; BUFFER_BYTES];
@@ -48,13 +51,25 @@ fn hash_file(mut file: File) -> io::Result<String> {
     Ok(digest)
 }
 
-pub(crate) fn current_program_sha256() -> io::Result<String> {
+fn measure_current_program_sha256() -> io::Result<String> {
     // Linux exposes the running image even after its pathname has been replaced.
     #[cfg(target_os = "linux")]
     let file = File::open("/proc/self/exe")?;
     #[cfg(not(target_os = "linux"))]
     let file = File::open(std::env::current_exe()?)?;
     hash_file(file)
+}
+
+fn cached_program_sha256(cache: &OnceLock<Result<String, String>>, measure: impl FnOnce() -> io::Result<String>) -> io::Result<String> {
+    let cached = cache.get_or_init(|| measure().map_err(|cause| cause.to_string()));
+    match cached {
+        Ok(sha256) => Ok(sha256.clone()),
+        Err(cause) => Err(io::Error::other(cause.clone())),
+    }
+}
+
+pub(crate) fn current_program_sha256() -> io::Result<String> {
+    cached_program_sha256(&PROGRAM_SHA256, measure_current_program_sha256)
 }
 
 #[cfg(test)]
@@ -130,5 +145,27 @@ mod tests {
         assert!(fieldcraft_io::fs::read_capped(&path, super::super::context::MAX_BYTES).is_err());
         std::fs::remove_file(path).unwrap();
         std::fs::remove_dir(root).unwrap();
+    }
+
+    #[test]
+    fn program_digest_is_measured_once_per_process() {
+        // The production cache is process-wide.  Use the same cache helper with a local
+        // counter so this test proves that the second lookup does not read the executable.
+        let cache = OnceLock::new();
+        let reads = std::cell::Cell::new(0);
+        let measure = || {
+            reads.set(reads.get() + 1);
+            Ok("a".repeat(64))
+        };
+        assert_eq!(cached_program_sha256(&cache, measure).unwrap(), "a".repeat(64));
+        assert_eq!(
+            cached_program_sha256(&cache, || {
+                reads.set(reads.get() + 1);
+                Ok("b".repeat(64))
+            })
+            .unwrap(),
+            "a".repeat(64)
+        );
+        assert_eq!(reads.get(), 1);
     }
 }

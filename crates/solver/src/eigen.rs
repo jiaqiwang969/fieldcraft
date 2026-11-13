@@ -98,6 +98,59 @@ pub fn symmetric_eigen(a: &[f64], n: usize) -> Result<(Vec<f64>, Vec<f64>)> {
     Ok((values, vectors))
 }
 
+/// A deterministic hypotenuse for the QR rotations.
+///
+/// The correction is the non-FMA form from C. F. Borges, *An Improved Algorithm for hypot(a,b)*
+/// (arXiv:1904.09481).  Scaling keeps the two square products in the normal range; multiplying
+/// by an exact power of two does not change their significands.  Keeping this here instead of
+/// using the platform `hypot` makes the QR path use the same rounded operations on every target.
+#[inline]
+fn portable_hypot(x: f64, y: f64) -> f64 {
+    let ax = x.abs();
+    let ay = y.abs();
+    if ax.is_infinite() || ay.is_infinite() {
+        return f64::INFINITY;
+    }
+    if ax.is_nan() || ay.is_nan() {
+        return f64::NAN;
+    }
+    let (mut ax, mut ay) = if ax >= ay { (ax, ay) } else { (ay, ax) };
+    if ax == 0.0 {
+        return 0.0;
+    }
+
+    // These are exact powers of two: 2^500, 2^-500, 2^-600 and 2^600.
+    const HIGH: f64 = f64::from_bits(1523_u64 << 52);
+    const LOW: f64 = f64::from_bits(523_u64 << 52);
+    const DOWN: f64 = f64::from_bits(423_u64 << 52);
+    const UP: f64 = f64::from_bits(1623_u64 << 52);
+    let scale = if ax > HIGH {
+        DOWN
+    } else if ax < LOW {
+        UP
+    } else {
+        1.0
+    };
+    ax *= scale;
+    ay *= scale;
+
+    // Do not rewrite this as a fused multiply-add: the correction is specified by the
+    // individual rounded products and sum.
+    let h = (ax * ax + ay * ay).sqrt();
+    let correction = if h <= 2.0 * ay {
+        let d = h - ay;
+        let t1 = ax * (2.0 * d - ax);
+        let t2 = (d - 2.0 * (ax - ay)) * d;
+        (t1 + t2) / (2.0 * h)
+    } else {
+        let d = h - ax;
+        let t1 = 2.0 * d * (ax - 2.0 * ay);
+        let t2 = (4.0 * d - ay) * ay + d * d;
+        (t1 + t2) / (2.0 * h)
+    };
+    (h - correction) / scale
+}
+
 /// Diagonalize a symmetric tridiagonal matrix (diagonal d, sub-diagonal e) by implicit QR steps
 /// with Wilkinson shifts, applying the rotations to the columns of q.
 fn tridiagonal_qr(d: &mut [f64], e: &mut [f64], q: &mut [f64], n: usize) -> Result<()> {
@@ -126,11 +179,11 @@ fn tridiagonal_qr(d: &mut [f64], e: &mut [f64], q: &mut [f64], n: usize) -> Resu
         let dd = (d[h - 1] - d[h]) / 2.0;
         let eh = e[h - 1];
         let sign = if dd >= 0.0 { 1.0 } else { -1.0 };
-        let mu = d[h] - eh * eh / (dd + sign * dd.hypot(eh));
+        let mu = d[h] - eh * eh / (dd + sign * portable_hypot(dd, eh));
         let mut x = d[l] - mu;
         let mut z = e[l];
         for k in l..h {
-            let r = x.hypot(z);
+            let r = portable_hypot(x, z);
             let (c, s) = if r == 0.0 { (1.0, 0.0) } else { (x / r, -z / r) };
             if k > l {
                 e[k - 1] = c * e[k - 1] - s * z;
@@ -613,6 +666,19 @@ pub fn lanczos(op: &impl Operator, shift: f64, wanted: Wanted, block: usize, max
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde::Deserialize;
+
+    #[derive(Deserialize)]
+    struct HypotFixture {
+        rows: Vec<HypotRow>,
+    }
+
+    #[derive(Deserialize)]
+    struct HypotRow {
+        x: String,
+        y: String,
+        hypot: String,
+    }
 
     #[test]
     fn dense_symmetric_eigen() {
@@ -637,6 +703,27 @@ mod tests {
             assert!((norm - 1.0).abs() < 1e-12);
         }
         assert_eq!(symmetric_eigen(&[3.0], 1).unwrap().0, vec![3.0]);
+    }
+
+    #[test]
+    fn portable_hypot_matches_cross_machine_fixture() {
+        let fixture: HypotFixture = serde_json::from_str(include_str!("../tests/data/hypot-fixture.json")).unwrap();
+        assert_eq!(fixture.rows.len(), 2_000);
+        for row in fixture.rows {
+            let x = f64::from_bits(u64::from_str_radix(&row.x, 16).unwrap());
+            let y = f64::from_bits(u64::from_str_radix(&row.y, 16).unwrap());
+            let expected = u64::from_str_radix(&row.hypot, 16).unwrap();
+            assert_eq!(portable_hypot(x, y).to_bits(), expected, "hypot({}, {})", row.x, row.y);
+        }
+    }
+
+    #[test]
+    fn portable_hypot_handles_special_values() {
+        assert_eq!(portable_hypot(0.0, -0.0).to_bits(), 0);
+        assert_eq!(portable_hypot(f64::INFINITY, f64::NAN), f64::INFINITY);
+        assert!(portable_hypot(f64::NAN, 1.0).is_nan());
+        assert_eq!(portable_hypot(f64::MAX, f64::MAX), f64::INFINITY);
+        assert_eq!(portable_hypot(f64::MIN_POSITIVE, f64::MIN_POSITIVE).to_bits(), 0x0016_a09e_667f_3bcd);
     }
 
     /// K and M diagonal.

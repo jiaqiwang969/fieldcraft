@@ -31,9 +31,8 @@
 //!   for the solution of nonlinear finite element equations*, CMAME 22:59–85, 1980);
 //!
 //! or when the force residual is a thousandth of its tolerance (round-off: no correction can
-//! improve it). With path-dependent materials, an increment that starts within the force
-//! tolerance (a predictor that already solved it) waives the energy criterion, whose reference
-//! would be round-off.
+//! improve it). When an increment starts within the force tolerance (a predictor that already
+//! solved it), the energy criterion is waived, whose reference would be round-off.
 //!
 //! **Norms by kind of freedom.** Rotations (today those of coupled reference points; shells and
 //! beams are refused) are radians and their residuals moments, so neither shares a norm with the
@@ -170,6 +169,28 @@ pub struct Iteration {
     /// Contact: the augmentation it belongs to (0: the increment's first solution).
     #[serde(default, skip_serializing_if = "is_zero")]
     pub augmentation: usize,
+}
+
+/// One iteration retained when a nonlinear increment ultimately fails.
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
+pub struct NonlinearFailureIteration {
+    pub force: f64,
+    pub displacement: f64,
+    pub energy: f64,
+    pub line_search: f64,
+    pub closed_nodes: usize,
+    pub slipping_nodes: usize,
+}
+
+/// The last failed increment of a nonlinear static solve.
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
+pub struct NonlinearFailureDiagnostic {
+    pub step: String,
+    pub increment: usize,
+    pub load_factor: f64,
+    pub size: f64,
+    pub reason: String,
+    pub iterations: Vec<NonlinearFailureIteration>,
 }
 
 fn is_zero(n: &usize) -> bool {
@@ -396,6 +417,7 @@ impl From<Error> for Failure {
             // increment may avoid it.
             Error::Element { label, source: fieldcraft_fem::Error::Degenerate(m) } => Failure::Cutback(format!("element {label}: {m}")),
             Error::NotConverged(m) => Failure::Cutback(m),
+            Error::NotConvergedWithDiagnostics { message, .. } => Failure::Cutback(message),
             e => Failure::Fatal(e),
         }
     }
@@ -404,6 +426,12 @@ impl From<Error> for Failure {
 /// One hash of the contacts' active sets.
 fn active_sets(e: &Evaluation) -> u64 {
     e.contact.iter().fold(0u64, |h, s| h.rotate_left(17) ^ s.active_set())
+}
+
+fn contact_counts(e: &Evaluation) -> (usize, usize) {
+    e.contact.iter().fold((0, 0), |(closed, slipping), state| {
+        (closed + state.pressure.iter().filter(|p| **p > 0.0).count(), slipping + state.slipping.iter().filter(|slip| **slip).count())
+    })
 }
 
 fn norm_inf(v: &[f64]) -> f64 {
@@ -756,8 +784,6 @@ struct Run<'a> {
     /// Every element's material history at the end of the last converged increment
     /// (integration points × the material's history length).
     committed: Vec<Vec<f64>>,
-    /// Whether a material keeps history (the tangent predictor and its convergence rules).
-    path_dependent: bool,
     /// How the undeformed model's tangent factors (Cholesky), once asked.
     undeformed: Option<std::result::Result<(), FactorError>>,
     /// The contacts' multipliers per secondary node (the last converged increment's, or the
@@ -979,6 +1005,7 @@ impl Run<'_> {
         lambda: f64,
         size: f64,
         iterations: &mut Vec<Iteration>,
+        failure_iterations: &mut Vec<NonlinearFailureIteration>,
     ) -> std::result::Result<Converged, Failure> {
         let red = self.problem.red;
         let tol = self.settings.tolerances;
@@ -990,10 +1017,9 @@ impl Run<'_> {
             Some(Err(Failure::Cutback(_))) | None => (q0.to_vec(), self.state(q0, lambda, true)?),
         };
         let mut r = self.residual(&eval);
-        // With path-dependent materials, an increment that starts within the force tolerance (a
-        // predictor that already solved it) has only round-off left for the energy criterion to
-        // measure against: it is waived.
-        let started_converged = self.path_dependent && self.force_floor.is_some() && self.force_within(&r, tol.force);
+        // An increment that starts within the force tolerance (a predictor that already solved
+        // it) has only round-off left for the energy criterion to measure against: it is waived.
+        let started_converged = self.force_floor.is_some() && self.force_within(&r, tol.force);
         let prescribed = (size * self.prescribed.0, size * self.prescribed.1);
         // The energy criterion's reference: the first correction's work, or the tangent
         // predictor's when the increment started from one that is still in use.
@@ -1068,6 +1094,15 @@ impl Run<'_> {
                 augmentation: self.augmentation,
             };
             iterations.push(it);
+            let (closed_nodes, slipping_nodes) = contact_counts(&eval);
+            failure_iterations.push(NonlinearFailureIteration {
+                force: it.force,
+                displacement: it.displacement,
+                energy: it.energy,
+                line_search: it.line_search,
+                closed_nodes,
+                slipping_nodes,
+            });
             if !it.force.is_finite() {
                 return Err(Failure::Cutback("the residual is not finite".into()));
             }
@@ -1098,6 +1133,7 @@ impl Run<'_> {
         lambda: f64,
         size: f64,
         iterations: &mut Vec<Iteration>,
+        failure_iterations: &mut Vec<NonlinearFailureIteration>,
         count: &mut usize,
         warnings: &mut Vec<String>,
     ) -> std::result::Result<Converged, Failure> {
@@ -1131,7 +1167,7 @@ impl Run<'_> {
             // From the converged state, measured against the increment's start and its first
             // correction like the increment itself.
             let start = std::mem::take(&mut c.q);
-            c = self.increment(q0, Some(&start), c.energy, lambda, size, iterations)?;
+            c = self.increment(q0, Some(&start), c.energy, lambda, size, iterations, failure_iterations)?;
         }
     }
 
@@ -1573,7 +1609,6 @@ fn solve_on<'a>(
         iterations: 0,
         factor_entries: 0,
         committed,
-        path_dependent,
         undeformed: None,
         contact: problem.contacts.iter().map(Interface::committed).collect(),
         reference: vec![0.0; mesh.dofs()],
@@ -1671,6 +1706,7 @@ fn solve_on<'a>(
             let target_lambda = settings.load_factor(target);
             let change = if settings.load_path.is_some() { target_lambda - lambda } else { this };
             let mut iterations = Vec::new();
+            let mut failure_iterations = Vec::new();
             let number = history.increments.len() + 1;
             // Linear extrapolation of the last converged increment's free motion, in proportion to
             // the change of the load factor (so it turns with the load path).
@@ -1691,8 +1727,10 @@ fn solve_on<'a>(
             let mut augmentations = 0;
             run.augmentation = 0;
             let solved = run
-                .increment(&q, predictor.as_deref(), predicted_energy, target_lambda, change.abs(), &mut iterations)
-                .and_then(|c| run.augment(c, &q, target_lambda, change.abs(), &mut iterations, &mut augmentations, &mut warnings));
+                .increment(&q, predictor.as_deref(), predicted_energy, target_lambda, change.abs(), &mut iterations, &mut failure_iterations)
+                .and_then(|c| {
+                    run.augment(c, &q, target_lambda, change.abs(), &mut iterations, &mut failure_iterations, &mut augmentations, &mut warnings)
+                });
             if solved.is_err() {
                 run.contact = saved;
             }
@@ -1742,10 +1780,21 @@ fn solve_on<'a>(
                     fast = 0;
                     size = this * CUTBACK;
                     if size < settings.min_increment * (1.0 - SAME_TIME) {
-                        return Err(Error::NotConverged(format!(
+                        let message = format!(
                             "step `{}` stopped at load factor {lambda:.6} (step fraction {t:.6}): the increment to {target_lambda:.6} failed ({reason}) and a smaller one would be below the minimum increment {}",
                             step.name, settings.min_increment
-                        )));
+                        );
+                        return Err(Error::NotConvergedWithDiagnostics {
+                            message,
+                            diagnostic: Box::new(NonlinearFailureDiagnostic {
+                                step: step.name.clone(),
+                                increment: number,
+                                load_factor: target_lambda,
+                                size: this,
+                                reason,
+                                iterations: failure_iterations,
+                            }),
+                        });
                     }
                 }
             }
