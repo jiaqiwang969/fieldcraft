@@ -1,0 +1,40 @@
+{
+  "title": "NAFEMS 5R: 40-element beam random displacement",
+  "kind": "benchmark",
+  "source": "NAFEMS, Selected Benchmarks for Forced Vibration, R0016, 1989, Test 5R; beam idealization uses the 40 beam elements of harmonic-nafems-5h with a 1 N/m line load.",
+  "slow": true,
+  "quantities": [
+    {
+      "id": "midspan_displacement_peak_PSD",
+      "quantity": "midspan displacement peak PSD (beam model)",
+      "measure": {
+        "from": "R",
+        "pointer": "/probes/0/samples",
+        "max_by": "/displacement_psd",
+        "scale": 1000000.0
+      },
+      "value": 180.9,
+      "tolerance": {
+        "relative": 0.01,
+        "absolute": 1e-14
+      },
+      "reason": "1% predeclared public-reference target; the beam model is expected to reproduce the published NAFEMS beam value."
+    },
+    {
+      "id": "displacement_peak_frequency",
+      "quantity": "displacement peak frequency (beam model)",
+      "measure": {
+        "from": "R",
+        "pointer": "/probes/0/samples",
+        "max_by": "/displacement_psd",
+        "value": "/frequency"
+      },
+      "value": 42.65,
+      "tolerance": {
+        "relative": 0.002,
+        "absolute": 1e-14
+      },
+      "reason": "0.2% allowance for public frequency rounding, damped peak and finite frequency sampling."
+    }
+  ]
+}

@@ -2,6 +2,8 @@
 //! the real measured evidence is exercised by the external runner and the delivery
 //! receipt, while this test covers the receive gate and persistence boundary.
 
+#[path = "common/manifest.rs"]
+mod manifest;
 use fieldcraft_engine::Session;
 use fieldcraft_io::{
     Geometry, Run,
@@ -156,6 +158,7 @@ fn static_base_receive_recomputes_unverified_and_roundtrips_byte_identically() {
     assert_eq!(reply["modal_package"]["shape_storage"], "stored_in_kind_13_record; omitted_from_command_response");
     session.execute("file.save_as", &json!({"path":first,"results":true})).unwrap();
     let first_bytes = fs::read(&first).unwrap();
+    manifest::remove_derived_metadata(&first);
     let mut reopened = Session::default();
     reopened.execute("file.open", &json!({"path":first})).unwrap();
     let listed = reopened.execute("results.external.list", &json!({})).unwrap();

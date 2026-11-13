@@ -85,7 +85,7 @@ No PSD is turned into a signed tensor history or nonlinear principal-stress spec
 
 `solve.run mass` retains its scoped contract: only frequency, transient and
 response-spectrum steps together; other mixed cases use individual commands.
-The integration does not start lane 17's separately scheduled 5R or any BASE run.
+The integration does not start the separately scheduled 5R run or any BASE run.
 
 ## Native evidence tool
 
