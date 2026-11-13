@@ -1,0 +1,194 @@
+[
+  {
+    "command": "model.units",
+    "params": {
+      "system": "m-kg-s-N-Pa"
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 1,
+      "xyz": [
+        0,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "all",
+      "nodes": [
+        1
+      ]
+    }
+  },
+  {
+    "command": "model.mass.create",
+    "params": {
+      "name": "M",
+      "target": {
+        "set": "all"
+      },
+      "mass": 1
+    }
+  },
+  {
+    "command": "model.boundary_condition.create",
+    "params": {
+      "name": "plane",
+      "type": "displacement",
+      "target": {
+        "set": "all"
+      },
+      "values": [
+        null,
+        null,
+        0,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  {
+    "command": "model.spring.create",
+    "params": {
+      "name": "K1",
+      "type": "spring",
+      "first": {
+        "set": "all"
+      },
+      "direction": {
+        "vector": [
+          1,
+          1,
+          0
+        ]
+      },
+      "stiffness": 192.37689999999998
+    }
+  },
+  {
+    "command": "model.spring.create",
+    "params": {
+      "name": "K2",
+      "type": "spring",
+      "first": {
+        "set": "all"
+      },
+      "direction": {
+        "vector": [
+          -1,
+          1,
+          0
+        ]
+      },
+      "stiffness": 194.04489999999998
+    }
+  },
+  {
+    "command": "model.step.create",
+    "params": {
+      "name": "SRSS",
+      "procedure": {
+        "type": "response_spectrum",
+        "modes": 2,
+        "damping_ratio": 0.05,
+        "combination": "srss",
+        "direction": [
+          1,
+          0,
+          0
+        ],
+        "pseudo_acceleration": [
+          [
+            1,
+            1
+          ],
+          [
+            5,
+            1
+          ]
+        ]
+      },
+      "boundary_conditions": [
+        "plane"
+      ],
+      "output": [
+        "displacement"
+      ]
+    }
+  },
+  {
+    "command": "solve.spectrum",
+    "params": {
+      "step": "SRSS",
+      "threads": 1
+    },
+    "id": "solve_srss"
+  },
+  {
+    "command": "solve.probe",
+    "params": {
+      "step": "SRSS",
+      "nodes": [
+        1
+      ]
+    },
+    "id": "probe_srss"
+  },
+  {
+    "command": "model.step.create",
+    "params": {
+      "name": "CQC",
+      "procedure": {
+        "type": "response_spectrum",
+        "modes": 2,
+        "damping_ratio": 0.05,
+        "combination": "cqc",
+        "direction": [
+          1,
+          0,
+          0
+        ],
+        "pseudo_acceleration": [
+          [
+            1,
+            1
+          ],
+          [
+            5,
+            1
+          ]
+        ]
+      },
+      "boundary_conditions": [
+        "plane"
+      ],
+      "output": [
+        "displacement"
+      ]
+    }
+  },
+  {
+    "command": "solve.spectrum",
+    "params": {
+      "step": "CQC",
+      "threads": 1
+    },
+    "id": "solve_cqc"
+  },
+  {
+    "command": "solve.probe",
+    "params": {
+      "step": "CQC",
+      "nodes": [
+        1
+      ]
+    },
+    "id": "probe_cqc"
+  }
+]

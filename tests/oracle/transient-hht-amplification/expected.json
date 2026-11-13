@@ -1,0 +1,63 @@
+{
+  "title": "HHT-alpha one-step amplification matrix and derived spectral damping",
+  "kind": "theory",
+  "source": "Hilber, Hughes and Taylor (1977), Improved numerical dissipation for time integration algorithms in structural dynamics, Earthquake Engineering & Structural Dynamics 5, 283–292; the amplification matrix follows directly from the published equilibrium and Newmark kinematics.",
+  "quantities": [
+    {
+      "id": "u1",
+      "quantity": "HHT one-step displacement column 1",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/0/samples/1/displacement/0"
+      },
+      "value": 0.9802154537091078,
+      "tolerance": {
+        "relative": 2e-12,
+        "absolute": 2e-13
+      },
+      "reason": "The value is the corresponding entry of the closed-form HHT amplification matrix obtained from the stated alpha, beta=(1-alpha)^2/4, gamma=0.5-alpha and dt."
+    },
+    {
+      "id": "v1",
+      "quantity": "HHT one-step velocity column 1",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/0/samples/1/velocity/0"
+      },
+      "value": -0.3957265380011673,
+      "tolerance": {
+        "relative": 2e-12,
+        "absolute": 2e-13
+      },
+      "reason": "The value is the corresponding entry of the closed-form HHT amplification matrix; the matrix eigenvalues give spectral radius 0.999208304757686 and period ratio 3.152202303026974 for this omega*dt."
+    },
+    {
+      "id": "u2",
+      "quantity": "HHT one-step displacement column 2",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/1/samples/1/displacement/0"
+      },
+      "value": 0.09892273145446093,
+      "tolerance": {
+        "relative": 2e-12,
+        "absolute": 2e-13
+      },
+      "reason": "The value is the corresponding entry of the closed-form HHT amplification matrix obtained from the stated alpha, beta=(1-alpha)^2/4, gamma=0.5-alpha and dt."
+    },
+    {
+      "id": "v2",
+      "quantity": "HHT one-step velocity column 2",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/1/samples/1/velocity/0"
+      },
+      "value": 0.9786326900058364,
+      "tolerance": {
+        "relative": 2e-12,
+        "absolute": 2e-13
+      },
+      "reason": "The value is the corresponding entry of the closed-form HHT amplification matrix; the matrix eigenvalues give spectral radius 0.999208304757686 and period ratio 3.152202303026974 for this omega*dt."
+    }
+  ]
+}

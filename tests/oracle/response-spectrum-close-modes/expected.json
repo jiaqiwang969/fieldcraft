@@ -1,0 +1,63 @@
+{
+  "title": "Response spectrum close modes: SRSS versus CQC",
+  "kind": "theory",
+  "source": "Der Kiureghian (1981), A response spectrum method for random vibration analysis of MDF systems, Earthquake Engineering & Structural Dynamics 9, 1–18; the two-mode CQC correlation formula and modal combination are evaluated independently.",
+  "quantities": [
+    {
+      "id": "srss_x",
+      "quantity": "SRSS combined displacement x",
+      "measure": {
+        "from": "probe_srss",
+        "pointer": "/nodes/0/samples/0/displacement/0"
+      },
+      "value": 0.003659868797108191,
+      "tolerance": {
+        "relative": 2e-09,
+        "absolute": 1e-12
+      },
+      "reason": "Closed-form modal combination. The modal ordinates are a=0.5/13.87^2 and b=0.5/13.93^2; SRSS uses sqrt(a^2+b^2), while CQC uses the published correlation coefficient rho=8 zeta^2 (1+r) r^(3/2) / ((1-r^2)^2 + 4 zeta^2 r (1+r)^2)."
+    },
+    {
+      "id": "srss_y",
+      "quantity": "SRSS combined displacement y",
+      "measure": {
+        "from": "probe_srss",
+        "pointer": "/nodes/0/samples/0/displacement/1"
+      },
+      "value": 0.003659868797108191,
+      "tolerance": {
+        "relative": 2e-09,
+        "absolute": 1e-12
+      },
+      "reason": "Closed-form modal combination. The modal ordinates are a=0.5/13.87^2 and b=0.5/13.93^2; SRSS uses sqrt(a^2+b^2), while CQC uses the published correlation coefficient rho=8 zeta^2 (1+r) r^(3/2) / ((1-r^2)^2 + 4 zeta^2 r (1+r)^2)."
+    },
+    {
+      "id": "cqc_x",
+      "quantity": "CQC combined displacement x",
+      "measure": {
+        "from": "probe_cqc",
+        "pointer": "/nodes/0/samples/0/displacement/0"
+      },
+      "value": 0.005173377862806834,
+      "tolerance": {
+        "relative": 2e-09,
+        "absolute": 1e-12
+      },
+      "reason": "Closed-form modal combination. The modal ordinates are a=0.5/13.87^2 and b=0.5/13.93^2; SRSS uses sqrt(a^2+b^2), while CQC uses the published correlation coefficient rho=8 zeta^2 (1+r) r^(3/2) / ((1-r^2)^2 + 4 zeta^2 r (1+r)^2)."
+    },
+    {
+      "id": "cqc_y",
+      "quantity": "CQC combined displacement y",
+      "measure": {
+        "from": "probe_cqc",
+        "pointer": "/nodes/0/samples/0/displacement/1"
+      },
+      "value": 0.00015950145050283433,
+      "tolerance": {
+        "relative": 2e-09,
+        "absolute": 1e-12
+      },
+      "reason": "Closed-form modal combination. The modal ordinates are a=0.5/13.87^2 and b=0.5/13.93^2; SRSS uses sqrt(a^2+b^2), while CQC uses the published correlation coefficient rho=8 zeta^2 (1+r) r^(3/2) / ((1-r^2)^2 + 4 zeta^2 r (1+r)^2)."
+    }
+  ]
+}

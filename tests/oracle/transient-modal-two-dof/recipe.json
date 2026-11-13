@@ -1,0 +1,224 @@
+[
+  {
+    "command": "model.units",
+    "params": {
+      "system": "m-kg-s-N-Pa"
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 1,
+      "xyz": [
+        0,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 2,
+      "xyz": [
+        1,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "all",
+      "nodes": [
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "n1",
+      "nodes": [
+        1
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "n2",
+      "nodes": [
+        2
+      ]
+    }
+  },
+  {
+    "command": "model.mass.create",
+    "params": {
+      "name": "m1",
+      "target": {
+        "set": "n1"
+      },
+      "mass": 1
+    }
+  },
+  {
+    "command": "model.mass.create",
+    "params": {
+      "name": "m2",
+      "target": {
+        "set": "n2"
+      },
+      "mass": 1
+    }
+  },
+  {
+    "command": "model.spring.create",
+    "params": {
+      "name": "k1",
+      "type": "spring",
+      "first": {
+        "set": "n1"
+      },
+      "direction": {
+        "dof": 1
+      },
+      "stiffness": 1
+    }
+  },
+  {
+    "command": "model.spring.create",
+    "params": {
+      "name": "k2",
+      "type": "spring",
+      "first": {
+        "set": "n2"
+      },
+      "direction": {
+        "dof": 1
+      },
+      "stiffness": 4
+    }
+  },
+  {
+    "command": "model.boundary_condition.create",
+    "params": {
+      "name": "guide",
+      "type": "displacement",
+      "target": {
+        "set": "all"
+      },
+      "values": [
+        null,
+        0,
+        0,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  {
+    "command": "model.load.create",
+    "params": {
+      "name": "force1",
+      "type": "force",
+      "target": {
+        "set": "n1"
+      },
+      "vector": [
+        1,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "command": "model.load.create",
+    "params": {
+      "name": "force2",
+      "type": "force",
+      "target": {
+        "set": "n2"
+      },
+      "vector": [
+        1,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "command": "model.step.create",
+    "params": {
+      "name": "ModalStep",
+      "procedure": {
+        "type": "transient",
+        "time_step": 0.001,
+        "increments": 1000,
+        "output_every": 500,
+        "method": {
+          "type": "modal",
+          "modes": 2
+        },
+        "load_amplitudes": {
+          "force1": {
+            "type": "tabular",
+            "points": [
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          },
+          "force2": {
+            "type": "tabular",
+            "points": [
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          }
+        }
+      },
+      "boundary_conditions": [
+        "guide"
+      ],
+      "loads": [
+        "force1",
+        "force2"
+      ]
+    }
+  },
+  {
+    "command": "solve.transient",
+    "params": {
+      "step": "ModalStep",
+      "threads": 1
+    },
+    "id": "solve"
+  },
+  {
+    "command": "solve.probe",
+    "params": {
+      "step": "ModalStep",
+      "nodes": [
+        1,
+        2
+      ]
+    },
+    "id": "probe"
+  }
+]

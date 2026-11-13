@@ -1,0 +1,63 @@
+{
+  "title": "Two-DOF modal superposition under a step force",
+  "kind": "theory",
+  "source": "Chopra, Dynamics of Structures, 5th ed., §9.4; modal superposition of independent undamped SDOF step responses.",
+  "quantities": [
+    {
+      "id": "u1_1",
+      "quantity": "mode-superposed displacement of DOF 1 at t=0.5 s",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/0/samples/1/displacement/0"
+      },
+      "value": 0.12241743810962724,
+      "tolerance": {
+        "relative": 2e-06,
+        "absolute": 1e-09
+      },
+      "reason": "Each uncoupled modal coordinate has the closed-form step response (1-cos(omega t))/omega^2; the retained basis contains both modes exactly and the fixed-step error bound is 2e-6."
+    },
+    {
+      "id": "u2_1",
+      "quantity": "mode-superposed displacement of DOF 2 at t=0.5 s",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/1/samples/1/displacement/0"
+      },
+      "value": 0.11492442353296506,
+      "tolerance": {
+        "relative": 2e-06,
+        "absolute": 1e-09
+      },
+      "reason": "The second modal coordinate has omega=2 rad/s and the same closed-form step response; both modes are retained."
+    },
+    {
+      "id": "u1_2",
+      "quantity": "mode-superposed displacement of DOF 1 at t=1 s",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/0/samples/2/displacement/0"
+      },
+      "value": 0.45969769413186023,
+      "tolerance": {
+        "relative": 2e-06,
+        "absolute": 1e-09
+      },
+      "reason": "Each uncoupled modal coordinate has the closed-form step response (1-cos(omega t))/omega^2; the retained basis contains both modes exactly and the fixed-step error bound is 2e-6."
+    },
+    {
+      "id": "u2_2",
+      "quantity": "mode-superposed displacement of DOF 2 at t=1 s",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/1/samples/2/displacement/0"
+      },
+      "value": 0.3540367091367856,
+      "tolerance": {
+        "relative": 2e-06,
+        "absolute": 1e-09
+      },
+      "reason": "The second modal coordinate has omega=2 rad/s and the same closed-form step response; both modes are retained."
+    }
+  ]
+}

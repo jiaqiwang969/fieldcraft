@@ -1,0 +1,91 @@
+{
+  "title": "Undamped SDOF step response with Newmark average acceleration",
+  "kind": "theory",
+  "source": "N. M. Newmark (1959), A method of computation for structural dynamics, Journal of the Engineering Mechanics Division 85(EM3), 67–94; closed-form step response for m=1, k=4, F=1.",
+  "quantities": [
+    {
+      "id": "u_1",
+      "quantity": "displacement at t=0.1 s",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/0/samples/1/displacement/0"
+      },
+      "value": 0.0049833555396895934,
+      "tolerance": {
+        "relative": 2e-06,
+        "absolute": 1e-09
+      },
+      "reason": "The exact step response is u=(F/k)(1-cos(omega t)); the average-acceleration phase error is O((omega*dt)^2/12) with omega=2 rad/s and dt=0.001 s, so 2e-6 bounds the accumulated time-discretisation error."
+    },
+    {
+      "id": "v_1",
+      "quantity": "velocity at t=0.1 s",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/0/samples/1/velocity/0"
+      },
+      "value": 0.09933466539753061,
+      "tolerance": {
+        "relative": 2e-06,
+        "absolute": 1e-09
+      },
+      "reason": "The exact step response is v=(F/(m omega)) sin(omega t); the same fixed-step Newmark phase-error bound is used."
+    },
+    {
+      "id": "u_5",
+      "quantity": "displacement at t=0.5 s",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/0/samples/5/displacement/0"
+      },
+      "value": 0.11492442353296506,
+      "tolerance": {
+        "relative": 2e-06,
+        "absolute": 1e-09
+      },
+      "reason": "The exact step response is u=(F/k)(1-cos(omega t)); the average-acceleration phase error is O((omega*dt)^2/12) with omega=2 rad/s and dt=0.001 s, so 2e-6 bounds the accumulated time-discretisation error."
+    },
+    {
+      "id": "v_5",
+      "quantity": "velocity at t=0.5 s",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/0/samples/5/velocity/0"
+      },
+      "value": 0.42073549240394825,
+      "tolerance": {
+        "relative": 2e-06,
+        "absolute": 1e-09
+      },
+      "reason": "The exact step response is v=(F/(m omega)) sin(omega t); the same fixed-step Newmark phase-error bound is used."
+    },
+    {
+      "id": "u_10",
+      "quantity": "displacement at t=1 s",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/0/samples/10/displacement/0"
+      },
+      "value": 0.3540367091367856,
+      "tolerance": {
+        "relative": 2e-06,
+        "absolute": 1e-09
+      },
+      "reason": "The exact step response is u=(F/k)(1-cos(omega t)); the average-acceleration phase error is O((omega*dt)^2/12) with omega=2 rad/s and dt=0.001 s, so 2e-6 bounds the accumulated time-discretisation error."
+    },
+    {
+      "id": "v_10",
+      "quantity": "velocity at t=1 s",
+      "measure": {
+        "from": "probe",
+        "pointer": "/nodes/0/samples/10/velocity/0"
+      },
+      "value": 0.45464871341284085,
+      "tolerance": {
+        "relative": 2e-06,
+        "absolute": 1e-09
+      },
+      "reason": "The exact step response is v=(F/(m omega)) sin(omega t); the same fixed-step Newmark phase-error bound is used."
+    }
+  ]
+}

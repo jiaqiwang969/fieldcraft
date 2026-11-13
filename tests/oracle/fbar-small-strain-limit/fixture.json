@@ -1,0 +1,13 @@
+{
+  "note": "FieldCraft's accepted results for this case, written by `cargo xtask oracle --bless`. A result outside its band fails CI.",
+  "values": {
+    "fbar_minus_bbar": {
+      "band": 1e-10,
+      "value": 5.148960820428386e-16
+    },
+    "middle_ux": {
+      "band": 1.5000000005148963e-15,
+      "value": 5.000000005148963e-7
+    }
+  }
+}

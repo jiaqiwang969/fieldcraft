@@ -1,0 +1,3 @@
+# HHT-alpha amplification matrix
+
+Two identical m=1, k=4 oscillators start from the two basis states (u,v)=(1,0) and (0,1). One HHT-alpha step uses alpha=-0.1, beta=(1-alpha)^2/4, gamma=0.5-alpha and dt=0.1 s. The four quantities are the two columns of the real amplification matrix. Its characteristic polynomial has eigenvalues 0.999208304757686 exp(±i 0.1993268420984914); therefore the numerical damping ratio is 0.003973386314139625 and the numerical period ratio is 3.152202303026974. These derived values are included to make the spectral interpretation explicit; the oracle measures the matrix entries directly.
