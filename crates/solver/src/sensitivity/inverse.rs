@@ -14,6 +14,7 @@ const INITIAL_DAMPING: f64 = 1e-3; // unit-factors: dimensionless relative LM di
 const STATIONARITY_TOLERANCE: f64 = 1e-9; // unit-factors: dimensionless normalized gradient tolerance
 const MIN_DAMPING: f64 = 1e-12; // unit-factors: dimensionless lower LM damping bound
 const MAX_DAMPING: f64 = 1e12; // unit-factors: dimensionless upper LM damping bound
+const MODEL_RELATIVE_PRECISION: f64 = 1e-8; // Dimensionless relative precision of one finite-element model evaluation.
 
 #[derive(Debug, Clone)]
 pub struct FrequencyFit {
@@ -119,6 +120,11 @@ pub(super) fn fit_scalar(
     if sigma.len() != fit.observed.len() || sigma.iter().any(|s| !s.is_finite() || *s <= 0.0) {
         return Err(Error::Invalid("standard deviations must be positive finite and match observations".into()));
     }
+    // Use the supplied standard deviations when known; otherwise these are the
+    // relative scales already used to whiten the observations.  This floor is
+    // the squared residual of one model-evaluation precision in every datum.
+    let platform_floor =
+        fit.observed.iter().zip(sigma).map(|(observation, scale)| (MODEL_RELATIVE_PRECISION * observation.abs() / scale).powi(2)).sum::<f64>();
     let scale = initial.abs().max((fit.upper - fit.lower) * 0.1);
     if !scale.is_finite() || scale <= 0.0 {
         return Err(Error::Invalid("frequency fit parameter scale overflow".into()));
@@ -196,9 +202,9 @@ pub(super) fn fit_scalar(
                 warnings.push("Confidence interval is a local Gaussian linearization conditional on the model and known independent observation errors; it excludes model discrepancy.".into());
             }
             if floating_point_plateau {
-                warnings.push(format!("Floating-point plateau after rejected step: gradient criterion not met, but the predicted relative decrease is at most sqrt(machine epsilon), below finite-element evaluation noise; normalized_gradient={}, predicted_decrease={}, objective={}",
+                warnings.push(format!("Floating-point plateau after rejected step: gradient criterion not met, but the predicted decrease is below the relative machine-epsilon criterion or the finite-element model-evaluation floor; normalized_gradient={}, predicted_decrease={}, objective={}, platform_floor={}",
                     current.gradient.abs() / current.information.sqrt(),
-                    0.5 * (current.gradient / current.information.sqrt()).powi(2), current.cost));
+                    0.5 * (current.gradient / current.information.sqrt()).powi(2), current.cost, platform_floor));
             }
             return Ok(FrequencyEstimate {
                 parameter: parameter.clone(),
@@ -233,10 +239,12 @@ pub(super) fn fit_scalar(
             // Undamped GN decrease, not the artificially small LM step at large damping.
             // cost stores the squared whitened residual (including any prior).
             let decrease = 0.5 * (current.gradient / current.information.sqrt()).powi(2);
-            // Below one squared standard deviation, compare with an absolute sqrt-epsilon
-            // floor: the remaining decrease is below FE floating-point noise and has no
-            // statistical meaning relative to the measurement error.
-            floating_point_plateau = decrease.is_finite() && decrease <= f64::EPSILON.sqrt() * current.cost.max(1.0);
+            // Once the predicted decrease is below the model's one-evaluation
+            // precision, further iterations have no meaning.  The floor uses
+            // the same observation scales as the whitened objective; it also
+            // prevents a small relative-residual objective from being treated
+            // as if it were measured in absolute standard-deviation units.
+            floating_point_plateau = decrease.is_finite() && (decrease <= f64::EPSILON.sqrt() * current.cost || decrease <= platform_floor);
             damping = (damping * 10.0).min(MAX_DAMPING);
         }
     }
@@ -367,30 +375,81 @@ mod platform_tests {
     }
 
     #[test]
-    fn scalar_self_consistent_low_cost_reaches_platform() {
+    fn scalar_relative_scale_floor_requires_model_precision() {
         let mut model = Model::default();
         model.add_material("m", Material { density: Some(0.9), ..Default::default() }).unwrap();
         let parameter = Parameter::Material { name: "m".into(), constant: MaterialConstant::Density };
         let fit = FrequencyFit {
             lower: 0.5,
             upper: 1.5,
-            observed: vec![1.0, 1.0],
+            observed: vec![1.00005],
             mode_indices: None,
-            standard_deviation: Some(vec![1.0; 2]),
+            standard_deviation: None,
+            regularization: 0.0,
+            max_iterations: 4,
+            relative_increment: 1e-5,
+        };
+        let error = fit_scalar(&model, &parameter, &fit, &[1.0], "injected coarse frequency response", |m, _| {
+            let x = parameter.value(m)?;
+            let frequency = (x / 1e-4).round() * 1e-4;
+            Ok(vec![(frequency, 1.0)])
+        })
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("frequency inverse reached"), "{error}");
+    }
+
+    #[test]
+    fn scalar_relative_scale_floor_reaches_platform() {
+        let mut model = Model::default();
+        model.add_material("m", Material { density: Some(0.9), ..Default::default() }).unwrap();
+        let parameter = Parameter::Material { name: "m".into(), constant: MaterialConstant::Density };
+        let fit = FrequencyFit {
+            lower: 0.5,
+            upper: 1.5,
+            observed: vec![1.000000004],
+            mode_indices: None,
+            standard_deviation: None,
             regularization: 0.0,
             max_iterations: 32,
             relative_increment: 1e-5,
         };
-        let r = fit_scalar(&model, &parameter, &fit, &[1.0; 2], "injected self-consistent frequency response", |m, _| {
+        let r = fit_scalar(&model, &parameter, &fit, &[1.0], "injected self-consistent frequency response", |m, _| {
             let x = parameter.value(m)?;
-            // A deterministic 1e-7 output quantum stands in for the FE frequency
-            // roundoff that leaves a tiny, self-consistent residual at the solution.
-            let frequency = (x / 1e-7).round() * 1e-7;
-            Ok(vec![(frequency, 1.0), (frequency + 1.234e-5, 1.0)])
+            // A deterministic 1e-8 output quantum stands in for the FE model
+            // precision; the remaining relative residual is below P=1e-8.
+            let frequency = (x / 1e-8).round() * 1e-8;
+            Ok(vec![(frequency, 1.0)])
         })
         .unwrap();
-        assert!((r.estimate - 0.9999938).abs() < 1e-7, "estimate={} objective={}", r.estimate, r.objective);
-        assert!(r.objective < 1.0);
+        assert!((r.estimate - 1.0).abs() < 1e-8, "estimate={} objective={}", r.estimate, r.objective);
+        assert!(r.objective < 1e-16);
         assert!(r.warnings.iter().any(|w| w.contains("Floating-point plateau")), "{:?}", r.warnings);
+    }
+
+    #[test]
+    fn scalar_known_error_floor_reaches_platform() {
+        let mut model = Model::default();
+        model.add_material("m", Material { density: Some(0.9), ..Default::default() }).unwrap();
+        let parameter = Parameter::Material { name: "m".into(), constant: MaterialConstant::Density };
+        let fit = FrequencyFit {
+            lower: 0.5,
+            upper: 1.5,
+            observed: vec![0.00700000002],
+            mode_indices: None,
+            standard_deviation: Some(vec![1e-5]),
+            regularization: 0.0,
+            max_iterations: 32,
+            relative_increment: 1e-5,
+        };
+        let r = fit_scalar(&model, &parameter, &fit, &[0.007], "injected shell-frequency response", |m, _| {
+            let x = parameter.value(m)?;
+            let frequency = (0.007 * x / 1e-10).round() * 1e-10;
+            Ok(vec![(frequency, 0.007)])
+        })
+        .unwrap();
+        assert!((r.estimate - 1.0).abs() < 1e-7, "estimate={} objective={}", r.estimate, r.objective);
+        assert!(r.objective < 1e-10);
+        assert!(r.warnings.iter().any(|w| w.contains("Floating-point plateau") && w.contains("platform_floor=")), "{:?}", r.warnings);
     }
 }
