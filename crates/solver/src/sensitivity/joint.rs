@@ -352,7 +352,10 @@ pub fn fit_joint(initial: &[f64], fit: &JointFit, response: impl Fn(&[f64]) -> R
                 solve(current.info.clone(), current.gradient.clone())?
             };
             let decrease = 0.5 * current.gradient.iter().zip(direction).map(|(g, d)| g * d).sum::<f64>();
-            if decrease.is_finite() && decrease >= 0.0 && decrease <= f64::EPSILON.sqrt() * current.cost {
+            // Below one squared standard deviation, compare with an absolute sqrt-epsilon
+            // floor: the remaining decrease is below FE floating-point noise and has no
+            // statistical meaning relative to the measurement error.
+            if decrease.is_finite() && decrease >= 0.0 && decrease <= f64::EPSILON.sqrt() * current.cost.max(1.0) {
                 floating_point_plateau = Some(decrease);
             }
             damping = (damping * 10.0).min(MAX_DAMPING);

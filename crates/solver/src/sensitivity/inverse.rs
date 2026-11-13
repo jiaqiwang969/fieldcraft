@@ -233,7 +233,10 @@ pub(super) fn fit_scalar(
             // Undamped GN decrease, not the artificially small LM step at large damping.
             // cost stores the squared whitened residual (including any prior).
             let decrease = 0.5 * (current.gradient / current.information.sqrt()).powi(2);
-            floating_point_plateau = decrease.is_finite() && decrease <= f64::EPSILON.sqrt() * current.cost;
+            // Below one squared standard deviation, compare with an absolute sqrt-epsilon
+            // floor: the remaining decrease is below FE floating-point noise and has no
+            // statistical meaning relative to the measurement error.
+            floating_point_plateau = decrease.is_finite() && decrease <= f64::EPSILON.sqrt() * current.cost.max(1.0);
             damping = (damping * 10.0).min(MAX_DAMPING);
         }
     }
@@ -361,5 +364,33 @@ mod platform_tests {
         }
         // A strongly wrong derivative must not be excused by repeated LM rejection.
         assert!(run(1.0, vec![-49.0, 51.0], 0.1, 32).is_err());
+    }
+
+    #[test]
+    fn scalar_self_consistent_low_cost_reaches_platform() {
+        let mut model = Model::default();
+        model.add_material("m", Material { density: Some(0.9), ..Default::default() }).unwrap();
+        let parameter = Parameter::Material { name: "m".into(), constant: MaterialConstant::Density };
+        let fit = FrequencyFit {
+            lower: 0.5,
+            upper: 1.5,
+            observed: vec![1.0, 1.0],
+            mode_indices: None,
+            standard_deviation: Some(vec![1.0; 2]),
+            regularization: 0.0,
+            max_iterations: 32,
+            relative_increment: 1e-5,
+        };
+        let r = fit_scalar(&model, &parameter, &fit, &[1.0; 2], "injected self-consistent frequency response", |m, _| {
+            let x = parameter.value(m)?;
+            // A deterministic 1e-7 output quantum stands in for the FE frequency
+            // roundoff that leaves a tiny, self-consistent residual at the solution.
+            let frequency = (x / 1e-7).round() * 1e-7;
+            Ok(vec![(frequency, 1.0), (frequency + 1.234e-5, 1.0)])
+        })
+        .unwrap();
+        assert!((r.estimate - 0.9999938).abs() < 1e-7, "estimate={} objective={}", r.estimate, r.objective);
+        assert!(r.objective < 1.0);
+        assert!(r.warnings.iter().any(|w| w.contains("Floating-point plateau")), "{:?}", r.warnings);
     }
 }
