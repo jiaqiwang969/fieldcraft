@@ -3,19 +3,19 @@
   "values": {
     "poisson_frequency_ratio": {
       "band": 9.89010989010989e-11,
-      "value": 0.028661558901799247
+      "value": 0.098893961466794
     },
     "poisson_static_ratio": {
       "band": 1.978021978021978e-10,
-      "value": -0.04531017587792442
+      "value": -0.19779286877748853
     },
     "thickness_frequency_ratio": {
       "band": 1e-9,
-      "value": 0.9989747345381658
+      "value": 0.9999568498778543
     },
     "thickness_static_ratio": {
       "band": 3.0000000000000004e-9,
-      "value": -2.99898794990094
+      "value": -2.9999564558252145
     }
   }
 }

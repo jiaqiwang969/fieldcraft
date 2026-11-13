@@ -1,7 +1,7 @@
 {
-  "title": "Thin plate strip thickness and Poisson sensitivity",
+  "title": "Cylindrical thin strip thickness and Poisson sensitivity",
   "kind": "theory",
-  "source": "Kirchhoff thin-plate bending theory, D=E t^3/[12(1-nu^2)], with the discrete shell strip used as the numerical realization. The reference ratios are the closed-form bending ratios; the stated bands cover shear deformation and the four-by-one mesh.",
+  "source": "A Kirchhoff cylindrical-bending strip: the two long edges y=0 and y=1 impose u_y=0 and rotation about x=0, so the width strain and curvature vanish and D=E t^3/[12(1-nu^2)] applies. The reference ratios are the closed-form logarithmic derivatives; the tolerance is the two-mesh difference plus the closed-form Timoshenko shear/rotary correction.",
   "quantities": [
     {
       "id": "thickness_static_ratio",
@@ -9,7 +9,7 @@
       "measure": {
         "from": "static_thickness",
         "pointer": "/direct",
-        "scale": 0.1,
+        "scale": 0.02,
         "over": {
           "from": "probe",
           "pointer": "/nodes/0/displacement/2"
@@ -17,9 +17,9 @@
       },
       "value": -3.0,
       "tolerance": {
-        "relative": 0.5
+        "relative": 0.0001
       },
-      "reason": "Kirchhoff bending gives w proportional to t^-3; the 50% band covers transverse shear and coarse mesh effects."
+      "reason": "Kirchhoff cylindrical bending gives w proportional to t^-3. The Timoshenko estimate uses w=P[L^3/(3EI)+L/(kappa G A)] with r=3EI/(kappa G A L^2)=1.95e-5; its relative correction is 1.30e-5, and the 4x1 versus 8x1 mesh difference is 8.47e-6, so 1e-4 covers their sum."
     },
     {
       "id": "thickness_frequency_ratio",
@@ -27,7 +27,7 @@
       "measure": {
         "from": "frequency_thickness",
         "pointer": "/modes/0/frequency_derivative",
-        "scale": 0.1,
+        "scale": 0.02,
         "over": {
           "from": "frequency",
           "pointer": "/modes/0/frequency"
@@ -35,9 +35,9 @@
       },
       "value": 1.0,
       "tolerance": {
-        "relative": 0.5
+        "relative": 0.0001
       },
-      "reason": "With shell mass proportional to t and bending stiffness proportional to t^3, thin-plate theory gives f proportional to t; the band covers shear and mesh effects."
+      "reason": "Kirchhoff bending with shell mass proportional to t gives f proportional to t. For beta_1=1.875104, the Timoshenko estimate has eta_s=2.2854e-5 and eta_r=7.3250e-6, giving a 3.02e-5 correction; the two-mesh difference is 2.16e-7."
     },
     {
       "id": "poisson_static_ratio",
@@ -53,9 +53,9 @@
       },
       "value": -0.1978021978021978,
       "tolerance": {
-        "relative": 0.8
+        "relative": 0.0001
       },
-      "reason": "Kirchhoff plate theory gives -2 nu^2/(1-nu^2); the 80% band explicitly covers the dominant shear and coarse-mesh departure in this four-by-one strip."
+      "reason": "Kirchhoff gives -2 nu^2/(1-nu^2). With the same Timoshenko expression and G=E/[2(1+nu)], the shear correction is 4.22e-5 relative; the two-mesh difference is 2.76e-5, so 1e-4 is a bounded sum."
     },
     {
       "id": "poisson_frequency_ratio",
@@ -71,9 +71,9 @@
       },
       "value": 0.0989010989010989,
       "tolerance": {
-        "relative": 0.75
+        "relative": 0.0001
       },
-      "reason": "The thin-plate frequency ratio is nu^2/(1-nu^2); the wide band covers the coarse strip and shear terms."
+      "reason": "Kirchhoff frequency theory gives nu^2/(1-nu^2). The first-mode Timoshenko correction uses R_nu - 0.5 eta_s nu/(1-nu)/(1+eta_s+eta_r), a 4.95e-5 relative correction; the two-mesh difference is 1.24e-7."
     }
   ]
 }
