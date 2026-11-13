@@ -1,0 +1,33 @@
+{
+  "title": "ASTM E1049 finite-record rainflow with a Basquin S-N curve",
+  "kind": "theory",
+  "source": "ASTM E1049-85(2017), \u00a75.4.4 three-point rainflow; Basquin Miner sum evaluated from the displayed cycle list.",
+  "quantities": [
+    {
+      "id": "rainflow_cycle_count",
+      "quantity": "sum of finite-record cycle counts",
+      "measure": {
+        "from": "fatigue",
+        "pointer": "/nodes/0/cycle_count"
+      },
+      "value": 4.0,
+      "tolerance": {
+        "absolute": 1e-12
+      },
+      "reason": "The ASTM sequence reduces to seven ranges with counts 0.5, 0.5, 1, 0.5, 0.5, 0.5, 0.5; the exact sum is 4.0."
+    },
+    {
+      "id": "miner_damage",
+      "quantity": "Miner damage for the finite record",
+      "measure": {
+        "from": "fatigue",
+        "pointer": "/nodes/0/damage"
+      },
+      "value": 0.0013675000000000002,
+      "tolerance": {
+        "absolute": 1e-12
+      },
+      "reason": "For each listed range r, amplitude a=r/2 and N=100(10/a)^3; summing count/N gives the hand calculation in README.md."
+    }
+  ]
+}

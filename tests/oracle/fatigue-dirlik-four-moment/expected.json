@@ -1,0 +1,49 @@
+{
+  "title": "Dirlik four-moment spectral fatigue density",
+  "kind": "theory",
+  "source": "Dirlik and Benasciutti, Metals 11 (2021) 1333, equations (8) and (9); the independent Simpson integral of the stated amplitude density is shown in README.md.",
+  "quantities": [
+    {
+      "id": "dirlik_m0",
+      "quantity": "projected stress spectral moment m0 (Pa\u00b2)",
+      "measure": {
+        "from": "random",
+        "pointer": "/projected_stress/0/moments_hz/0"
+      },
+      "value": 4.0,
+      "tolerance": {
+        "relative": 1e-07,
+        "absolute": 1e-12
+      },
+      "reason": "The independent unit-transfer rectangular spectrum is 1 Pa\u00b2/Hz on 1..5 Hz, giving m0=4; finite-element inertia is negligible at these frequencies and the solver integrates the linear interval exactly."
+    },
+    {
+      "id": "dirlik_m2",
+      "quantity": "projected stress spectral moment m2 (Pa\u00b2 Hz\u00b2)",
+      "measure": {
+        "from": "random",
+        "pointer": "/projected_stress/0/moments_hz/2"
+      },
+      "value": 41.333333333333336,
+      "tolerance": {
+        "relative": 1e-07,
+        "absolute": 1e-12
+      },
+      "reason": "Direct integration of f\u00b2 over 1..5 Hz gives (5\u00b3-1\u00b3)/3=124/3."
+    },
+    {
+      "id": "dirlik_damage",
+      "quantity": "Dirlik damage over 10 s",
+      "measure": {
+        "from": "random",
+        "pointer": "/projected_stress/0/fatigue/damage"
+      },
+      "value": 8.740438621002562,
+      "tolerance": {
+        "relative": 1e-06,
+        "absolute": 1e-12
+      },
+      "reason": "The four moments give alpha1=0.933256525257383, alpha2=0.826798965085801, D1=0.104560681940958, R=0.55609740518208, D2=0.179258445681847, D3=0.716180872377195, Q=0.130700852426198. Integrating z^3 times p(z)=D1/Q exp(-z/Q)+D2 z/R\u00b2 exp(-z\u00b2/(2R\u00b2))+D3 z exp(-z\u00b2/2) from z=0 to 20 by 200000-panel Simpson yields ratio 0.903944626778584 and damage 8.74043862100256."
+    }
+  ]
+}

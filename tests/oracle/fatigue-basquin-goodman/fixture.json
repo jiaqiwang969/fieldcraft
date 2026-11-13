@@ -1,0 +1,21 @@
+{
+  "note": "FieldCraft's accepted results for this case, written by `cargo xtask oracle --bless`. A result outside its band fails CI.",
+  "values": {
+    "goodman_damage": {
+      "band": 3.731878425655977e-12,
+      "value": 0.003731778425655972
+    },
+    "goodman_repeated_life": {
+      "band": 1.0718751000000014e-6,
+      "value": 1071.8750000000014
+    },
+    "uncorrected_damage": {
+      "band": 1.2801000000000002e-12,
+      "value": 0.0012799999999999982
+    },
+    "uncorrected_repeated_life": {
+      "band": 3.1250001000000047e-6,
+      "value": 3125.0000000000045
+    }
+  }
+}

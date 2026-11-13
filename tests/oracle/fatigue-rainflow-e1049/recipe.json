@@ -1,0 +1,183 @@
+[
+  {
+    "command": "solve.fatigue.transient",
+    "params": {
+      "history": {
+        "step": "ReferenceHistory",
+        "spectrum": false,
+        "units": {
+          "stress": "Pa",
+          "time": "s"
+        },
+        "stress_components": [
+          "xx",
+          "yy",
+          "zz",
+          "xy",
+          "xz",
+          "yz"
+        ],
+        "stress_location": "global nodal average; shell top surface",
+        "frames": [
+          {
+            "time": 0.0
+          },
+          {
+            "time": 1.0
+          },
+          {
+            "time": 2.0
+          },
+          {
+            "time": 3.0
+          },
+          {
+            "time": 4.0
+          },
+          {
+            "time": 5.0
+          },
+          {
+            "time": 6.0
+          },
+          {
+            "time": 7.0
+          },
+          {
+            "time": 8.0
+          }
+        ],
+        "nodes": [
+          {
+            "node": 1,
+            "samples": [
+              {
+                "time": 0.0,
+                "stress": [
+                  -2,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              },
+              {
+                "time": 1.0,
+                "stress": [
+                  1,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              },
+              {
+                "time": 2.0,
+                "stress": [
+                  -3,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              },
+              {
+                "time": 3.0,
+                "stress": [
+                  5,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              },
+              {
+                "time": 4.0,
+                "stress": [
+                  -1,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              },
+              {
+                "time": 5.0,
+                "stress": [
+                  3,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              },
+              {
+                "time": 6.0,
+                "stress": [
+                  -4,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              },
+              {
+                "time": 7.0,
+                "stress": [
+                  4,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              },
+              {
+                "time": 8.0,
+                "stress": [
+                  -2,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "source_id": "ASTM E1049 nine-point reference",
+      "step": "ReferenceHistory",
+      "nodes": [
+        1
+      ],
+      "max_time_step_seconds": 1.0,
+      "weights": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "curve": {
+        "amplitude_ref": 10,
+        "cycles_ref": 100,
+        "exponent": 3,
+        "endurance_limit": 0
+      },
+      "correction": {
+        "type": "none"
+      }
+    },
+    "id": "fatigue"
+  }
+]
