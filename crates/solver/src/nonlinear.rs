@@ -112,6 +112,10 @@
 //! active set chatters is cut back. With contact the force scale of the convergence test is that
 //! of the converged states, the loads and the current state, not the largest force of every
 //! trial: a trial state can press a body deep into another before the active set settles.
+//! If a force-loaded frictional increment fails, the solver makes one same-size retry before
+//! cutting back: nodes that were open at the previous converged increment use the stick branch,
+//! and the retry is accepted only when its static Coulomb inequalities hold. A failed retry is
+//! discarded together with its contact state, so the original failure and cutback remain intact.
 //!
 //! Element forces and tangents are computed in parallel and added in label order, so results are
 //! the same bit for bit on any number of threads.
@@ -180,6 +184,9 @@ pub struct NonlinearFailureIteration {
     pub line_search: f64,
     pub closed_nodes: usize,
     pub slipping_nodes: usize,
+    /// Failed-increment retry number (0: the original algorithm, 1: the stick retry).
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub retry: usize,
 }
 
 /// The last failed increment of a nonlinear static solve.
@@ -584,7 +591,7 @@ impl Problem<'_> {
         reference: &[f64],
         band: f64,
     ) -> Result<Evaluation> {
-        self.evaluate_with_contact(u, lambda, tangent, committed, contact, reference, band, true)
+        self.evaluate_with_contact_policy(u, lambda, tangent, committed, contact, reference, band, true, None)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -599,6 +606,22 @@ impl Problem<'_> {
         band: f64,
         include_contact: bool,
     ) -> Result<Evaluation> {
+        self.evaluate_with_contact_policy(u, lambda, tangent, committed, contact, reference, band, include_contact, None)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn evaluate_with_contact_policy(
+        &self,
+        u: &[f64],
+        lambda: f64,
+        tangent: bool,
+        committed: &[Vec<f64>],
+        contact: &[contact::Committed],
+        reference: &[f64],
+        band: f64,
+        include_contact: bool,
+        stick: Option<&[Vec<bool>]>,
+    ) -> Result<Evaluation> {
         let layout = &self.mesh.layout;
         let n = u.len();
         let mut internal = vec![0.0; n];
@@ -607,7 +630,17 @@ impl Problem<'_> {
         let mut states = Vec::with_capacity(self.contacts.len());
         for (i, c) in self.contacts.iter().enumerate().filter(|_| include_contact) {
             let empty = contact::Committed::default();
-            states.push(c.evaluate(self.mesh, u, reference, contact.get(i).unwrap_or(&empty), band, tangent, &mut internal, &mut blocks)?);
+            states.push(c.evaluate_with_stick(
+                self.mesh,
+                u,
+                reference,
+                contact.get(i).unwrap_or(&empty),
+                stick.and_then(|masks| masks.get(i).map(Vec::as_slice)),
+                band,
+                tangent,
+                &mut internal,
+                &mut blocks,
+            )?);
         }
         let mut k = tangent.then(|| {
             if blocks.is_empty() {
@@ -797,6 +830,10 @@ struct Run<'a> {
     augmentations: usize,
     /// The augmentation being solved in the current increment.
     augmentation: usize,
+    /// Failed-increment retry number (0: the original path, 1: the permitted stick retry).
+    retry: usize,
+    /// Per-contact mask for the one permitted retry; `None` keeps the ordinary contact law.
+    retry_stick: Option<Vec<Vec<bool>>>,
     /// The largest force and moment of the converged states (contact's scales,
     /// [`Run::residual`]).
     converged_scale: f64,
@@ -812,6 +849,17 @@ struct Converged {
 }
 
 impl Run<'_> {
+    /// The contact nodes that had no closed state at the last converged increment. A nonempty
+    /// mask means the one permitted failed-increment stick retry can change the path; an empty
+    /// mask leaves the original cutback path untouched.
+    fn retry_stick_nodes(&self) -> Vec<Vec<bool>> {
+        self.problem.contacts.iter().zip(&self.contact).map(|(interface, committed)| interface.retry_stick_nodes(committed)).collect()
+    }
+
+    fn retry_stick_valid(&self, evaluation: &Evaluation, masks: &[Vec<bool>]) -> bool {
+        self.problem.contacts.iter().zip(&evaluation.contact).zip(masks).all(|((interface, state), mask)| interface.retry_stick_valid(state, mask))
+    }
+
     /// Commit a fully converged load-control increment, after its contact augmentations.
     fn commit_increment(&mut self, q: &[f64], lambda: f64, evaluation: &Evaluation) {
         self.committed.clone_from(&evaluation.history);
@@ -911,7 +959,7 @@ impl Run<'_> {
     }
 
     fn state(&self, q: &[f64], lambda: f64, tangent: bool) -> std::result::Result<Evaluation, Failure> {
-        Ok(self.problem.evaluate(
+        Ok(self.problem.evaluate_with_contact_policy(
             &self.problem.red.expand_scaled(q, lambda),
             lambda,
             tangent,
@@ -919,6 +967,8 @@ impl Run<'_> {
             &self.contact,
             &self.reference,
             self.band,
+            true,
+            self.retry_stick.as_deref(),
         )?)
     }
 
@@ -1102,6 +1152,7 @@ impl Run<'_> {
                 line_search: it.line_search,
                 closed_nodes,
                 slipping_nodes,
+                retry: self.retry,
             });
             if !it.force.is_finite() {
                 return Err(Failure::Cutback("the residual is not finite".into()));
@@ -1615,6 +1666,8 @@ fn solve_on<'a>(
         band: 0.0,
         augmentations: 0,
         augmentation: 0,
+        retry: 0,
+        retry_stick: None,
         converged_scale: 0.0,
         converged_moment: 0.0,
     };
@@ -1726,13 +1779,54 @@ fn solve_on<'a>(
             let saved = run.contact.clone();
             let mut augmentations = 0;
             run.augmentation = 0;
-            let solved = run
+            run.retry = 0;
+            run.retry_stick = None;
+            let mut solved = run
                 .increment(&q, predictor.as_deref(), predicted_energy, target_lambda, change.abs(), &mut iterations, &mut failure_iterations)
                 .and_then(|c| {
                     run.augment(c, &q, target_lambda, change.abs(), &mut iterations, &mut failure_iterations, &mut augmentations, &mut warnings)
                 });
             if solved.is_err() {
-                run.contact = saved;
+                run.contact = saved.clone();
+            }
+            if let Err(Failure::Cutback(original_reason)) = &solved {
+                let original_reason = original_reason.clone();
+                let masks = run.retry_stick_nodes();
+                if masks.iter().flatten().any(|forced| *forced) {
+                    // The original algorithm has already failed. Restore only the committed
+                    // contact state and retry this very same increment once before cutting it
+                    // back. A failed or non-admissible retry is reported as the original failure.
+                    let failed_band = run.band;
+                    run.contact = saved.clone();
+                    run.retry = 1;
+                    run.retry_stick = Some(masks.clone());
+                    run.augmentation = 0;
+                    augmentations = 0;
+                    let retry = run
+                        .increment(&q, predictor.as_deref(), predicted_energy, target_lambda, change.abs(), &mut iterations, &mut failure_iterations)
+                        .and_then(|c| {
+                            run.augment(
+                                c,
+                                &q,
+                                target_lambda,
+                                change.abs(),
+                                &mut iterations,
+                                &mut failure_iterations,
+                                &mut augmentations,
+                                &mut warnings,
+                            )
+                        });
+                    run.retry = 0;
+                    run.retry_stick = None;
+                    match retry {
+                        Ok(c) if run.retry_stick_valid(&c.evaluation, &masks) => solved = Ok(c),
+                        _ => {
+                            run.contact = saved;
+                            run.band = failed_band;
+                            solved = Err(Failure::Cutback(original_reason));
+                        }
+                    }
+                }
             }
             match solved {
                 Ok(c) => {

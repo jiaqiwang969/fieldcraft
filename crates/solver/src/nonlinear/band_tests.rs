@@ -99,6 +99,8 @@ fn with_run<T>(model: &Model, f: impl FnOnce(&mut Run<'_>) -> T) -> T {
         band: 0.,
         augmentations: 0,
         augmentation: 0,
+        retry: 0,
+        retry_stick: None,
         converged_scale: 0.,
         converged_moment: 0.,
     };
