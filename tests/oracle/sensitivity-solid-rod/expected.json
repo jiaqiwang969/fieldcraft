@@ -1,0 +1,120 @@
+{
+  "title": "Solid rod material sensitivities across static, modal and harmonic response",
+  "kind": "theory",
+  "source": "Independent axial-bar scaling laws for a fixed-load discrete rod: u is proportional to 1/E, modal frequency is proportional to sqrt(E/rho), and the fixed-load harmonic response obeys E du/dE + rho du/drho + u = 0. The guide removes lateral and rigid modes; no commercial data are used.",
+  "quantities": [
+    {
+      "id": "static_E_identity",
+      "quantity": "E times static displacement derivative divided by displacement",
+      "measure": {
+        "from": "static_E",
+        "pointer": "/direct",
+        "scale": 1000.0,
+        "over": {
+          "from": "static_probe",
+          "pointer": "/nodes/0/displacement/0"
+        }
+      },
+      "value": -1.0,
+      "tolerance": {
+        "relative": 1e-08
+      },
+      "reason": "Exact axial scaling u proportional to 1/E for the fixed-load rod; only linear algebra roundoff is allowed."
+    },
+    {
+      "id": "static_density_zero",
+      "quantity": "static density derivative",
+      "measure": {
+        "from": "static_density",
+        "pointer": "/direct"
+      },
+      "value": 0.0,
+      "tolerance": {
+        "absolute": 1e-10
+      },
+      "reason": "Density enters only inertia, so the static fixed-load displacement derivative is exactly zero."
+    },
+    {
+      "id": "frequency_E_identity",
+      "quantity": "2E times modal frequency derivative divided by frequency",
+      "measure": {
+        "from": "frequency_E",
+        "pointer": "/modes/0/frequency_derivative",
+        "scale": 2000.0,
+        "over": {
+          "from": "frequency",
+          "pointer": "/modes/0/frequency"
+        }
+      },
+      "value": 1.0,
+      "tolerance": {
+        "relative": 1e-08
+      },
+      "reason": "The fixed-boundary discrete eigenproblem scales K with E, giving f proportional to sqrt(E)."
+    },
+    {
+      "id": "frequency_density_identity",
+      "quantity": "-2rho times modal frequency derivative divided by frequency",
+      "measure": {
+        "from": "frequency_density",
+        "pointer": "/modes/0/frequency_derivative",
+        "scale": -4.0,
+        "over": {
+          "from": "frequency",
+          "pointer": "/modes/0/frequency"
+        }
+      },
+      "value": 1.0,
+      "tolerance": {
+        "relative": 1e-08
+      },
+      "reason": "The consistent mass matrix scales with density, giving f proportional to rho to the minus one half."
+    },
+    {
+      "id": "harmonic_real_identity",
+      "quantity": "fixed-load harmonic real scaling identity",
+      "measure": {
+        "from": "harmonic_E",
+        "pointer": "/frames/0/direct/0",
+        "scale": 1000.0,
+        "plus": {
+          "from": "harmonic_density",
+          "pointer": "/frames/0/direct/0",
+          "scale": 2.0,
+          "plus": {
+            "from": "harmonic_probe",
+            "pointer": "/nodes/0/samples/0/displacement_real/0"
+          }
+        }
+      },
+      "value": 0.0,
+      "tolerance": {
+        "absolute": 1e-08
+      },
+      "reason": "Independent differentiation of the assembled dynamic equilibrium gives E du/dE + rho du/drho + u = 0 at fixed force."
+    },
+    {
+      "id": "harmonic_imag_identity",
+      "quantity": "fixed-load harmonic imaginary scaling identity",
+      "measure": {
+        "from": "harmonic_E",
+        "pointer": "/frames/0/direct/1",
+        "scale": 1000.0,
+        "plus": {
+          "from": "harmonic_density",
+          "pointer": "/frames/0/direct/1",
+          "scale": 2.0,
+          "plus": {
+            "from": "harmonic_probe",
+            "pointer": "/nodes/0/samples/0/displacement_imaginary/0"
+          }
+        }
+      },
+      "value": 0.0,
+      "tolerance": {
+        "absolute": 1e-08
+      },
+      "reason": "The same fixed-load dynamic identity applies to the imaginary component with structural loss damping held fixed."
+    }
+  ]
+}

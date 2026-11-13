@@ -1,0 +1,13 @@
+{
+  "note": "FieldCraft's accepted results for this case, written by `cargo xtask oracle --bless`. A result outside its band fails CI.",
+  "values": {
+    "frequency_e1_ratio": {
+      "band": 1.0000000000011962e-9,
+      "value": 1.0000000000011962
+    },
+    "static_e1_ratio": {
+      "band": 1.0000000000360757e-9,
+      "value": -1.0000000000360756
+    }
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "title": "Thin plate strip thickness and Poisson sensitivity",
+  "kind": "theory",
+  "source": "Kirchhoff thin-plate bending theory, D=E t^3/[12(1-nu^2)], with the discrete shell strip used as the numerical realization. The reference ratios are the closed-form bending ratios; the stated bands cover shear deformation and the four-by-one mesh.",
+  "quantities": [
+    {
+      "id": "thickness_static_ratio",
+      "quantity": "t times tip deflection derivative divided by deflection",
+      "measure": {
+        "from": "static_thickness",
+        "pointer": "/direct",
+        "scale": 0.1,
+        "over": {
+          "from": "probe",
+          "pointer": "/nodes/0/displacement/2"
+        }
+      },
+      "value": -3.0,
+      "tolerance": {
+        "relative": 0.5
+      },
+      "reason": "Kirchhoff bending gives w proportional to t^-3; the 50% band covers transverse shear and coarse mesh effects."
+    },
+    {
+      "id": "thickness_frequency_ratio",
+      "quantity": "t times first frequency derivative divided by frequency",
+      "measure": {
+        "from": "frequency_thickness",
+        "pointer": "/modes/0/frequency_derivative",
+        "scale": 0.1,
+        "over": {
+          "from": "frequency",
+          "pointer": "/modes/0/frequency"
+        }
+      },
+      "value": 1.0,
+      "tolerance": {
+        "relative": 0.5
+      },
+      "reason": "With shell mass proportional to t and bending stiffness proportional to t^3, thin-plate theory gives f proportional to t; the band covers shear and mesh effects."
+    },
+    {
+      "id": "poisson_static_ratio",
+      "quantity": "nu times tip deflection derivative divided by deflection",
+      "measure": {
+        "from": "static_poisson",
+        "pointer": "/direct",
+        "scale": 0.3,
+        "over": {
+          "from": "probe",
+          "pointer": "/nodes/0/displacement/2"
+        }
+      },
+      "value": -0.1978021978021978,
+      "tolerance": {
+        "relative": 0.8
+      },
+      "reason": "Kirchhoff plate theory gives -2 nu^2/(1-nu^2); the 80% band explicitly covers the dominant shear and coarse-mesh departure in this four-by-one strip."
+    },
+    {
+      "id": "poisson_frequency_ratio",
+      "quantity": "nu times first frequency derivative divided by frequency",
+      "measure": {
+        "from": "frequency_poisson",
+        "pointer": "/modes/0/frequency_derivative",
+        "scale": 0.3,
+        "over": {
+          "from": "frequency",
+          "pointer": "/modes/0/frequency"
+        }
+      },
+      "value": 0.0989010989010989,
+      "tolerance": {
+        "relative": 0.75
+      },
+      "reason": "The thin-plate frequency ratio is nu^2/(1-nu^2); the wide band covers the coarse strip and shear terms."
+    }
+  ]
+}
