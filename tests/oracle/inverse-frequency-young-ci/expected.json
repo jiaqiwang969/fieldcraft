@@ -1,0 +1,72 @@
+{
+  "title": "Frequency identification of Young modulus with a local 95% interval",
+  "kind": "theory",
+  "source": "The consistent two-element axial rod model has K=(EA/h)[[2,-1],[-1,1]] and M=(rho A h/6)[[4,1],[1,2]] after the fixed node is removed. The determinant gives 7 lambda^2 - 240000 lambda + 576000000 = 0 for E=1000 Pa, rho=1 kg/m^3, h=0.5 m; both frequencies scale as sqrt(E).",
+  "quantities": [
+    {
+      "id": "estimate",
+      "quantity": "identified Young modulus (Pa)",
+      "measure": {
+        "from": "inverse",
+        "pointer": "/estimate"
+      },
+      "value": 1210.0,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "The two observed frequencies are the closed-form rod frequencies multiplied by sqrt(1.21), so E=1210 Pa exactly."
+    },
+    {
+      "id": "ci_lower",
+      "quantity": "lower endpoint of local 95% interval (Pa)",
+      "measure": {
+        "from": "inverse",
+        "pointer": "/confidence_interval/0"
+      },
+      "value": 1208.536832522364,
+      "tolerance": {
+        "absolute": 1e-05
+      },
+      "reason": "Independent 0.01 Hz errors give sigma_E=0.746527736824412 Pa; the endpoint is E-1.959963984540054 sigma_E."
+    },
+    {
+      "id": "ci_upper",
+      "quantity": "upper endpoint of local 95% interval (Pa)",
+      "measure": {
+        "from": "inverse",
+        "pointer": "/confidence_interval/1"
+      },
+      "value": 1211.463167477636,
+      "tolerance": {
+        "absolute": 1e-05
+      },
+      "reason": "The same independent-error linearization gives E+1.959963984540054 sigma_E."
+    },
+    {
+      "id": "ranked_observation_0",
+      "quantity": "predicted first observed frequency (Hz)",
+      "measure": {
+        "from": "inverse",
+        "pointer": "/predicted/0"
+      },
+      "value": 8.92114098317261,
+      "tolerance": {
+        "relative": 1e-07
+      },
+      "reason": "Closed-form consistent-rod frequency at E=1210 Pa."
+    },
+    {
+      "id": "ranked_observation_1",
+      "quantity": "predicted second observed frequency (Hz)",
+      "measure": {
+        "from": "inverse",
+        "pointer": "/predicted/1"
+      },
+      "value": 31.165023062360497,
+      "tolerance": {
+        "relative": 1e-07
+      },
+      "reason": "Closed-form consistent-rod frequency at E=1210 Pa."
+    }
+  ]
+}

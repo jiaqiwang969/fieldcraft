@@ -1,0 +1,45 @@
+{
+  "note": "FieldCraft's accepted results for this case, written by `cargo xtask oracle --bless`. A result outside its band fails CI.",
+  "values": {
+    "E": {
+      "band": 1.0000000000000002e-6,
+      "value": 999.999999787585
+    },
+    "condition": {
+      "band": 5.736470915350589e-8,
+      "value": 57.36470914133312
+    },
+    "cov_EE": {
+      "band": 1.0000000000003717e-7,
+      "value": 99.99999991593393
+    },
+    "cov_rhorho": {
+      "band": 4.0048651310523287e-13,
+      "value": 0.00040048651276949513
+    },
+    "interval_E_high": {
+      "band": 1.0244774683068126e-6,
+      "value": 1024.4774680841047
+    },
+    "interval_E_low": {
+      "band": 9.755225316931873e-7,
+      "value": 975.5225314910655
+    },
+    "interval_rho_high": {
+      "band": 2.0489846990892555e-9,
+      "value": 2.0489846986436344
+    },
+    "interval_rho_low": {
+      "band": 1.9510153009107448e-9,
+      "value": 1.9510153005061888
+    },
+    "rank": {
+      "band": 2e-9,
+      "value": 2.0
+    },
+    "rho": {
+      "band": 2e-9,
+      "value": 1.9999999995749116
+    }
+  }
+}

@@ -1,0 +1,137 @@
+{
+  "title": "Joint static and frequency identification of Young modulus and density",
+  "kind": "theory",
+  "source": "For the two-element fixed-root consistent axial rod, the static tip displacement is FL/(EA), while the first frequency is f0(E,rho)=8.110128166520553 sqrt(E/1000) / sqrt(rho) Hz. These two independent relations separate E and rho.",
+  "quantities": [
+    {
+      "id": "E",
+      "quantity": "identified Young modulus (Pa)",
+      "measure": {
+        "from": "joint",
+        "pointer": "/estimate_si/0"
+      },
+      "value": 1000.0,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "The static observation 0.001 m gives E=1000 Pa for F=L=A=1; the frequency then gives rho=2 kg/m\u00b3."
+    },
+    {
+      "id": "rho",
+      "quantity": "identified density (kg/m\u00b3)",
+      "measure": {
+        "from": "joint",
+        "pointer": "/estimate_si/1"
+      },
+      "value": 2.0,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "With E=1000 Pa, the frequency observation 5.7347266228387 Hz equals the first two-element rod frequency at rho=2 kg/m\u00b3."
+    },
+    {
+      "id": "rank",
+      "quantity": "data-only Jacobian rank",
+      "measure": {
+        "from": "joint",
+        "pointer": "/rank"
+      },
+      "value": 2,
+      "tolerance": {
+        "exact": true
+      },
+      "reason": "Static displacement has zero density derivative while frequency has both E and density derivatives, so the two columns are independent."
+    },
+    {
+      "id": "condition",
+      "quantity": "scaled Jacobian condition number",
+      "measure": {
+        "from": "joint",
+        "pointer": "/condition_number"
+      },
+      "value": 57.364709153505885,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "Using scales 1000 Pa and 2 kg/m\u00b3 with 1e-5 m and 1e-3 Hz errors, the closed-form scaled Jacobian has singular-value ratio 57.3647091535059."
+    },
+    {
+      "id": "cov_EE",
+      "quantity": "covariance E,E (Pa\u00b2)",
+      "measure": {
+        "from": "joint",
+        "pointer": "/covariance_si/0/0"
+      },
+      "value": 100.00000000003716,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "The covariance is the inverse of the two-observation closed-form information matrix with the stated independent errors."
+    },
+    {
+      "id": "cov_rhorho",
+      "quantity": "covariance rho,rho ((kg/m\u00b3)\u00b2)",
+      "measure": {
+        "from": "joint",
+        "pointer": "/covariance_si/1/1"
+      },
+      "value": 0.00040048651310523286,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "The covariance is the inverse of the two-observation closed-form information matrix with the stated independent errors."
+    },
+    {
+      "id": "interval_E_low",
+      "quantity": "lower joint 95% projection for E (Pa)",
+      "measure": {
+        "from": "joint",
+        "pointer": "/joint_projection_intervals_si/0/0"
+      },
+      "value": 975.5225316931873,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "The projection uses chi-square(2)=5.991464547107979."
+    },
+    {
+      "id": "interval_E_high",
+      "quantity": "upper joint 95% projection for E (Pa)",
+      "measure": {
+        "from": "joint",
+        "pointer": "/joint_projection_intervals_si/0/1"
+      },
+      "value": 1024.4774683068126,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "The projection uses chi-square(2)=5.991464547107979."
+    },
+    {
+      "id": "interval_rho_low",
+      "quantity": "lower joint 95% projection for rho (kg/m\u00b3)",
+      "measure": {
+        "from": "joint",
+        "pointer": "/joint_projection_intervals_si/1/0"
+      },
+      "value": 1.9510153009107447,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "The projection uses chi-square(2)=5.991464547107979."
+    },
+    {
+      "id": "interval_rho_high",
+      "quantity": "upper joint 95% projection for rho (kg/m\u00b3)",
+      "measure": {
+        "from": "joint",
+        "pointer": "/joint_projection_intervals_si/1/1"
+      },
+      "value": 2.0489846990892553,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "The projection uses chi-square(2)=5.991464547107979."
+    }
+  ]
+}

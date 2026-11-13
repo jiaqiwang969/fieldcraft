@@ -1,0 +1,72 @@
+{
+  "title": "Complex harmonic identification of loss-factor damping",
+  "kind": "theory",
+  "source": "The single-degree-of-freedom impedance is Z=k\u2212omega\u00b2m+i eta k and u=F/Z. At k=4 N/m, m=1 kg, omega=1 rad/s and eta=0.5, u=3/13\u22122i/13 m. The recipe stores frequency in Hz as 1/(2 pi), so the solver's angular frequency is omega=1 rad/s; the derivative du/deta=\u2212i k/Z\u00b2 gives the local interval from two independent Cartesian errors.",
+  "quantities": [
+    {
+      "id": "estimate",
+      "quantity": "identified loss factor",
+      "measure": {
+        "from": "inverse",
+        "pointer": "/estimate"
+      },
+      "value": 0.5,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "The observed real and imaginary components are the exact impedance response at eta=0.5."
+    },
+    {
+      "id": "predicted_real",
+      "quantity": "predicted real displacement (m)",
+      "measure": {
+        "from": "inverse",
+        "pointer": "/predicted/0"
+      },
+      "value": 0.23076923076923078,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "Closed scalar impedance u=1/(3+2i)=3/13\u22122i/13."
+    },
+    {
+      "id": "predicted_imag",
+      "quantity": "predicted imaginary displacement (m)",
+      "measure": {
+        "from": "inverse",
+        "pointer": "/predicted/1"
+      },
+      "value": -0.15384615384615385,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "Closed scalar impedance u=1/(3+2i)=3/13\u22122i/13."
+    },
+    {
+      "id": "ci_lower",
+      "quantity": "lower endpoint of local 95% interval",
+      "measure": {
+        "from": "inverse",
+        "pointer": "/confidence_interval/0"
+      },
+      "value": 0.4993630117050245,
+      "tolerance": {
+        "absolute": 1e-08
+      },
+      "reason": "With 1e-4 m independent real/imaginary errors, the scalar information is |du/deta|\u00b2/sigma\u00b2; the endpoint is eta\u22121.959963984540054 sigma_eta."
+    },
+    {
+      "id": "ci_upper",
+      "quantity": "upper endpoint of local 95% interval",
+      "measure": {
+        "from": "inverse",
+        "pointer": "/confidence_interval/1"
+      },
+      "value": 0.5006369882949755,
+      "tolerance": {
+        "absolute": 1e-08
+      },
+      "reason": "The same Cartesian-error linearization gives eta+1.959963984540054 sigma_eta."
+    }
+  ]
+}

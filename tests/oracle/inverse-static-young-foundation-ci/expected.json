@@ -1,0 +1,150 @@
+{
+  "title": "Static identification of Young modulus and foundation stiffness",
+  "kind": "theory",
+  "source": "For a unit-area unit-length axial member on a Winkler support, u(0)=F/k and u(L)=F/k+FL/(EA); this is the one-dimensional virtual-work solution described by Hetenyi, Beams on Elastic Foundation (1946).",
+  "quantities": [
+    {
+      "id": "E",
+      "quantity": "identified Young modulus (Pa)",
+      "measure": {
+        "from": "joint",
+        "pointer": "/estimate_si/0"
+      },
+      "value": 1250.0,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "The two written displacement observations 0.008 and 0.0088 m solve the independent equations for E=1250 Pa and k=125 N/m³."
+    },
+    {
+      "id": "k",
+      "quantity": "identified normal foundation stiffness (N/m³)",
+      "measure": {
+        "from": "joint",
+        "pointer": "/estimate_si/1"
+      },
+      "value": 125.0,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "The support displacement equation u(0)=F/k gives k=125 N/m³ from the first observation."
+    },
+    {
+      "id": "rank",
+      "quantity": "data-only Jacobian rank",
+      "measure": {
+        "from": "joint",
+        "pointer": "/rank"
+      },
+      "value": 2,
+      "tolerance": {
+        "exact": true
+      },
+      "reason": "The support and tip observations have independent E and k derivatives."
+    },
+    {
+      "id": "condition",
+      "quantity": "scaled Jacobian condition number",
+      "measure": {
+        "from": "joint",
+        "pointer": "/condition_number"
+      },
+      "value": 20.05012499921872,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "Using scales 1000 Pa and 100 N/m³ with 1e-5 m errors, the closed-form scaled Jacobian [[0,-640],[-64,-640]] has singular-value ratio 20.05012499921872."
+    },
+    {
+      "id": "cov_EE",
+      "quantity": "covariance E,E (Pa²)",
+      "measure": {
+        "from": "joint",
+        "pointer": "/covariance_si/0/0"
+      },
+      "value": 488.28124999999983,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "The covariance is (Jᵀ W J)^−1 from the two independent 1e-5 m errors and the closed-form Jacobian."
+    },
+    {
+      "id": "cov_Ek",
+      "quantity": "covariance E,k (Pa·N/m³)",
+      "measure": {
+        "from": "joint",
+        "pointer": "/covariance_si/0/1"
+      },
+      "value": -2.441406249999999,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "The covariance is (Jᵀ W J)^−1 from the two independent 1e-5 m errors and the closed-form Jacobian."
+    },
+    {
+      "id": "cov_kk",
+      "quantity": "covariance k,k ((N/m³)²)",
+      "measure": {
+        "from": "joint",
+        "pointer": "/covariance_si/1/1"
+      },
+      "value": 0.024414062499999993,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "The covariance is (Jᵀ W J)^−1 from the two independent 1e-5 m errors and the closed-form Jacobian."
+    },
+    {
+      "id": "interval_E_low",
+      "quantity": "lower joint 95% projection for E (Pa)",
+      "measure": {
+        "from": "joint",
+        "pointer": "/joint_projection_intervals_si/0/0"
+      },
+      "value": 1195.9119255436785,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "The projection uses chi-square(2)=5.991464547107979 and the diagonal covariance above."
+    },
+    {
+      "id": "interval_E_high",
+      "quantity": "upper joint 95% projection for E (Pa)",
+      "measure": {
+        "from": "joint",
+        "pointer": "/joint_projection_intervals_si/0/1"
+      },
+      "value": 1304.0880744563215,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "The projection uses chi-square(2)=5.991464547107979 and the diagonal covariance above."
+    },
+    {
+      "id": "interval_k_low",
+      "quantity": "lower joint 95% projection for k (N/m³)",
+      "measure": {
+        "from": "joint",
+        "pointer": "/joint_projection_intervals_si/1/0"
+      },
+      "value": 124.61753955770612,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "The projection uses chi-square(2)=5.991464547107979 and the diagonal covariance above."
+    },
+    {
+      "id": "interval_k_high",
+      "quantity": "upper joint 95% projection for k (N/m³)",
+      "measure": {
+        "from": "joint",
+        "pointer": "/joint_projection_intervals_si/1/1"
+      },
+      "value": 125.38246044229388,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "The projection uses chi-square(2)=5.991464547107979 and the diagonal covariance above."
+    }
+  ]
+}
