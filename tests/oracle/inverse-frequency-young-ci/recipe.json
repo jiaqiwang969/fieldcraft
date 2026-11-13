@@ -191,5 +191,31 @@
       "uniform_young_scaling": true
     },
     "id": "inverse"
+  },
+  {
+    "command": "solve.inverse.frequency",
+    "params": {
+      "step": "Modes",
+      "parameter": {
+        "type": "material",
+        "name": "Mat",
+        "constant": "young"
+      },
+      "lower": 500.0,
+      "upper": 2000.0,
+      "observed": [
+        8.92114098317261,
+        31.165023062360497
+      ],
+      "mode_indices": [
+        0,
+        1
+      ],
+      "standard_deviation": [
+        0.01,
+        0.01
+      ]
+    },
+    "id": "inverse-general"
   }
 ]

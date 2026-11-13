@@ -67,6 +67,71 @@
         "relative": 1e-07
       },
       "reason": "Closed-form consistent-rod frequency at E=1210 Pa."
+    },
+    {
+      "id": "general_estimate",
+      "quantity": "identified Young modulus from the general FE path (Pa)",
+      "measure": {
+        "from": "inverse-general",
+        "pointer": "/estimate"
+      },
+      "value": 1210.0,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "The same two observed frequencies are the closed-form consistent-rod frequencies multiplied by sqrt(1.21), so the general finite-element fit has the same E=1210 Pa reference as the uniform-scaling fit."
+    },
+    {
+      "id": "general_ci_lower",
+      "quantity": "lower endpoint of the general-fit local 95% interval (Pa)",
+      "measure": {
+        "from": "inverse-general",
+        "pointer": "/confidence_interval/0"
+      },
+      "value": 1208.536832522364,
+      "tolerance": {
+        "absolute": 1e-05
+      },
+      "reason": "The independent 0.01 Hz errors give sigma_E=0.746527736824412 Pa; the general fit uses the same FE derivative and the endpoint is E-1.959963984540054 sigma_E."
+    },
+    {
+      "id": "general_ci_upper",
+      "quantity": "upper endpoint of the general-fit local 95% interval (Pa)",
+      "measure": {
+        "from": "inverse-general",
+        "pointer": "/confidence_interval/1"
+      },
+      "value": 1211.463167477636,
+      "tolerance": {
+        "absolute": 1e-05
+      },
+      "reason": "The same independent-error linearization gives E+1.959963984540054 sigma_E for the general finite-element path."
+    },
+    {
+      "id": "general_ranked_observation_0",
+      "quantity": "general-fit predicted first observed frequency (Hz)",
+      "measure": {
+        "from": "inverse-general",
+        "pointer": "/predicted/0"
+      },
+      "value": 8.92114098317261,
+      "tolerance": {
+        "relative": 1e-07
+      },
+      "reason": "Closed-form consistent-rod frequency at E=1210 Pa, shared with the shortcut observation."
+    },
+    {
+      "id": "general_ranked_observation_1",
+      "quantity": "general-fit predicted second observed frequency (Hz)",
+      "measure": {
+        "from": "inverse-general",
+        "pointer": "/predicted/1"
+      },
+      "value": 31.165023062360497,
+      "tolerance": {
+        "relative": 1e-07
+      },
+      "reason": "Closed-form consistent-rod frequency at E=1210 Pa, shared with the shortcut observation."
     }
   ]
 }

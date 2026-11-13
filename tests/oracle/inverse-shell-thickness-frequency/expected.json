@@ -1,7 +1,7 @@
 {
   "title": "Thin shell thickness identification from a cantilever frequency",
   "kind": "theory",
-  "source": "Euler–Bernoulli cantilever beam theory (Timoshenko and Young, Vibration Problems in Engineering): f1=beta1²/(2 pi L²) sqrt(EI/(rho A)), beta1=1.875104068711961. For a unit-width strip with I=b t³/12 and A=b t, f1=beta1² t sqrt(E/(12 rho))/(2 pi L²).",
+  "source": "Euler–Bernoulli cantilever beam theory (Timoshenko and Young, Vibration Problems in Engineering): f1=beta1²/(2 pi L²) sqrt(EI/(rho A)), beta1=1.875104068711961. For a unit-width strip with I=b t³/12 and A=b t, f1=beta1² t sqrt(E/(12 rho))/(2 pi L²). The tolerance also bounds the measured 8-to-16-element mesh change and the closed-form first-mode Timoshenko shear/rotary correction.",
   "quantities": [
     {
       "id": "estimate",
@@ -12,9 +12,9 @@
       },
       "value": 0.005,
       "tolerance": {
-        "relative": 0.08
+        "relative": 7.4e-06
       },
-      "reason": "The independent thin-strip target is t=0.005 m; the coarse shell inverse starts at the nearby FE-stationary value and the 8% band covers the stated shear, rotary-inertia and mesh effects."
+      "reason": "The independent thin-strip target is t=0.005 m. The 8-element frequency is 0.006994825643627156 Hz and the 16-element frequency is 0.006994839209354149 Hz, a relative mesh difference of 1.939390826041693e-06. The first-mode Timoshenko correction below is 5.416830989868338e-06; their sum is 7.356221815910031e-6, rounded upward to the stated 7.4e-6 relative tolerance."
     },
     {
       "id": "ci_lower",
@@ -25,9 +25,9 @@
       },
       "value": 0.004985990030224736,
       "tolerance": {
-        "absolute": 1e-05
+        "absolute": 4e-08
       },
-      "reason": "The closed relation is linear in t; with 1e-5 Hz independent error, sigma_t=1e-5/(f1/t), and the endpoint is t-1.959963984540054 sigma_t."
+      "reason": "The closed relation is linear in t; with 1e-5 Hz independent error, sigma_t=1e-5/(f1/t), and the endpoint is t-1.959963984540054 sigma_t. The 4e-8 m allowance is the 7.4e-6 model-discrepancy budget applied to t=0.005 m, rounded upward."
     },
     {
       "id": "ci_upper",
@@ -38,9 +38,9 @@
       },
       "value": 0.005014009969775264,
       "tolerance": {
-        "absolute": 1e-05
+        "absolute": 4e-08
       },
-      "reason": "The same thin-beam linearization gives t+1.959963984540054 sigma_t."
+      "reason": "The same thin-beam linearization gives t+1.959963984540054 sigma_t. The 4e-8 m allowance is the 7.4e-6 model-discrepancy budget applied to t=0.005 m, rounded upward."
     },
     {
       "id": "predicted_frequency",
@@ -51,9 +51,9 @@
       },
       "value": 0.006994890124604707,
       "tolerance": {
-        "relative": 0.08
+        "relative": 7.4e-06
       },
-      "reason": "Euler–Bernoulli thin-strip reference; the 8% allowance covers shear, rotary-inertia and coarse two-element shell effects."
+      "reason": "The Euler–Bernoulli reference is 0.00699489012460471 Hz. The 8/16 mesh difference is 1.939390826041693e-06 relative and the first-mode Timoshenko shear/rotary correction is 5.416830989868338e-06; their sum is rounded upward to 7.4e-6."
     }
   ]
 }
