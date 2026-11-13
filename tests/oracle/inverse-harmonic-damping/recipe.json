@@ -1,0 +1,135 @@
+[
+  {
+    "command": "model.units",
+    "params": {
+      "system": "m-kg-s-N-Pa"
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 1,
+      "xyz": [
+        0,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "tip",
+      "nodes": [
+        1
+      ]
+    }
+  },
+  {
+    "command": "model.mass.create",
+    "params": {
+      "name": "Mass",
+      "target": {
+        "set": "tip"
+      },
+      "mass": 1.0
+    }
+  },
+  {
+    "command": "model.spring.create",
+    "params": {
+      "name": "Spring",
+      "type": "spring",
+      "first": {
+        "set": "tip"
+      },
+      "direction": {
+        "dof": 1
+      },
+      "stiffness": 4.0
+    }
+  },
+  {
+    "command": "model.boundary_condition.create",
+    "params": {
+      "name": "guide",
+      "type": "displacement",
+      "target": {
+        "set": "tip"
+      },
+      "values": [
+        null,
+        0,
+        0,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  {
+    "command": "model.load.create",
+    "params": {
+      "name": "Force",
+      "type": "force",
+      "target": {
+        "set": "tip"
+      },
+      "vector": [
+        1,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "command": "model.step.create",
+    "params": {
+      "name": "H",
+      "procedure": {
+        "type": "harmonic",
+        "frequencies": [
+          0.15915494309189535
+        ],
+        "method": {
+          "type": "direct"
+        },
+        "damping": {
+          "loss_factor": 0.2
+        }
+      },
+      "boundary_conditions": [
+        "guide"
+      ],
+      "loads": [
+        "Force"
+      ]
+    }
+  },
+  {
+    "command": "solve.inverse.harmonic",
+    "params": {
+      "step": "H",
+      "parameter": {
+        "type": "damping",
+        "step": "H",
+        "component": {
+          "kind": "loss_factor"
+        }
+      },
+      "node": 1,
+      "dof": 1,
+      "lower": 0.01,
+      "upper": 1.0,
+      "observed": [
+        0.23076923076923078,
+        -0.15384615384615385
+      ],
+      "standard_deviation": [
+        0.0001,
+        0.0001
+      ]
+    },
+    "id": "inverse"
+  }
+]

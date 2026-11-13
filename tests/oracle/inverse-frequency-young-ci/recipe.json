@@ -1,0 +1,221 @@
+[
+  {
+    "command": "model.units",
+    "params": {
+      "system": "m-kg-s-N-Pa"
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 1,
+      "xyz": [
+        0.0,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 2,
+      "xyz": [
+        0.5,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "command": "mesh.node.add",
+    "params": {
+      "label": 3,
+      "xyz": [
+        1.0,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "command": "mesh.element.add",
+    "params": {
+      "label": 1,
+      "kind": "rod2",
+      "nodes": [
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "command": "mesh.element.add",
+    "params": {
+      "label": 2,
+      "kind": "rod2",
+      "nodes": [
+        2,
+        3
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "root",
+      "nodes": [
+        1
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "guide",
+      "nodes": [
+        1,
+        2,
+        3
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "tip",
+      "nodes": [
+        3
+      ]
+    }
+  },
+  {
+    "command": "model.set.create",
+    "params": {
+      "name": "member",
+      "elements": [
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "command": "model.material.create",
+    "params": {
+      "name": "Mat",
+      "elastic": {
+        "type": "isotropic",
+        "young": 1000.0,
+        "poisson": 0.0
+      },
+      "density": 1.0
+    }
+  },
+  {
+    "command": "model.section.create",
+    "params": {
+      "name": "Rod",
+      "set": "member",
+      "material": "Mat",
+      "kind": {
+        "type": "rod",
+        "area": 1.0
+      }
+    }
+  },
+  {
+    "command": "model.boundary_condition.create",
+    "params": {
+      "name": "clamp",
+      "type": "fixed",
+      "target": {
+        "set": "root"
+      }
+    }
+  },
+  {
+    "command": "model.boundary_condition.create",
+    "params": {
+      "name": "guide",
+      "type": "displacement",
+      "target": {
+        "set": "guide"
+      },
+      "values": [
+        null,
+        0,
+        0,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  {
+    "command": "model.step.create",
+    "params": {
+      "name": "Modes",
+      "procedure": {
+        "type": "frequency",
+        "modes": 2
+      },
+      "boundary_conditions": [
+        "clamp",
+        "guide"
+      ]
+    }
+  },
+  {
+    "command": "solve.inverse.frequency",
+    "params": {
+      "step": "Modes",
+      "parameter": {
+        "type": "material",
+        "name": "Mat",
+        "constant": "young"
+      },
+      "lower": 500.0,
+      "upper": 2000.0,
+      "observed": [
+        8.92114098317261,
+        31.165023062360497
+      ],
+      "mode_indices": [
+        0,
+        1
+      ],
+      "standard_deviation": [
+        0.01,
+        0.01
+      ],
+      "uniform_young_scaling": true
+    },
+    "id": "inverse"
+  },
+  {
+    "command": "solve.inverse.frequency",
+    "params": {
+      "step": "Modes",
+      "parameter": {
+        "type": "material",
+        "name": "Mat",
+        "constant": "young"
+      },
+      "lower": 500.0,
+      "upper": 2000.0,
+      "observed": [
+        8.92114098317261,
+        31.165023062360497
+      ],
+      "mode_indices": [
+        0,
+        1
+      ],
+      "standard_deviation": [
+        0.01,
+        0.01
+      ]
+    },
+    "id": "inverse-general"
+  }
+]

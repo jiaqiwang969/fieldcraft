@@ -1,0 +1,72 @@
+{
+  "title": "Frequency identification of density",
+  "kind": "theory",
+  "source": "The same two-element consistent axial rod has frequencies proportional to 1/sqrt(rho) at fixed E. Its determinant is 7 lambda^2 - 240000 lambda + 576000000 for E=1000 Pa, rho=1 kg/m^3, h=0.5 m; the base frequencies are 8.110128166520553 Hz and 28.331839147600448 Hz. The observations are those values divided by sqrt(1.44).",
+  "quantities": [
+    {
+      "id": "estimate",
+      "quantity": "identified density (kg/m\u00b3)",
+      "measure": {
+        "from": "inverse",
+        "pointer": "/estimate"
+      },
+      "value": 1.44,
+      "tolerance": {
+        "relative": 1e-06
+      },
+      "reason": "Both observations are the closed-form frequencies at rho=1.44 kg/m\u00b3, because frequency scales as rho^(-1/2)."
+    },
+    {
+      "id": "ci_lower",
+      "quantity": "lower endpoint of local 95% interval (kg/m\u00b3)",
+      "measure": {
+        "from": "inverse",
+        "pointer": "/confidence_interval/0"
+      },
+      "value": 1.437701496907859,
+      "tolerance": {
+        "absolute": 1e-07
+      },
+      "reason": "With independent 0.01 Hz errors, sigma_rho=0.00117272720839326 kg/m\u00b3; the endpoint is rho-1.959963984540054 sigma_rho."
+    },
+    {
+      "id": "ci_upper",
+      "quantity": "upper endpoint of local 95% interval (kg/m\u00b3)",
+      "measure": {
+        "from": "inverse",
+        "pointer": "/confidence_interval/1"
+      },
+      "value": 1.442298503092141,
+      "tolerance": {
+        "absolute": 1e-07
+      },
+      "reason": "The same independent-error linearization gives rho+1.959963984540054 sigma_rho."
+    },
+    {
+      "id": "predicted_frequency_0",
+      "quantity": "predicted first frequency (Hz)",
+      "measure": {
+        "from": "inverse",
+        "pointer": "/predicted/0"
+      },
+      "value": 6.758440138767128,
+      "tolerance": {
+        "relative": 1e-07
+      },
+      "reason": "Closed-form consistent-rod frequency at rho=1.44 kg/m\u00b3."
+    },
+    {
+      "id": "predicted_frequency_1",
+      "quantity": "predicted second frequency (Hz)",
+      "measure": {
+        "from": "inverse",
+        "pointer": "/predicted/1"
+      },
+      "value": 23.609865956333707,
+      "tolerance": {
+        "relative": 1e-07
+      },
+      "reason": "Closed-form consistent-rod frequency at rho=1.44 kg/m\u00b3."
+    }
+  ]
+}

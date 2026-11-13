@@ -15,6 +15,7 @@ const MAX_DAMPING: f64 = 1e12; // unit-factors: dimensionless LM damping
 
 const INITIAL_DAMPING: f64 = 0.001; // unit-factors: dimensionless initial LM damping
 const INCREMENT_FLOOR: f64 = 0.001; // unit-factors: dimensionless parameter-scale fraction
+const MODEL_RELATIVE_PRECISION: f64 = 1e-8; // Dimensionless relative precision of one finite-element model evaluation.
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct JointParameter {
@@ -215,6 +216,13 @@ pub fn fit_joint(initial: &[f64], fit: &JointFit, response: impl Fn(&[f64]) -> R
     validate_fit(initial, fit)?;
     let n = fit.parameters.len();
     let m = fit.observations.len();
+    // The joint objective is whitened by each observation's known standard
+    // deviation, so the model-evaluation floor uses that same scale.
+    let platform_floor = fit
+        .observations
+        .iter()
+        .map(|observation| (MODEL_RELATIVE_PRECISION * observation.value_si.abs() / observation.standard_deviation_si).powi(2))
+        .sum::<f64>();
     let evaluate = |x: &[f64]| -> Result<Evaluation> {
         fieldcraft_model::progress::check()?;
         let (predicted, jac) = response(x)?;
@@ -304,7 +312,7 @@ pub fn fit_joint(initial: &[f64], fit: &JointFit, response: impl Fn(&[f64]) -> R
             });
             let mut warnings = vec!["Local data-only rank diagnosis; not global identifiability. Covariance is a known-independent-Gaussian-error linearization. Joint projection intervals are projections of one 95% ellipsoid, not marginal intervals. No covariance for regularization or bound-active estimates.".into()];
             if let Some(decrease) = floating_point_plateau {
-                warnings.push(format!("Floating-point plateau after rejected step: gradient criterion not met, but the predicted relative decrease is at most sqrt(machine epsilon), below finite-element evaluation noise; normalized_gradient={norm}, predicted_decrease={decrease}, objective={}", current.cost));
+                warnings.push(format!("Floating-point plateau after rejected step: gradient criterion not met, but the predicted decrease is below the relative machine-epsilon criterion or the finite-element model-evaluation floor; normalized_gradient={norm}, predicted_decrease={decrease}, objective={}, platform_floor={platform_floor}", current.cost));
             }
             return Ok(JointEstimate {
                 modal_pairings: Vec::new(),
@@ -352,7 +360,10 @@ pub fn fit_joint(initial: &[f64], fit: &JointFit, response: impl Fn(&[f64]) -> R
                 solve(current.info.clone(), current.gradient.clone())?
             };
             let decrease = 0.5 * current.gradient.iter().zip(direction).map(|(g, d)| g * d).sum::<f64>();
-            if decrease.is_finite() && decrease >= 0.0 && decrease <= f64::EPSILON.sqrt() * current.cost {
+            // Once the predicted decrease is below the model's one-evaluation
+            // precision, further iterations have no meaning.  The floor uses
+            // the observation standard deviations that whiten this objective.
+            if decrease.is_finite() && decrease >= 0.0 && (decrease <= f64::EPSILON.sqrt() * current.cost || decrease <= platform_floor) {
                 floating_point_plateau = Some(decrease);
             }
             damping = (damping * 10.0).min(MAX_DAMPING);
@@ -695,5 +706,45 @@ mod platform_tests {
             assert!(error.contains(key), "{error}");
         }
         assert!(run(&[1.0, 2.0], &[-49.0, 51.0, -48.0, 52.0], 0.1, 32).is_err());
+    }
+
+    #[test]
+    fn joint_known_error_floor_reaches_platform() {
+        let parameters = [MaterialConstant::Young, MaterialConstant::Density]
+            .into_iter()
+            .map(|constant| JointParameter {
+                parameter: Parameter::Material { name: "m".into(), constant },
+                lower_si: 0.5,
+                upper_si: 1.5,
+                scale_si: 1.0,
+            })
+            .collect();
+        let fit = JointFit {
+            parameters,
+            observations: vec![
+                JointObservation {
+                    response: JointResponse::Frequency { step: "F".into(), mode: 0 },
+                    value_si: 0.00700000002,
+                    standard_deviation_si: 1e-5,
+                },
+                JointObservation {
+                    response: JointResponse::Frequency { step: "F".into(), mode: 1 },
+                    value_si: 0.00700000002,
+                    standard_deviation_si: 1e-5,
+                },
+            ],
+            regularization: 0.0,
+            max_iterations: 32,
+            relative_increment: 1e-5,
+        };
+        let r = fit_joint(&[0.9, 0.9], &fit, |x| {
+            let first = (0.007 * x[0] / 1e-10).round() * 1e-10;
+            let second = (0.007 * x[1] / 1e-10).round() * 1e-10;
+            Ok((vec![first, second], vec![vec![0.007, 0.0], vec![0.0, 0.007]]))
+        })
+        .unwrap();
+        assert!(r.estimate_si.iter().all(|x| (*x - 1.0).abs() < 1e-7), "estimate={:?} objective={}", r.estimate_si, r.objective);
+        assert!(r.objective < 1e-10);
+        assert!(r.warnings.iter().any(|w| w.contains("Floating-point plateau") && w.contains("platform_floor=")), "{:?}", r.warnings);
     }
 }
