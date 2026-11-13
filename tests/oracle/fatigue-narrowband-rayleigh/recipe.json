@@ -199,7 +199,7 @@
           "curve": {
             "amplitude_ref": 2,
             "cycles_ref": 100,
-            "exponent": 2,
+            "exponent": 3,
             "endurance_limit": 0
           },
           "duration_seconds": 10,

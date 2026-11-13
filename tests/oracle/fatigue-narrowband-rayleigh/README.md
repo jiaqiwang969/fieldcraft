@@ -6,4 +6,4 @@ For a piecewise-linear one-sided spectrum, the moments are `m_j = integral f^j S
 
 `D = T * sqrt(m2/m0) * (sqrt(2 m0)/A_ref)^k * Gamma(1+k/2) / N_ref`.
 
-With `T=10 s`, `A_ref=2 Pa`, `N_ref=100`, and `k=2`, the independent value is `0.832666399786453`. The irregularity diagnostic is `sqrt(m2/m0)/sqrt(m4/m2)=0.8808752638635534`; it is reported but is not used as a pass/fail assumption about the spectrum.
+With `T=10 s`, `A_ref=2 Pa`, `N_ref=100`, and `k=3`, the independent value is `2.2137941502317`; here `Gamma(2.5)=1.329340388179`, so the gamma factor is exercised rather than equal to one. The irregularity diagnostic is `sqrt(m2/m0)/sqrt(m4/m2)=0.8808752638635534`; it is reported but is not used as a pass/fail assumption about the spectrum.

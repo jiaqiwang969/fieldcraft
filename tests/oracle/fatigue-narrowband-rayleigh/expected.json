@@ -38,12 +38,12 @@
         "from": "random",
         "pointer": "/projected_stress/0/fatigue/damage"
       },
-      "value": 0.832666399786453,
+      "value": 2.2137941502317,
       "tolerance": {
         "relative": 1e-06,
         "absolute": 1e-12
       },
-      "reason": "With N=100(2/a)^2, Rayleigh E[a\u00b2]=2m0, and rate sqrt(m2/m0), D=T rate (2m0/2\u00b2)/100 = 0.4 sqrt(13/3)."
+      "reason": "With N=100(2/a)^3, Rayleigh E[a\u00b3]=(sqrt(2m0))\u00b3 Gamma(2.5), and rate sqrt(m2/m0), D=T rate E[a\u00b3]/(100*2\u00b3)=2.2137941502317; Gamma(2.5)=1.329340388179."
     }
   ]
 }

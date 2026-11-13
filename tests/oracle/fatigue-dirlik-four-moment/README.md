@@ -8,6 +8,8 @@ For Basquin `N=100(1/a)^3`, compute `alpha1=(m1/sqrt(m0))/sqrt(m2)` and `alpha2=
 
 `D1=2(alpha1 alpha2-alpha2²)/(1+alpha2²)`, `R=(alpha2-alpha1 alpha2-D1²)/(1-alpha2-D1+D1²)`, `D2=(1-alpha2-D1+D1²)/(1-R)`, `D3=1-D1-D2`, and `Q=1.25 D1`.
 
+The equivalent form in Dirlik's original notation is `Q=1.25 (alpha2-D3-D2 R)/D1`; since `D1+D2+D3=1` and the definition of `D2` makes `alpha2-D3-D2 R = D1²`, the two expressions are identical.
+
 The independent amplitude-density check uses the normalized amplitude `z=a/sqrt(m0)` and
 
 `p(z)=D1/Q exp(-z/Q) + D2 z/R² exp(-z²/(2R²)) + D3 z exp(-z²/2)`.
