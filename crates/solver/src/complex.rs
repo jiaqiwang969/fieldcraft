@@ -24,7 +24,8 @@
 //! summation (N. J. Higham, *The Accuracy of Floating Point Summation*, SIAM J.
 //! Sci. Comput. 14(4):783–799, 1993, <https://doi.org/10.1137/0914050>), and the
 //! existing factor as correction solver (Higham 2002, §12.2). This also refines
-//! real-only Cholesky solves; the equilibrium threshold is never relaxed.
+//! real-only Cholesky solves; the load-relative residual is the first acceptance
+//! tier, with an explicit componentwise certificate for the double-precision floor.
 
 use serde::{Deserialize, Serialize};
 
@@ -88,7 +89,14 @@ pub struct Solution {
     pub factor_entries: usize,
     /// n for real/native complex factors, 2n for the real symmetric equivalent.
     pub factor_equations: usize,
+    /// Runtime Oettli–Prager certificate; not part of any serialized result.
+    pub(crate) componentwise_backward: f64,
+    /// True when the second, componentwise acceptance tier was used.
+    pub(crate) accepted_by_backward: bool,
 }
+
+const RELATIVE_RESIDUAL_LIMIT: f64 = 1e-8;
+const COMPONENTWISE_BACKWARD_LIMIT: f64 = 1e-13;
 
 /// Validate the CSR shape before it reaches numerical kernels. Input-derived indices
 /// are checked even though model assembly normally constructs this representation.
@@ -240,16 +248,26 @@ fn solve_using(a: &Csr, b: &Csr, rhs: &Vector, limits: &Limits, native: bool) ->
         (out, f.entries(), matrix.n)
     };
     displacement.check(a.n)?;
-    let residual = residual_unchecked(a, b, rhs, &displacement)?;
-    // The load-relative certificate is intentionally independent of backward error:
-    // a tiny backward error alone does not certify equilibrium near resonance.
-    if residual.relative > 1e-8 {
+    let certificate = residual_certificate(a, b, rhs, &displacement)?;
+    // Use a componentwise, rather than global-norm, backward certificate for
+    // the second tier. Near resonance or with an unstable factorization it is
+    // much larger, so this fallback cannot hide an unreliable solve.
+    let accepted_by_backward =
+        certificate.residual.relative > RELATIVE_RESIDUAL_LIMIT && certificate.componentwise_backward <= COMPONENTWISE_BACKWARD_LIMIT;
+    if certificate.residual.relative > RELATIVE_RESIDUAL_LIMIT && !accepted_by_backward {
         return Err(Error::NotConverged(format!(
-            "harmonic original-equation residual {} exceeds 1e-8 (backward error {})",
-            residual.relative, residual.backward
+            "harmonic original-equation residual {} exceeds 1e-8 (componentwise backward error {} exceeds 1e-13; global backward error {})",
+            certificate.residual.relative, certificate.componentwise_backward, certificate.residual.backward
         )));
     }
-    Ok(Solution { displacement, residual, factor_entries, factor_equations })
+    Ok(Solution {
+        displacement,
+        residual: certificate.residual,
+        factor_entries,
+        factor_equations,
+        componentwise_backward: certificate.componentwise_backward,
+        accepted_by_backward,
+    })
 }
 
 /// Certificate for any candidate (including a truncated modal solution), without
@@ -259,6 +277,36 @@ pub fn residual(a: &Csr, b: &Csr, rhs: &Vector, u: &Vector, limits: &Limits) -> 
     rhs.check(a.n)?;
     u.check(a.n)?;
     residual_unchecked(a, b, rhs, u)
+}
+
+/// Componentwise Oettli–Prager backward error for a supplied complex
+/// candidate. The denominator is evaluated row by row as
+/// `sum_j |Z_ij| |u_j| + |f_i|`; a zero denominator with a nonzero residual is
+/// infinite. This certificate is separate from [`Residual`], whose serialized
+/// shape remains unchanged.
+pub fn componentwise_backward_error(a: &Csr, b: &Csr, rhs: &Vector, u: &Vector, limits: &Limits) -> Result<f64> {
+    pair(a, b, limits)?;
+    rhs.check(a.n)?;
+    u.check(a.n)?;
+    Ok(residual_certificate(a, b, rhs, u)?.componentwise_backward)
+}
+
+pub(crate) fn backward_warning(context: &str, solution: &Solution) -> Option<String> {
+    solution.accepted_by_backward.then(|| backward_warning_text(context, solution.residual.relative, solution.componentwise_backward))
+}
+
+pub(crate) fn backward_warning_text(context: &str, relative: f64, componentwise: f64) -> String {
+    format!(
+        "{context}: relative load residual {relative:.3e} exceeds 1e-8, but componentwise backward error omega={componentwise:.3e} is within 1e-13. This load makes the equation ill-conditioned at the double-precision floor; the solution is exact for a coefficient-perturbed equation with relative perturbation no larger than omega."
+    )
+}
+
+impl Solution {
+    /// Whether the second, componentwise acceptance tier admitted this solve.
+    /// The flag is runtime metadata and is not serialized with a result.
+    pub fn accepted_by_componentwise_backward(&self) -> bool {
+        self.accepted_by_backward
+    }
 }
 
 fn imbalance(a: &Csr, b: &Csr, rhs: &Vector, u: &Vector) -> Result<Vector> {
@@ -317,22 +365,41 @@ fn refine(a: &Csr, b: &Csr, rhs: &Vector, mut u: Vector, solve: impl Fn(&mut Vec
 }
 
 fn residual_unchecked(a: &Csr, b: &Csr, rhs: &Vector, u: &Vector) -> Result<Residual> {
+    Ok(residual_certificate(a, b, rhs, u)?.residual)
+}
+
+struct ResidualCertificate {
+    residual: Residual,
+    componentwise_backward: f64,
+}
+
+fn residual_certificate(a: &Csr, b: &Csr, rhs: &Vector, u: &Vector) -> Result<ResidualCertificate> {
     let imbalance = imbalance(a, b, rhs, u)?;
     let mut norm_r = 0.0_f64;
     let mut norm_f = 0.0_f64;
     let mut norm_u = 0.0_f64;
     let mut norm_z = 0.0_f64;
     let mut norm = 0.0_f64;
+    let mut componentwise_backward = 0.0_f64;
     for r in 0..a.n {
         let residual = libm::hypot(imbalance.real[r], imbalance.imaginary[r]);
         let load = libm::hypot(rhs.real[r], rhs.imaginary[r]);
         let displacement = libm::hypot(u.real[r], u.imaginary[r]);
-        let (_, ar) = a.row(r);
+        let (cols, ar) = a.row(r);
         let (_, br) = b.row(r);
         let row: f64 = ar.iter().zip(br).map(|(a, b)| libm::hypot(*a, *b)).sum();
-        if !residual.is_finite() || !load.is_finite() || !displacement.is_finite() || !row.is_finite() {
+        let mut denominator = load;
+        for ((&c, &a), &b) in cols.iter().zip(ar).zip(br) {
+            denominator += libm::hypot(a, b) * libm::hypot(u.real[c], u.imaginary[c]);
+        }
+        if !residual.is_finite() || !load.is_finite() || !displacement.is_finite() || !row.is_finite() || !denominator.is_finite() {
             return Err(Error::Invalid("overflow in harmonic residual evaluation".into()));
         }
+        let row_backward = if denominator == 0.0 { if residual == 0.0 { 0.0 } else { f64::INFINITY } } else { residual / denominator };
+        if row_backward.is_nan() {
+            return Err(Error::Invalid("invalid componentwise harmonic backward error".into()));
+        }
+        componentwise_backward = componentwise_backward.max(row_backward);
         norm_r = norm_r.max(residual);
         norm = libm::hypot(norm, residual);
         norm_f = norm_f.max(load);
@@ -340,7 +407,7 @@ fn residual_unchecked(a: &Csr, b: &Csr, rhs: &Vector, u: &Vector) -> Result<Resi
         norm_z = norm_z.max(row);
     }
     if norm_r == 0.0 {
-        return Ok(Residual { norm: 0.0, relative: 0.0, backward: 0.0 });
+        return Ok(ResidualCertificate { residual: Residual { norm: 0.0, relative: 0.0, backward: 0.0 }, componentwise_backward: 0.0 });
     }
     if norm_f == 0.0 || !norm.is_finite() {
         return Err(Error::NotConverged("nonzero harmonic residual for zero force or unrepresentable residual norm".into()));
@@ -352,5 +419,5 @@ fn residual_unchecked(a: &Csr, b: &Csr, rhs: &Vector, u: &Vector) -> Result<Resi
     if !relative.is_finite() || !backward.is_finite() {
         return Err(Error::Invalid("overflow in harmonic residual ratios".into()));
     }
-    Ok(Residual { norm, relative, backward })
+    Ok(ResidualCertificate { residual: Residual { norm, relative, backward }, componentwise_backward })
 }

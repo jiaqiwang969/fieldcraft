@@ -12,8 +12,15 @@ pub(super) struct Operators<'a> {
 }
 
 /// φ must have unit modal mass. Returns its derivative, the differentiated
-/// eigen-equation residual and the differentiated normalization residual.
-pub(super) fn derivative(op: Operators<'_>, phi: &[f64], lambda: f64, dlambda: f64, limits: &Limits) -> Result<(Vec<f64>, f64, f64)> {
+/// eigen-equation residual, the differentiated normalization residual, and an
+/// optional componentwise backward certificate from the constrained solve.
+pub(super) fn derivative(
+    op: Operators<'_>,
+    phi: &[f64],
+    lambda: f64,
+    dlambda: f64,
+    limits: &Limits,
+) -> Result<(Vec<f64>, f64, f64, Option<(f64, f64)>)> {
     let n = op.k.n;
     if phi.len() != n || n == 0 {
         return Err(Error::Invalid("Nelson mode must match nonempty equations".into()));
@@ -50,7 +57,9 @@ pub(super) fn derivative(op: Operators<'_>, phi: &[f64], lambda: f64, dlambda: f
     let mut load = complex::Vector { real: rhs.clone(), imaginary: vec![0.0; n] };
     load.real[pivot] = 0.0;
     let zero = Csr { val: vec![0.0; constrained.val.len()], ..constrained.clone() };
-    let mut derivative = complex::solve(&constrained, &zero, &load, limits)?.displacement.real;
+    let solution = complex::solve(&constrained, &zero, &load, limits)?;
+    let backward = solution.accepted_by_backward.then_some((solution.residual.relative, solution.componentwise_backward));
+    let mut derivative = solution.displacement.real;
     let mass_change: f64 = phi.iter().zip(&dmp).map(|(p, m)| p * m).sum();
     let projection: f64 = derivative.iter().zip(&mp).map(|(d, m)| d * m).sum();
     let alpha = -0.5 * mass_change - projection;
@@ -67,5 +76,5 @@ pub(super) fn derivative(op: Operators<'_>, phi: &[f64], lambda: f64, dlambda: f
     if derivative.iter().any(|v| !v.is_finite()) || !residual.is_finite() || !normalization.is_finite() || residual > 1e-7 {
         return Err(Error::NotConverged(format!("Nelson differentiated eigen-equation residual {residual}")));
     }
-    Ok((derivative, residual, normalization))
+    Ok((derivative, residual, normalization, backward))
 }

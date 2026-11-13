@@ -61,8 +61,15 @@ pub fn direct(a: &Csr, b: &Csr, tangent: &Vector, limits: &Limits) -> Result<Sol
 /// Fixed complex linear observation: transpose (not Hermitian) adjoint.
 /// Returns (real, imaginary) derivative. Variable weights need w'^T u added.
 pub fn adjoint(a: &Csr, b: &Csr, weights: &Vector, tangent: &Vector, limits: &Limits) -> Result<[f64; 2]> {
+    adjoint_with_solution(a, b, weights, tangent, limits).map(|(out, _)| out)
+}
+
+/// Adjoint contraction together with the solve metadata needed to propagate a
+/// componentwise backward-error warning to the command reply.
+pub(crate) fn adjoint_with_solution(a: &Csr, b: &Csr, weights: &Vector, tangent: &Vector, limits: &Limits) -> Result<([f64; 2], Solution)> {
     vector(tangent, a.n)?;
-    let lambda = complex::solve(a, b, weights, limits)?.displacement;
+    let solution = complex::solve(a, b, weights, limits)?;
+    let lambda = &solution.displacement;
     let mut out = [0.0, 0.0];
     for ((lr, li), (tr, ti)) in lambda.real.iter().zip(&lambda.imaginary).zip(tangent.real.iter().zip(&tangent.imaginary)) {
         out[0] += lr * tr - li * ti;
@@ -71,7 +78,7 @@ pub fn adjoint(a: &Csr, b: &Csr, weights: &Vector, tangent: &Vector, limits: &Li
     if out.iter().any(|x| !x.is_finite()) {
         return Err(Error::Invalid("overflow in sensitivity adjoint contraction".into()));
     }
-    Ok(out)
+    Ok((out, solution))
 }
 
 /// Derivatives of magnitude and locally unwrapped phase (radians).
