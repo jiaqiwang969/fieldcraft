@@ -1,0 +1,25 @@
+{
+  "note": "FieldCraft's accepted results for this case, written by `cargo xtask oracle --bless`. A result outside its band fails CI.",
+  "values": {
+    "bbar_10": {
+      "band": 2.0000777261691024e-7,
+      "value": 0.007728186914128032
+    },
+    "bbar_30": {
+      "band": 2.000079997184839e-7,
+      "value": 0.007989993350277178
+    },
+    "bbar_4": {
+      "band": 2.0000695747138572e-7,
+      "value": 0.006802014865143488
+    },
+    "standard_10": {
+      "band": 2.260365262443149e-12,
+      "value": 0.002260365262443149
+    },
+    "standard_4": {
+      "band": 2.164622662887184e-12,
+      "value": 0.0021646226628871837
+    }
+  }
+}

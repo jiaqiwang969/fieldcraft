@@ -1,0 +1,39 @@
+{
+  "title": "Small-strain F-bar limit against a linear B-bar Hex8 pair",
+  "kind": "theory",
+  "source": "Foster and Mohammad Nejad (2015), Engineering 7:765\u2013788, equations (4), (5), (24), (51), (53), (54); the zero-strain F-bar tangent reduces to the volume-averaged B-bar tangent. For the two-element unit-length extension with E=1000 Pa, nu=0 and a prescribed 1e-6 m right displacement, the independent affine value is 0.5e-6 m.",
+  "quantities": [
+    {
+      "id": "middle_ux",
+      "quantity": "middle-plane displacement from F-bar",
+      "measure": {
+        "from": "probe_fbar",
+        "pointer": "/nodes/0/displacement/0"
+      },
+      "value": 5e-07,
+      "tolerance": {
+        "relative": 1e-06,
+        "absolute": 1e-12
+      },
+      "reason": "With nu=0 the constrained transverse directions decouple, so the two equal elements carry the prescribed axial displacement affinely and the middle value is exactly 0.5e-6 m; the 1e-6 relative/1e-12 absolute allowance covers the nonlinear solve residual."
+    },
+    {
+      "id": "fbar_minus_bbar",
+      "quantity": "F-bar minus linear B-bar middle displacement",
+      "measure": {
+        "from": "probe_fbar",
+        "pointer": "/nodes/0/displacement/0",
+        "plus": {
+          "from": "probe_bbar",
+          "pointer": "/nodes/0/displacement/0",
+          "scale": -1.0
+        }
+      },
+      "value": 0.0,
+      "tolerance": {
+        "absolute": 1e-10
+      },
+      "reason": "At infinitesimal strain the reference-volume F-bar tangent is the existing volume-averaged B-bar tangent; the 1e-10 m bound is the requested small-strain comparison."
+    }
+  ]
+}

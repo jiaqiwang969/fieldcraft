@@ -1,0 +1,72 @@
+{
+  "title": "Cook membrane: linear B-bar convergence and standard-brick setup",
+  "kind": "benchmark",
+  "source": "OpenGeoSys, Cook's membrane B-bar benchmark (Wang, page revised 2024-06-11), https://www.opengeosys.org/stable/docs/benchmarks/small-deformations/cooksmembranebbar/; the public code values and comparison tolerance are transcribed from that page.",
+  "quantities": [
+    {
+      "id": "bbar_4",
+      "quantity": "linear B-bar top-corner vertical displacement, 4 elements per side",
+      "measure": {
+        "from": "probe_bbar_4",
+        "pointer": "/nodes/0/displacement/1"
+      },
+      "value": 0.0069574713856979,
+      "tolerance": {
+        "absolute": 0.0002
+      },
+      "reason": "The public B-bar benchmark asserts an absolute 2e-4 m comparison tolerance; the three meshes show the expected convergence to the published result."
+    },
+    {
+      "id": "bbar_10",
+      "quantity": "linear B-bar top-corner vertical displacement, 10 elements per side",
+      "measure": {
+        "from": "probe_bbar_10",
+        "pointer": "/nodes/0/displacement/1"
+      },
+      "value": 0.007772616910217863,
+      "tolerance": {
+        "absolute": 0.0002
+      },
+      "reason": "The public B-bar benchmark asserts an absolute 2e-4 m comparison tolerance; the three meshes show the expected convergence to the published result."
+    },
+    {
+      "id": "bbar_30",
+      "quantity": "linear B-bar top-corner vertical displacement, 30 elements per side",
+      "measure": {
+        "from": "probe_bbar_30",
+        "pointer": "/nodes/0/displacement/1"
+      },
+      "value": 0.007999718483861992,
+      "tolerance": {
+        "absolute": 0.0002
+      },
+      "reason": "The public B-bar benchmark asserts an absolute 2e-4 m comparison tolerance; the three meshes show the expected convergence to the published result."
+    },
+    {
+      "id": "standard_4",
+      "quantity": "linear standard-brick top-corner vertical displacement, 4 elements per side",
+      "measure": {
+        "from": "probe_standard_4",
+        "pointer": "/nodes/0/displacement/1"
+      },
+      "value": 0.002164586784123102,
+      "tolerance": {
+        "relative": 0.0001
+      },
+      "reason": "The public page reports these same-mesh standard-brick values; 1e-4 relative is above the observed 1e-5 setup difference and below the 0.1% scale of the comparison."
+    },
+    {
+      "id": "standard_10",
+      "quantity": "linear standard-brick top-corner vertical displacement, 10 elements per side",
+      "measure": {
+        "from": "probe_standard_10",
+        "pointer": "/nodes/0/displacement/1"
+      },
+      "value": 0.0022603329644579383,
+      "tolerance": {
+        "relative": 0.0001
+      },
+      "reason": "The public page reports these same-mesh standard-brick values; 1e-4 relative is above the observed 1e-5 setup difference and below the 0.1% scale of the comparison."
+    }
+  ]
+}
