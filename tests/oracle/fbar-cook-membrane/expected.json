@@ -1,7 +1,7 @@
 {
   "title": "Cook membrane: finite-strain F-bar convergence, standard-brick setup, and small-load limit",
   "kind": "benchmark",
-  "source": "OpenGeoSys, Cook's membrane F-bar benchmark (Wang and Nagel, page revised 2024-07-03), https://www.opengeosys.org/stable/docs/benchmarks/large-deformations/cooksmembranefbar/; geometry, material, load and the six published displacement values are transcribed from that page's benchmark code.",
+  "source": "OpenGeoSys, Cook's membrane F-bar benchmark (Wang and Nagel, page revised 2024-07-03), https://www.opengeosys.org/stable/docs/benchmarks/large-deformations/cooksmembranefbar/; the five published displacement values and the comparison tolerance are transcribed from that page's code and the material input from its text; the geometry and the 100 N/mm edge shear are the classical Cook membrane (R. D. Cook, 1974), and the standard-brick rows confirm that this set-up is the benchmark's.",
   "quantities": [
     {
       "id": "fbar_4",
