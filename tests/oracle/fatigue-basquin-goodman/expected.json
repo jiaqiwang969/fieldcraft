@@ -1,0 +1,59 @@
+{
+  "title": "Equal-amplitude Basquin life with Goodman mean-stress correction",
+  "kind": "theory",
+  "source": "Basquin S-N relation and Goodman correction as stated in Shigley, Mechanical Engineering Design, fatigue chapter; values are direct substitutions.",
+  "quantities": [
+    {
+      "id": "uncorrected_damage",
+      "quantity": "uncorrected Miner damage",
+      "measure": {
+        "from": "uncorrected",
+        "pointer": "/nodes/0/damage"
+      },
+      "value": 0.00128,
+      "tolerance": {
+        "absolute": 1e-13
+      },
+      "reason": "The record contains two counted cycles of amplitude 4 Pa and mean 6 Pa. N=100(10/4)^3, so 2/N=0.00128 exactly."
+    },
+    {
+      "id": "uncorrected_repeated_life",
+      "quantity": "uncorrected repeated-record life (s)",
+      "measure": {
+        "from": "uncorrected",
+        "pointer": "/nodes/0/repeated_record_life_seconds"
+      },
+      "value": 3125.0,
+      "tolerance": {
+        "absolute": 1e-10
+      },
+      "reason": "The record duration is 4 s and the independent damage is 0.00128, so duration/damage=3125 s."
+    },
+    {
+      "id": "goodman_damage",
+      "quantity": "Goodman-corrected Miner damage",
+      "measure": {
+        "from": "goodman",
+        "pointer": "/nodes/0/damage"
+      },
+      "value": 0.003731778425655976,
+      "tolerance": {
+        "absolute": 1e-13
+      },
+      "reason": "Goodman changes amplitude to 4/(1-6/20)=40/7 Pa. Two cycles with N=100(10/(40/7))^3 give damage 0.003731778425655976."
+    },
+    {
+      "id": "goodman_repeated_life",
+      "quantity": "Goodman-corrected repeated-record life (s)",
+      "measure": {
+        "from": "goodman",
+        "pointer": "/nodes/0/repeated_record_life_seconds"
+      },
+      "value": 1071.8750000000002,
+      "tolerance": {
+        "absolute": 1e-10
+      },
+      "reason": "The record duration is 4 s; 4/0.003731778425655976=1071.875 s by the same closed-form Miner convention."
+    }
+  ]
+}

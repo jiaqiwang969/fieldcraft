@@ -1,0 +1,13 @@
+{
+  "note": "FieldCraft's accepted results for this case, written by `cargo xtask oracle --bless`. A result outside its band fails CI.",
+  "values": {
+    "miner_damage": {
+      "band": 1.3685000000000005e-12,
+      "value": 0.0013674999999999985
+    },
+    "rainflow_cycle_count": {
+      "band": 4.0000010000000006e-9,
+      "value": 4.0
+    }
+  }
+}
