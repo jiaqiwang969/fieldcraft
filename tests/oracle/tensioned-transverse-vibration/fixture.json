@@ -1,0 +1,29 @@
+{
+  "note": "FieldCraft's accepted results for this case, written by `cargo xtask oracle --bless`. A result outside its band fails CI.",
+  "values": {
+    "control_frequency_1": {
+      "band": 2.0558397921726842e-8,
+      "value": 20.517804645118222
+    },
+    "control_frequency_2": {
+      "band": 4.1116795843453685e-8,
+      "value": 40.769317319208334
+    },
+    "control_frequency_3": {
+      "band": 5.6670015515523845e-8,
+      "value": 56.40746935244151
+    },
+    "tensioned_frequency_1": {
+      "band": 4.3566203687742694e-8,
+      "value": 43.5274986902492
+    },
+    "tensioned_frequency_2": {
+      "band": 5.6733514687630294e-8,
+      "value": 56.44026934466541
+    },
+    "tensioned_frequency_3": {
+      "band": 9.437479727189416e-8,
+      "value": 94.17356016223765
+    }
+  }
+}

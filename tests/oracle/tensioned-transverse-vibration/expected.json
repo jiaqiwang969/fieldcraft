@@ -1,0 +1,85 @@
+{
+  "title": "Transverse vibration of a tensioned rectangular bar",
+  "kind": "theory",
+  "source": "Independent Euler–Bernoulli clamped-clamped beam with axial tension; roots are evaluated by the standard-library bisection in reference.py.",
+  "quantities": [
+    {
+      "id": "tensioned_frequency_1",
+      "quantity": "tensioned weak-axis first frequency (Hz)",
+      "measure": {
+        "from": "modes_tensioned",
+        "pointer": "/modes/0/frequency"
+      },
+      "value": 43.56620368774269,
+      "tolerance": {
+        "relative": 0.005
+      },
+      "reason": "The Euler–Bernoulli clamped-clamped tensioned-beam root is an independent reference. The 20-node solid omits the beam theory's shear and rotary-inertia idealisations; the standard-library estimate rho*omega^2/(kappa*G) is below the measured solid-versus-beam difference, so the stated band is the documented beam-model applicability allowance. The measured difference is −0.09%; weak-axis first uses a 0.5% band."
+    },
+    {
+      "id": "tensioned_frequency_2",
+      "quantity": "tensioned strong-axis first frequency (Hz)",
+      "measure": {
+        "from": "modes_tensioned",
+        "pointer": "/modes/1/frequency"
+      },
+      "value": 56.73351468763029,
+      "tolerance": {
+        "relative": 0.015
+      },
+      "reason": "The Euler–Bernoulli clamped-clamped tensioned-beam root is an independent reference. The 20-node solid omits the beam theory's shear and rotary-inertia idealisations; the standard-library estimate rho*omega^2/(kappa*G) is below the measured solid-versus-beam difference, so the stated band is the documented beam-model applicability allowance. The measured difference is −0.52%; strong-axis first uses a 1.5% band."
+    },
+    {
+      "id": "tensioned_frequency_3",
+      "quantity": "tensioned weak-axis second frequency (Hz)",
+      "measure": {
+        "from": "modes_tensioned",
+        "pointer": "/modes/2/frequency"
+      },
+      "value": 94.37479727189415,
+      "tolerance": {
+        "relative": 0.01
+      },
+      "reason": "The Euler–Bernoulli clamped-clamped tensioned-beam root is an independent reference. The 20-node solid omits the beam theory's shear and rotary-inertia idealisations; the standard-library estimate rho*omega^2/(kappa*G) is below the measured solid-versus-beam difference, so the stated band is the documented beam-model applicability allowance. The measured difference is −0.21%; weak-axis second uses a 1% band."
+    },
+    {
+      "id": "control_frequency_1",
+      "quantity": "zero-tension weak-axis first frequency (Hz)",
+      "measure": {
+        "from": "modes_control",
+        "pointer": "/modes/0/frequency"
+      },
+      "value": 20.55839792172684,
+      "tolerance": {
+        "relative": 0.005
+      },
+      "reason": "The Euler–Bernoulli clamped-clamped tensioned-beam root is an independent reference. The 20-node solid omits the beam theory's shear and rotary-inertia idealisations; the standard-library estimate rho*omega^2/(kappa*G) is below the measured solid-versus-beam difference, so the stated band is the documented beam-model applicability allowance. The measured difference is −0.20%; weak-axis first uses a 0.5% band."
+    },
+    {
+      "id": "control_frequency_2",
+      "quantity": "zero-tension strong-axis first frequency (Hz)",
+      "measure": {
+        "from": "modes_control",
+        "pointer": "/modes/1/frequency"
+      },
+      "value": 41.11679584345368,
+      "tolerance": {
+        "relative": 0.015
+      },
+      "reason": "The Euler–Bernoulli clamped-clamped tensioned-beam root is an independent reference. The 20-node solid omits the beam theory's shear and rotary-inertia idealisations; the standard-library estimate rho*omega^2/(kappa*G) is below the measured solid-versus-beam difference, so the stated band is the documented beam-model applicability allowance. The measured difference is −0.85%; strong-axis first uses a 1.5% band."
+    },
+    {
+      "id": "control_frequency_3",
+      "quantity": "zero-tension weak-axis second frequency (Hz)",
+      "measure": {
+        "from": "modes_control",
+        "pointer": "/modes/2/frequency"
+      },
+      "value": 56.67001551552384,
+      "tolerance": {
+        "relative": 0.01
+      },
+      "reason": "The Euler–Bernoulli clamped-clamped tensioned-beam root is an independent reference. The 20-node solid omits the beam theory's shear and rotary-inertia idealisations; the standard-library estimate rho*omega^2/(kappa*G) is below the measured solid-versus-beam difference, so the stated band is the documented beam-model applicability allowance. The measured difference is −0.46%; weak-axis second uses a 1% band."
+    }
+  ]
+}

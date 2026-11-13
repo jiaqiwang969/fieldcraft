@@ -27,7 +27,7 @@
       "tolerance": {
         "absolute": 1e-06
       },
-      "reason": "Let y and z be the lower and upper centre displacements. The locked compatibility is y − z = 0.015 and centre equilibrium is 1000 y − 2000 z = 3; solving those equations gives the independent reference stress."
+      "reason": "Let y and z be the lower and upper centre displacements. The locked compatibility is y − z = 0.015; the centre equilibrium is σ1 − σ2 = 3 Pa, and compatibility is (σ1 − 10)/1000 + (σ2 − 10)/2000 = 0. Solving gives the independent reference stress."
     },
     {
       "id": "upper_stress",
@@ -40,7 +40,7 @@
       "tolerance": {
         "absolute": 1e-06
       },
-      "reason": "Let y and z be the lower and upper centre displacements. The locked compatibility is y − z = 0.015 and centre equilibrium is 1000 y − 2000 z = 3; solving those equations gives the independent reference stress."
+      "reason": "Let y and z be the lower and upper centre displacements. The locked compatibility is y − z = 0.015; the centre equilibrium is σ1 − σ2 = 3 Pa, and compatibility is (σ1 − 10)/1000 + (σ2 − 10)/2000 = 0. Solving gives the independent reference stress."
     }
   ]
 }
